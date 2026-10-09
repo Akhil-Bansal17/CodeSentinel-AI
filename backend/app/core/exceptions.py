@@ -76,3 +76,40 @@ class RepositoryAccessError(AppException):
             error_code="REPOSITORY_ACCESS_ERROR",
             details=details,
         )
+
+
+class SourceValidationError(AppException):
+    """Raised when a repository source URL or local path fails security/validation checks."""
+
+    def __init__(self, message: str, details: Optional[Dict[str, Any]] = None):
+        super().__init__(
+            message=message,
+            status_code=400,
+            error_code="SOURCE_VALIDATION_ERROR",
+            details=details,
+        )
+
+
+class RepositoryLimitExceededError(AppException):
+    """Raised when an ingested repository exceeds file count, size, or expansion limits."""
+
+    def __init__(self, message: str, details: Optional[Dict[str, Any]] = None):
+        super().__init__(
+            message=message,
+            status_code=413,
+            error_code="REPOSITORY_LIMIT_EXCEEDED",
+            details=details,
+        )
+
+
+class SecurityViolationError(AppException):
+    """Raised when path traversal, symlink escape, or SSRF is detected."""
+
+    def __init__(self, message: str, details: Optional[Dict[str, Any]] = None):
+        super().__init__(
+            message=message,
+            status_code=400,
+            error_code="SECURITY_VIOLATION",
+            details=details,
+        )
+
