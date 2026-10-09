@@ -1,6 +1,8 @@
+from pathlib import Path
 from typing import List, Union
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 
 class Settings(BaseSettings):
@@ -38,9 +40,52 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = Field(default="INFO", description="Logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
     LOG_FORMAT: str = Field(default="json", description="Log format: json or text")
 
+    # Phase 1: Repository Ingestion & Limits
+    LOCAL_REPOSITORY_ROOTS: List[str] = Field(
+        default_factory=list,
+        description="Allowed root paths for local repository ingestion. Comma-separated or JSON list.",
+    )
+    MAX_REPOSITORY_DOWNLOAD_BYTES: int = Field(
+        default=52428800,  # 50 MB
+        description="Maximum allowed compressed archive download size in bytes",
+    )
+    MAX_REPOSITORY_EXTRACTED_BYTES: int = Field(
+        default=157286400,  # 150 MB
+        description="Maximum allowed extracted repository size in bytes",
+    )
+    MAX_REPOSITORY_FILES: int = Field(
+        default=10000,
+        description="Maximum number of discovered files per repository",
+    )
+    MAX_REPOSITORY_FILE_BYTES: int = Field(
+        default=2097152,  # 2 MB
+        description="Maximum individual file size in bytes for line counting and hashing",
+    )
+    REPOSITORY_INGESTION_TIMEOUT_SECONDS: int = Field(
+        default=60,
+        description="Maximum duration allowed for an ingestion operation in seconds",
+    )
+    REPOSITORY_HTTP_TIMEOUT_SECONDS: int = Field(
+        default=20,
+        description="HTTP request timeout for GitHub downloads in seconds",
+    )
+    MAX_ARCHIVE_EXPANSION_RATIO: float = Field(
+        default=10.0,
+        description="Maximum allowed ratio between extracted size and archive size",
+    )
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
+        if isinstance(v, str) and not v.startswith("["):
+            return [i.strip() for i in v.split(",") if i.strip()]
+        elif isinstance(v, list):
+            return v
+        return [str(v)]
+
+    @field_validator("LOCAL_REPOSITORY_ROOTS", mode="before")
+    @classmethod
+    def assemble_local_roots(cls, v: Union[str, List[str]]) -> List[str]:
         if isinstance(v, str) and not v.startswith("["):
             return [i.strip() for i in v.split(",") if i.strip()]
         elif isinstance(v, list):
@@ -56,5 +101,21 @@ class Settings(BaseSettings):
             raise ValueError(f"Invalid LOG_LEVEL '{v}'. Must be one of {valid_levels}")
         return upper_v
 
+    def get_allowed_local_roots(self) -> List[Path]:
+        """Return resolved Path objects for configured LOCAL_REPOSITORY_ROOTS."""
+        roots: List[Path] = []
+        raw_roots = self.LOCAL_REPOSITORY_ROOTS
+        if isinstance(raw_roots, str):
+            raw_roots = [r.strip() for r in raw_roots.split(",") if r.strip()]
+        for r in raw_roots:
+            try:
+                p = Path(r).resolve()
+                if p.exists():
+                    roots.append(p)
+            except Exception:
+                continue
+        return roots
+
 
 settings = Settings()
+
