@@ -2,54 +2,73 @@
 
 > **"AI-powered software engineering intelligence for your codebase."**
 
-CodeSentinel AI is a developer platform designed to analyze software repositories and deliver deep architectural insights, security findings, dependency intelligence, and test health metrics.
+CodeSentinel AI is a serious developer intelligence platform designed to analyze software repositories and deliver deep architectural insights, security findings, dependency intelligence, and test health metrics.
 
-Unlike simple "ChatGPT wrappers" that pass code directly to generic language models, CodeSentinel AI strictly separates **deterministic analysis** from **AI reasoning**:
-* **Deterministic engines** parse ASTs, run static analysis rules, audit dependencies, and compute verifiable health scores.
+Unlike simple "ChatGPT wrappers" that pass raw code directly to language models, CodeSentinel AI strictly separates **deterministic analysis** from **AI reasoning**:
+* **Deterministic engines** discover repositories, classify languages, parse ASTs, audit dependencies, and compute verifiable health metrics.
 * **The AI layer** explains, summarizes, and prioritizes verified facts—never hallucinating codebase state.
 
 ---
 
-## High-Level Architecture & Planned Pipeline
+## High-Level Architecture & Pipeline
 
 ```
-Repository (Git / Local)
+Repository Source (Public GitHub / Approved Local Directory)
        ↓
-Repository Ingestion
+Source Validation & SSRF Protection
        ↓
-File Discovery & Language Detection
+Repository Acquisition (Streaming Tarball / Local Resolution)
        ↓
-Code Parsing (Tree-sitter AST)
+Safe Archive Extraction (TarSlip / ZipSlip & Bomb Protection)
        ↓
-Deterministic Engines: Static Analysis | Security SAST | Dependency Audit | Test Intelligence | Docs
+Safe File Discovery & Exclusion (Ignore Rules, Symlink Containment, Binary Detection)
        ↓
-Evidence Store & Verifiable Health Engine
+Deterministic Language Detection & LOC Calculation
        ↓
-Knowledge Representation: Code Chunking | Embeddings | Vector Store (pgvector)
+Deterministic Repository Metrics (Languages, Categories, LOC, Largest Files)
        ↓
-Grounded AI Reasoning: RAG | Codebase Assistant | Prioritized Recommendations
+Transactional Database Persistence (Repository, RepositorySnapshot, RepositoryFiles)
        ↓
-Safe Agentic Code Changes (Diffs + Verification Plans)
+REST API Layer (/api/v1/repositories)
+       ↓
+Developer Dashboard (Metrics, Language Breakdown, Paginated File Explorer)
 ```
 
 ---
 
-## Phase 0: Foundation Scope
+## Implemented Capabilities: Phase 1
 
-This repository currently implements **Phase 0 (Foundation)**:
-1. **Monorepo Architecture**: Clean separation between `backend/`, `frontend/`, `docs/`, and orchestration.
-2. **Backend Foundation**: FastAPI application with configuration via environment variables, structured logging, safe exception handling, and health telemetry.
-3. **Database Foundation**: SQLAlchemy 2.0 with PostgreSQL support, session management, and Alembic database migration infrastructure.
-4. **Service Contracts**: Typed Python `Protocol` interfaces in `backend/app/services/interfaces.py` for future analysis engines without premature monolithic logic.
-5. **Frontend Foundation**: Modern Vite 8 + React 19 + TypeScript developer UI featuring dark developer-tool design, responsive desktop/mobile shells, live API health telemetry, reusable empty/error states, and zero simulated/fake metrics.
-6. **Automated Testing**: 100% passing test suites across both backend (pytest) and frontend (Vitest).
+This repository implements **Phase 1: Deterministic Repository Ingestion, Safe File Discovery & Snapshots**:
+
+1. **Source Ingestion**:
+   - **Public GitHub Repositories**: Validates URLs, downloads archives safely via streaming HTTP with redirect re-validation, strips wrapper directories, and auto-detects default branches.
+   - **Local Directory Repositories**: Scans local project directories in-place within configured `LOCAL_REPOSITORY_ROOTS`.
+2. **Security & Sandboxing**:
+   - **ZipSlip & TarSlip Protection**: Member path sanitization rejects absolute paths, Windows drive letters, UNC paths, and `..` traversal escapes.
+   - **Decompression Bomb Protection**: Tracks uncompressed size and expansion ratio.
+   - **SSRF Prevention**: Rejects private, loopback, and cloud metadata IP ranges.
+   - **Symlink Protection**: Verifies containment within repository root; prevents symlink loops.
+   - **Secret Protection**: Credential and sensitive files (`.env`, `*.pem`, `id_rsa`, etc.) are excluded from line-counting. Ingested code is never executed.
+3. **Deterministic Classification & Metrics**:
+   - Categorizes files into `source`, `configuration`, `documentation`, `data`, and `other`.
+   - Computes file counts, source file counts, LOC, uncompressed size, language distributions, top-level directories, and largest files deterministically.
+   - Zero synthetic scores or fake vulnerability numbers.
+4. **Database & Snapshots**:
+   - PostgreSQL/SQLite schema with Alembic migration `0002_phase1`.
+   - Models: `Repository`, `RepositorySnapshot`, and `RepositoryFile`.
+   - Failed ingestions preserve the previous successful snapshot.
+5. **REST API**:
+   - Endpoints under `/api/v1/repositories`: create/ingest, list, get details, file explorer with pagination & filtering, snapshot details, re-ingest, and delete.
+6. **Frontend Experience**:
+   - Connect Repository modal supporting both GitHub and Local inputs with validation.
+   - Repository detail view featuring metric cards, proportional language distribution bar, top-level directory tables, and paginated file explorer with language and category filters.
 
 ---
 
 ## Technology Stack
 
 ### Backend
-* **Python**: 3.12+ (tested through 3.14)
+* **Python**: 3.12+ (tested on Python 3.14)
 * **Framework**: FastAPI, Pydantic v2, Pydantic-Settings
 * **Database & Migrations**: PostgreSQL, SQLAlchemy 2.0, Alembic
 * **Driver**: `psycopg` (v3 binary)
@@ -58,7 +77,7 @@ This repository currently implements **Phase 0 (Foundation)**:
 ### Frontend
 * **Framework**: React 19, TypeScript, Vite 8
 * **Styling**: Tailwind CSS (custom developer platform palette)
-* **Icons**: Lucide React
+* **Icons**: Lucide React + custom SVG icons
 * **Testing**: Vitest, React Testing Library, JSDOM
 
 ### Infrastructure
@@ -73,15 +92,13 @@ This repository currently implements **Phase 0 (Foundation)**:
 * Node.js 20+ and npm
 * Docker & Docker Compose (optional, for containerized PostgreSQL)
 
-### 1. Clone & Setup Backend
+### 1. Setup Backend
 
 ```bash
 cd backend
 
-# Create virtual environment
+# Create & activate virtual environment
 python -m venv .venv
-
-# Activate virtual environment
 # Windows:
 .\.venv\Scripts\activate
 # Linux/macOS:
@@ -93,10 +110,10 @@ pip install -r requirements.txt
 # Configure environment
 cp .env.example .env
 
-# Run Alembic migrations (with running DB or offline check)
+# Run database migrations
 alembic upgrade head
 
-# Start development server
+# Start development API server
 uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
@@ -116,7 +133,7 @@ npm install
 npm run dev
 ```
 
-The UI will be accessible at `http://localhost:5173`. In development mode, Vite automatically proxies `/api` calls to the FastAPI backend running on port 8000.
+The UI will be accessible at `http://localhost:5173`. In development mode, Vite proxies `/api` calls to the FastAPI backend running on port 8000.
 
 ### 3. Running via Docker Compose
 
@@ -133,30 +150,27 @@ docker compose up --build
 
 ### Backend Tests (pytest)
 ```bash
-# From workspace root
+# Run complete test suite (43 tests)
 .\backend\.venv\Scripts\pytest -v backend/tests
-
-# Or from backend directory
-cd backend && pytest -v
 ```
 
 ### Frontend Tests (Vitest)
 ```bash
 cd frontend
-npm test
+# Run complete test suite (22 tests)
+npm test -- --run
 ```
 
-### Frontend Typecheck & Build
+### Typechecking & Production Build
 ```bash
 cd frontend
 npm run build
+npm run lint
 ```
 
 ---
 
 ## Environment Configuration
-
-Configuration is managed strictly through environment variables.
 
 | Variable | Default | Purpose |
 | :--- | :--- | :--- |
@@ -169,19 +183,19 @@ Configuration is managed strictly through environment variables.
 | `DATABASE_URL` | `postgresql+psycopg://postgres:postgres@localhost:5432/codesentinel` | Connection string |
 | `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Allowed CORS origins |
 | `LOG_LEVEL` | `INFO` | Logging threshold (DEBUG, INFO, WARNING, ERROR) |
-
----
-
-## Phase 0 Limitations
-
-* **No Repository Ingestion**: Phase 0 does not yet clone remote Git repositories or parse local folders.
-* **No AI/LLM Execution**: No calls to external LLM providers or vector databases are executed in Phase 0.
-* **Truthfulness Enforced**: The dashboard displays clean empty states ("No repository analyzed yet") rather than fake health scores or dummy vulnerability counts.
+| `LOCAL_REPOSITORY_ROOTS` | `""` | Comma-separated allowed directories for local ingestion |
+| `MAX_REPOSITORY_DOWNLOAD_BYTES` | `52428800` (50MB) | Maximum allowed archive download size |
+| `MAX_REPOSITORY_EXTRACTED_BYTES` | `157286400` (150MB) | Maximum allowed uncompressed extraction size |
+| `MAX_REPOSITORY_FILES` | `10000` | Maximum discovered files per repository |
+| `MAX_REPOSITORY_FILE_BYTES` | `2097152` (2MB) | File size threshold for line-counting |
+| `REPOSITORY_INGESTION_TIMEOUT_SECONDS` | `60` | Ingestion pipeline execution timeout |
+| `REPOSITORY_HTTP_TIMEOUT_SECONDS` | `20` | HTTP download read timeout |
+| `MAX_ARCHIVE_EXPANSION_RATIO` | `10.0` | Maximum decompression expansion ratio |
 
 ---
 
 ## Planned Roadmap
 
-* **Phase 1**: Repository ingestion, AST parsing, static analysis rules, dependency vulnerability audits, test intelligence, and verifiable health scoring.
-* **Phase 2**: Syntactic code chunking, vector embeddings, PostgreSQL `pgvector` indexing, and AST + semantic code search.
-* **Phase 3**: RAG over verified evidence, AI Codebase Assistant, prioritized recommendations, and safe agentic code changes with test verification.
+* **Phase 1 (Complete)**: Deterministic repository ingestion, safe archive discovery, language detection, snapshot persistence, and frontend dashboard.
+* **Phase 2**: Deterministic code parsing (AST), static analysis rules, security SAST scanning, dependency vulnerability audits, and test intelligence.
+* **Phase 3**: Vector embeddings (`pgvector`), AST + semantic code search, RAG evidence grounding, AI Codebase Assistant, and safe agentic code changes.
