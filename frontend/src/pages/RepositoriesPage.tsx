@@ -44,7 +44,6 @@ export const RepositoriesPage: React.FC<RepositoriesPageProps> = ({
         if (found) setSelectedRepo(found);
       }
     } catch (err: unknown) {
-
       if (err instanceof Error && "code" in err && (err as { code: string }).code === "NETWORK_ERROR") {
         setIsBackendUnavailable(true);
       } else {
@@ -56,8 +55,39 @@ export const RepositoriesPage: React.FC<RepositoriesPageProps> = ({
   }, [selectedRepoId]);
 
   useEffect(() => {
-    fetchRepositories();
-  }, [fetchRepositories]);
+    let isCancelled = false;
+
+    async function loadInitial() {
+      try {
+        const response = await repositoryService.listRepositories(1, 50);
+        if (isCancelled) return;
+        const items = Array.isArray(response?.items) ? response.items : [];
+        setRepositories(items);
+
+        if (selectedRepoId) {
+          const found = items.find((r) => r.id === selectedRepoId);
+          if (found) setSelectedRepo(found);
+        }
+      } catch (err: unknown) {
+        if (isCancelled) return;
+        if (err instanceof Error && "code" in err && (err as { code: string }).code === "NETWORK_ERROR") {
+          setIsBackendUnavailable(true);
+        } else {
+          setError(err instanceof Error ? err.message : "Failed to load repositories.");
+        }
+      } finally {
+        if (!isCancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadInitial();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedRepoId]);
 
   const handleRepositoryUpdated = (updated: Repository) => {
     setSelectedRepo(updated);
