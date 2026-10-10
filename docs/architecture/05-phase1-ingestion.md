@@ -60,10 +60,10 @@ REST API (/api/v1/repositories) & Frontend Dashboard
 | Threat | Defense Implementation |
 | :--- | :--- |
 | **Path Traversal / TarSlip / ZipSlip** | Strict member sanitization in `safe_extractor.py`. Absolute paths, Windows drive letters (`C:`), UNC paths (`\\server\share`), and `..` escape sequences are rejected before writing to disk. |
-| **Decompression Bombs** | Maximum extracted bytes limit (`MAX_REPOSITORY_EXTRACTED_BYTES`), file count limit (`MAX_REPOSITORY_FILES`), and expansion ratio check (`MAX_ARCHIVE_EXPANSION_RATIO`). |
-| **SSRF (Server-Side Request Forgery)** | IP checks (`is_ip_private_or_loopback`) reject private, loopback, link-local, and cloud metadata IPs (`169.254.169.254`, `127.0.0.1`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `::1`). Redirects are re-validated on every hop. |
-| **Symlink Escapes & Loops** | `discover_repository_files` verifies `os.path.realpath` for every directory and file. Escaping symlinks are ignored and logged; cycle detection tracks visited inodes. |
-| **Sensitive File Exposure** | Secret patterns (`.env`, `*.pem`, `*.key`, `id_rsa`, `credentials.json`, etc.) are excluded from line-counting and content decoding. No source file contents are stored in database records in Phase 1. |
+| **Decompression Bombs & Forged Headers** | Chunk-streamed extraction enforcing maximum extracted bytes (`MAX_REPOSITORY_EXTRACTED_BYTES`), individual file limit (`MAX_REPOSITORY_FILE_BYTES`), file count limit (`MAX_REPOSITORY_FILES`), and expansion ratio check (`MAX_ARCHIVE_EXPANSION_RATIO`). Validates actual bytes written rather than trusting archive header claims. |
+| **SSRF (Server-Side Request Forgery)** | IP checks (`is_ip_private_or_loopback`) reject private, loopback, link-local, multicast, cloud metadata IPs (`169.254.169.254`), and NAT64 (RFC 6052 `64:ff9b::/96`) translated private addresses. Redirects enforce HTTPS, reject user credentials, disallow non-443 ports, and re-validate hosts on every hop. |
+| **Symlink Escapes & Loops** | `discover_repository_files` verifies canonical resolved paths for every directory and file. Escaping symlinks are ignored and logged; cycle detection tracks both visited canonical paths and inodes to ensure robust protection on Windows and Linux. |
+| **Sensitive File & Path Disclosure** | Secret patterns (`.env`, `*.pem`, `*.key`, `id_rsa`, `credentials.json`, etc.) are excluded from line-counting and content decoding. Error messages and validation details are strictly sanitized to prevent leaking host directory structures, server usernames, or internal paths. |
 | **Code Execution Prevention** | Zero repository code is executed during ingestion. Build tools, `setup.py`, `package.json` scripts, Makefiles, and shell scripts are never invoked. |
 
 ---
