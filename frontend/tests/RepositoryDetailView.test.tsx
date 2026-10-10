@@ -123,6 +123,10 @@ describe("RepositoryDetailView Component", () => {
     expect(screen.getByText("Lines of Code")).toBeInTheDocument();
     expect(screen.getByText("Processed Size")).toBeInTheDocument();
     expect(screen.getByText("Language Distribution")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(repositoryService.listSnapshotFiles).toHaveBeenCalled();
+    });
   });
 
   it("renders files in the File Explorer table with metadata", async () => {
@@ -140,10 +144,9 @@ describe("RepositoryDetailView Component", () => {
       expect(screen.getByText("README.md")).toBeInTheDocument();
       expect(screen.getByText("abc12345")).toBeInTheDocument(); // truncated SHA256
     });
-
   });
 
-  it("navigates back when Back button is clicked", () => {
+  it("navigates back when Back button is clicked", async () => {
     const handleBack = vi.fn();
     render(
       <RepositoryDetailView
@@ -158,5 +161,9 @@ describe("RepositoryDetailView Component", () => {
     fireEvent.click(backBtn);
 
     expect(handleBack).toHaveBeenCalledTimes(1);
+
+    await waitFor(() => {
+      expect(repositoryService.listSnapshotFiles).toHaveBeenCalled();
+    });
   });
 });
