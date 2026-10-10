@@ -79,6 +79,25 @@ async def _stream_download_github_archive(
 
         while redirect_count <= max_redirects:
             parsed = urlparse(current_url)
+
+            # Enforce HTTPS scheme on all hops
+            if parsed.scheme.lower() != "https":
+                raise SecurityViolationError(
+                    f"Invalid download URL scheme '{parsed.scheme}'. Only https is permitted.",
+                    details={"scheme": parsed.scheme},
+                )
+
+            # Disallow embedded user credentials
+            if parsed.username or parsed.password:
+                raise SecurityViolationError("Download URL contains forbidden user credentials.")
+
+            # Disallow non-standard ports
+            if parsed.port and parsed.port != 443:
+                raise SecurityViolationError(
+                    f"Invalid download URL port '{parsed.port}'. Only standard HTTPS port 443 is permitted.",
+                    details={"port": parsed.port},
+                )
+
             host = (parsed.hostname or "").lower()
 
             # SSRF re-validation on every hop
@@ -111,7 +130,8 @@ async def _stream_download_github_archive(
                 if not location:
                     raise RepositoryAccessError("Received redirect without Location header.")
                 redirect_count += 1
-                current_url = location
+                from urllib.parse import urljoin
+                current_url = urljoin(current_url, location)
                 continue
 
             if response.status_code == 404:
