@@ -45,11 +45,18 @@ def is_ip_private_or_loopback(ip_str: str) -> bool:
     """Check if an IP address string is loopback, private, link-local, or reserved."""
     try:
         ip = ipaddress.ip_address(ip_str)
+
+        # RFC 6052 Well-Known Prefix (64:ff9b::/96) translates IPv4 addresses to IPv6.
+        # Recursively validate the translated embedded IPv4 address.
+        if isinstance(ip, ipaddress.IPv6Address) and ip in ipaddress.IPv6Network("64:ff9b::/96"):
+            embedded_ipv4 = ipaddress.IPv4Address(ip.packed[12:])
+            return is_ip_private_or_loopback(str(embedded_ipv4))
+
         return (
             ip.is_private
             or ip.is_loopback
             or ip.is_link_local
-            or ip.is_reserved
+            or (ip.is_reserved and not ip.is_global)
             or ip.is_multicast
             or ip.is_unspecified
         )
@@ -202,19 +209,16 @@ def validate_and_normalize_local_path(
         resolved_path = raw_path.resolve(strict=True)
     except FileNotFoundError:
         raise SourceValidationError(
-            f"Local repository directory does not exist: '{cleaned_path}'",
-            details={"path": cleaned_path},
+            "Local repository directory does not exist or is inaccessible.",
         )
     except (RuntimeError, PermissionError) as exc:
         raise SecurityViolationError(
-            f"Cannot safely access local path: {exc}",
-            details={"path": cleaned_path},
+            f"Cannot safely access the specified directory: {exc}",
         )
 
     if not resolved_path.is_dir():
         raise SourceValidationError(
-            f"Path is not a directory: '{cleaned_path}'",
-            details={"path": cleaned_path},
+            "Specified path is not a directory.",
         )
 
     # Check against configured allowed roots
@@ -237,8 +241,7 @@ def validate_and_normalize_local_path(
 
     if not is_contained:
         raise SecurityViolationError(
-            f"Directory is outside allowed repository roots. Configured roots: {[str(r) for r in allowed_roots]}",
-            details={"resolved_path": str(resolved_path)},
+            "Directory is outside allowed repository roots.",
         )
 
     repo_name = name_override or resolved_path.name
