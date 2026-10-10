@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     DB_POOL_TIMEOUT: int = Field(default=30, ge=1, le=120)
 
     # Security & CORS
-    CORS_ORIGINS: List[str] = Field(
+    CORS_ORIGINS: Union[List[str], str] = Field(
         default=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000"],
         description="Allowed CORS origin domains",
     )
@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     LOG_FORMAT: str = Field(default="json", description="Log format: json or text")
 
     # Phase 1: Repository Ingestion & Limits
-    LOCAL_REPOSITORY_ROOTS: List[str] = Field(
+    LOCAL_REPOSITORY_ROOTS: Union[List[str], str] = Field(
         default_factory=list,
         description="Allowed root paths for local repository ingestion. Comma-separated or JSON list.",
     )
