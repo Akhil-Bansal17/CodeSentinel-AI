@@ -52,6 +52,15 @@ class RepositoryCreateRequest(BaseModel):
     )
 
 
+class RepositoryReingestRequest(BaseModel):
+    """Optional payload for re-ingestion, used for local repositories."""
+
+    local_path: Optional[str] = Field(
+        None,
+        description="Filesystem path for local repositories (must be within LOCAL_REPOSITORY_ROOTS)",
+    )
+
+
 # --- Response Models ---
 
 class RepositoryFileResponse(BaseModel):
