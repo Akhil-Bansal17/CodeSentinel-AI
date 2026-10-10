@@ -259,7 +259,10 @@ class RepositoryService:
                 # Check if it was started in the last 2 minutes
                 latest_active = self.get_latest_snapshot(repo.id)
                 if latest_active and latest_active.status == "processing":
-                    elapsed = (now - latest_active.started_at).total_seconds()
+                    started = latest_active.started_at
+                    if started.tzinfo is None:
+                        started = started.replace(tzinfo=timezone.utc)
+                    elapsed = (now - started).total_seconds()
                     if elapsed < 120:
                         raise ConflictError(
                             "An ingestion job is already actively processing for this repository.",
@@ -396,23 +399,27 @@ class RepositoryService:
             if acquired:
                 acquired.cleanup()
 
-    async def reingest_repository(self, repository_id: str) -> RepositoryResponse:
+    async def reingest_repository(
+        self,
+        repository_id: str,
+        local_path: Optional[str] = None,
+    ) -> RepositoryResponse:
         """Trigger re-ingestion of an already registered repository."""
         repo = self.get_repository_by_id(repository_id)
         if not repo:
             raise NotFoundError("Repository", repository_id)
 
+        if repo.source_type == "local" and not local_path:
+            raise RepositoryAccessError(
+                "Re-ingesting a local repository requires specifying the local_path via repository creation or re-ingest request.",
+            )
+
         req = RepositoryCreateRequest(
             source_type=repo.source_type,
             source_url=repo.source_url if repo.source_type == "github" else None,
-            local_path=None,  # We re-evaluate source based on stored details
+            local_path=local_path if repo.source_type == "local" else None,
             name=repo.name,
             default_branch=repo.default_branch,
         )
-
-        if repo.source_type == "local":
-            raise RepositoryAccessError(
-                "Re-ingesting a local repository requires specifying the local_path via repository creation.",
-            )
 
         return await self.ingest_repository(req)
