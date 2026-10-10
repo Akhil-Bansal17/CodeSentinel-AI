@@ -182,6 +182,7 @@ def discover_repository_files(
 
     result = DiscoveryResult()
     visited_inodes: Set[int] = set()
+    visited_paths: Set[Path] = {root_resolved}
 
     for current_dir, dirnames, filenames in os.walk(root_resolved, followlinks=False):
         current_path = Path(current_dir)
@@ -194,6 +195,11 @@ def discover_repository_files(
                     logger.warning("Skipping directory symlink escaping repo root: %s", current_path)
                     dirnames.clear()
                     continue
+                if resolved_curr in visited_paths:
+                    logger.warning("Skipping cyclic directory symlink: %s", current_path)
+                    dirnames.clear()
+                    continue
+                visited_paths.add(resolved_curr)
             except (RuntimeError, ValueError):
                 dirnames.clear()
                 continue
@@ -214,13 +220,15 @@ def discover_repository_files(
                         logger.warning("Skipping escaping symlink directory: %s", d_path)
                         dirs_to_remove.append(d)
                         continue
-                    # Check inode loop detection
+                    # Check loop detection via both canonical path and inode
                     stat_info = resolved_d.stat()
-                    if stat_info.st_ino in visited_inodes:
+                    if resolved_d in visited_paths or (stat_info.st_ino and stat_info.st_ino in visited_inodes):
                         logger.warning("Skipping cyclic symlink directory: %s", d_path)
                         dirs_to_remove.append(d)
                         continue
-                    visited_inodes.add(stat_info.st_ino)
+                    visited_paths.add(resolved_d)
+                    if stat_info.st_ino:
+                        visited_inodes.add(stat_info.st_ino)
                 except (RuntimeError, ValueError, OSError):
                     dirs_to_remove.append(d)
                     continue
