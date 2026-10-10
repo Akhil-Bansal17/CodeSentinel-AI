@@ -112,8 +112,38 @@ export const RepositoryDetailView: React.FC<RepositoryDetailViewProps> = ({
   }, [repository.id, snapshot, page, pageSize, search, selectedLanguage, selectedCategory]);
 
   useEffect(() => {
-    fetchFiles();
-  }, [fetchFiles]);
+    if (!snapshot) return;
+    let isCancelled = false;
+
+    async function loadFiles() {
+      try {
+        const res: RepositoryFileListResponse = await repositoryService.listSnapshotFiles(repository.id, {
+          page,
+          pageSize,
+          snapshotId: snapshot?.id,
+          search: search.trim() || undefined,
+          language: selectedLanguage || undefined,
+          category: selectedCategory || undefined,
+        });
+        if (isCancelled) return;
+        setFiles(res.items);
+        setTotalFiles(res.total);
+      } catch (err: unknown) {
+        if (isCancelled) return;
+        setFileError(err instanceof Error ? err.message : "Failed to load repository files.");
+      } finally {
+        if (!isCancelled) {
+          setLoadingFiles(false);
+        }
+      }
+    }
+
+    loadFiles();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [repository.id, snapshot, page, pageSize, search, selectedLanguage, selectedCategory]);
 
   const handleReingest = async () => {
     if (repository.source_type === "local") {
