@@ -9,6 +9,7 @@ from backend.app.schemas.repository import (
     RepositoryCreateRequest,
     RepositoryFileListResponse,
     RepositoryListResponse,
+    RepositoryReingestRequest,
     RepositoryResponse,
     RepositorySnapshotResponse,
 )
@@ -120,11 +121,13 @@ def get_snapshot(
 )
 async def reingest_repository(
     repository_id: str,
+    request: Optional[RepositoryReingestRequest] = None,
     db: Session = Depends(get_db),
 ) -> RepositoryResponse:
     """Trigger re-ingestion of a repository, creating a new snapshot."""
     service = RepositoryService(db)
-    return await service.reingest_repository(repository_id)
+    local_path = request.local_path if request else None
+    return await service.reingest_repository(repository_id, local_path=local_path)
 
 
 @router.delete(
