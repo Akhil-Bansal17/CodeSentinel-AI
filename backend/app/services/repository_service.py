@@ -242,7 +242,7 @@ class RepositoryService:
                 id=str(uuid.uuid4()),
                 name=validated_source.display_name,
                 source_type=validated_source.source_type.value,
-                source_url=validated_source.source_url,
+                source_url=validated_source.source_url or (str(validated_source.local_path) if validated_source.local_path else None),
                 source_identifier=validated_source.source_identifier,
                 remote_url=validated_source.source_url,
                 default_branch=validated_source.default_branch,
