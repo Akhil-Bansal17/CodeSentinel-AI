@@ -16,7 +16,7 @@ from sqlalchemy.orm import sessionmaker
 
 from backend.app.models.base import Repository, RepositoryFile, RepositorySnapshot
 
-POSTGRES_TEST_URL = "postgresql+psycopg://postgres:postgres@localhost:5433/codesentinel"
+POSTGRES_TEST_URL = "postgresql+psycopg://postgres:postgres@localhost:5433/codesentinel?connect_timeout=1"
 
 
 def is_live_postgres_available() -> bool:
@@ -171,3 +171,102 @@ def test_live_postgresql_cascade_deletion(postgres_session):
     assert postgres_session.scalar(select(Repository).where(Repository.id == repo_id)) is None
     assert postgres_session.scalar(select(RepositorySnapshot).where(RepositorySnapshot.id == snap_id)) is None
     assert postgres_session.scalar(select(RepositoryFile).where(RepositoryFile.id == file_id)) is None
+
+
+def test_live_postgresql_phase2_analysis_and_cascade(postgres_session):
+    """Verify Phase 2 AnalysisRun & AnalysisFinding live PostgreSQL persistence and CASCADE."""
+    from backend.app.models.base import AnalysisFinding, AnalysisRun
+
+    now = datetime.now(timezone.utc)
+    repo_id = str(uuid.uuid4())
+    snap_id = str(uuid.uuid4())
+    run_id = str(uuid.uuid4())
+    finding_id = str(uuid.uuid4())
+
+    repo = Repository(
+        id=repo_id,
+        name="pg-phase2-repo",
+        source_type="local",
+        source_identifier="local:pg-phase2-repo",
+        status="completed",
+        created_at=now,
+        updated_at=now,
+    )
+    snapshot = RepositorySnapshot(
+        id=snap_id,
+        repository_id=repo_id,
+        status="completed",
+        started_at=now,
+        completed_at=now,
+        created_at=now,
+        updated_at=now,
+    )
+    summary_data = {
+        "total_findings": 1,
+        "severity_distribution": {"MEDIUM": 1},
+        "analyzed_files": 1,
+    }
+    run = AnalysisRun(
+        id=run_id,
+        repository_id=repo_id,
+        snapshot_id=snap_id,
+        status="completed",
+        started_at=now,
+        completed_at=now,
+        rule_set_version="1.0.0",
+        files_discovered=1,
+        files_analyzed=1,
+        files_skipped=0,
+        findings_count=1,
+        summary_json=summary_data,
+        created_at=now,
+        updated_at=now,
+    )
+    finding_metadata = {"complexity": 12, "threshold": 10, "function_name": "calc"}
+    finding = AnalysisFinding(
+        id=finding_id,
+        analysis_run_id=run_id,
+        repository_id=repo_id,
+        snapshot_id=snap_id,
+        rule_id="PY-COMPLEXITY-001",
+        rule_name="High Cyclomatic Complexity",
+        rule_version="1.0.0",
+        title="High cyclomatic complexity in 'calc'",
+        description="Function calc has complexity 12 exceeding threshold 10.",
+        severity="MEDIUM",
+        category="COMPLEXITY",
+        file_path="src/calc.py",
+        start_line=10,
+        start_column=1,
+        end_line=25,
+        end_column=5,
+        evidence_summary="Function 'calc' complexity=12 (threshold=10)",
+        fingerprint="d3adb33f12345678",
+        metadata_json=finding_metadata,
+        created_at=now,
+        updated_at=now,
+    )
+
+    postgres_session.add(repo)
+    postgres_session.add(snapshot)
+    postgres_session.add(run)
+    postgres_session.add(finding)
+    postgres_session.commit()
+
+    # Query back from PostgreSQL
+    fetched_run = postgres_session.scalar(select(AnalysisRun).where(AnalysisRun.id == run_id))
+    assert fetched_run is not None
+    assert fetched_run.summary_json == summary_data
+
+    fetched_finding = postgres_session.scalar(select(AnalysisFinding).where(AnalysisFinding.id == finding_id))
+    assert fetched_finding is not None
+    assert fetched_finding.metadata_json == finding_metadata
+    assert fetched_finding.rule_id == "PY-COMPLEXITY-001"
+
+    # Verify CASCADE on deleting repository
+    postgres_session.delete(repo)
+    postgres_session.commit()
+
+    assert postgres_session.scalar(select(AnalysisRun).where(AnalysisRun.id == run_id)) is None
+    assert postgres_session.scalar(select(AnalysisFinding).where(AnalysisFinding.id == finding_id)) is None
+
