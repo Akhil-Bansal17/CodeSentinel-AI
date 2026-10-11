@@ -42,6 +42,9 @@ class EntityValidationError(AppException):
         )
 
 
+ValidationError = EntityValidationError
+
+
 class DatabaseConnectionError(AppException):
     """Raised when database connection fails safely."""
 

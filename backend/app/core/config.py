@@ -74,6 +74,36 @@ class Settings(BaseSettings):
         description="Maximum allowed ratio between extracted size and archive size",
     )
 
+    # Phase 2: Static Analysis Limits & Thresholds
+    MAX_ANALYSIS_FILES: int = Field(
+        default=1000,
+        description="Maximum number of source files analyzed in a single analysis run",
+    )
+    MAX_ANALYSIS_FILE_BYTES: int = Field(
+        default=1048576,  # 1 MB
+        description="Maximum individual file size in bytes for AST parsing",
+    )
+    MAX_ANALYSIS_TOTAL_BYTES: int = Field(
+        default=52428800,  # 50 MB
+        description="Maximum cumulative file bytes read during an analysis run",
+    )
+    ANALYSIS_TIMEOUT_SECONDS: int = Field(
+        default=60,
+        description="Maximum duration allowed for an analysis operation in seconds",
+    )
+    RULE_COMPLEXITY_DEFAULT_THRESHOLD: int = Field(
+        default=10,
+        description="Default cyclomatic complexity threshold (triggers when complexity > threshold)",
+    )
+    RULE_FUNCTION_LENGTH_DEFAULT_THRESHOLD: int = Field(
+        default=50,
+        description="Default function length threshold in lines (triggers when lines > threshold)",
+    )
+    RULE_SET_VERSION: str = Field(
+        default="1.0.0",
+        description="Current static analysis rule set version",
+    )
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:

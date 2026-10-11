@@ -56,6 +56,12 @@ class Repository(Base, TimestampMixin):
         cascade="all, delete-orphan",
         order_by="desc(RepositorySnapshot.started_at)",
     )
+    analyses: Mapped[List["AnalysisRun"]] = relationship(
+        "AnalysisRun",
+        back_populates="repository",
+        cascade="all, delete-orphan",
+        order_by="desc(AnalysisRun.started_at)",
+    )
 
 
 class RepositorySnapshot(Base, TimestampMixin):
@@ -102,6 +108,12 @@ class RepositorySnapshot(Base, TimestampMixin):
         cascade="all, delete-orphan",
         order_by="RepositoryFile.relative_path",
     )
+    analyses: Mapped[List["AnalysisRun"]] = relationship(
+        "AnalysisRun",
+        back_populates="snapshot",
+        cascade="all, delete-orphan",
+        order_by="desc(AnalysisRun.started_at)",
+    )
 
 
 class RepositoryFile(Base, TimestampMixin):
@@ -137,4 +149,110 @@ class RepositoryFile(Base, TimestampMixin):
     __table_args__ = (
         Index("ix_repository_files_snapshot_lang", "snapshot_id", "language"),
         Index("ix_repository_files_snapshot_cat", "snapshot_id", "category"),
+    )
+
+
+class AnalysisRun(Base, TimestampMixin):
+    """Execution run of deterministic static analysis on a specific repository snapshot."""
+
+    __tablename__ = "analysis_runs"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    repository_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("repositories.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    snapshot_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("repository_snapshots.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    status: Mapped[str] = mapped_column(String(32), default="pending", nullable=False, index=True)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    rule_set_version: Mapped[str] = mapped_column(String(32), default="1.0.0", nullable=False)
+    files_discovered: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    files_analyzed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    files_skipped: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    findings_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    failure_code: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    failure_reason: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
+    summary_json: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+
+    # Relationships
+    repository: Mapped["Repository"] = relationship("Repository", back_populates="analyses")
+    snapshot: Mapped["RepositorySnapshot"] = relationship("RepositorySnapshot", back_populates="analyses")
+    findings: Mapped[List["AnalysisFinding"]] = relationship(
+        "AnalysisFinding",
+        back_populates="analysis_run",
+        cascade="all, delete-orphan",
+        order_by="AnalysisFinding.start_line",
+    )
+
+
+class AnalysisFinding(Base, TimestampMixin):
+    """Deterministic static analysis finding with exact source coordinates and evidence."""
+
+    __tablename__ = "analysis_findings"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    analysis_run_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("analysis_runs.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    repository_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("repositories.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    snapshot_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("repository_snapshots.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    rule_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    rule_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    rule_version: Mapped[str] = mapped_column(String(32), default="1.0.0", nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(String(1024), nullable=False)
+    severity: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    category: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    file_path: Mapped[str] = mapped_column(String(1024), nullable=False, index=True)
+    start_line: Mapped[int] = mapped_column(Integer, nullable=False)
+    start_column: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    end_line: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    end_column: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    evidence_summary: Mapped[str] = mapped_column(String(1024), nullable=False)
+    fingerprint: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    metadata_json: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+
+    # Relationships
+    analysis_run: Mapped["AnalysisRun"] = relationship("AnalysisRun", back_populates="findings")
+    repository: Mapped["Repository"] = relationship("Repository")
+    snapshot: Mapped["RepositorySnapshot"] = relationship("RepositorySnapshot")
+
+    __table_args__ = (
+        Index("ix_analysis_findings_run_sev", "analysis_run_id", "severity"),
+        Index("ix_analysis_findings_run_cat", "analysis_run_id", "category"),
+        Index("ix_analysis_findings_run_file", "analysis_run_id", "file_path"),
+        Index("ix_analysis_findings_run_rule", "analysis_run_id", "rule_id"),
     )
