@@ -12,6 +12,15 @@ vi.mock("../src/services/repositoryService", () => ({
   },
 }));
 
+vi.mock("../src/services/analysisService", () => ({
+  analysisService: {
+    listRepositoryAnalyses: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, page_size: 20 }),
+    startAnalysis: vi.fn(),
+    listFindings: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, page_size: 50 }),
+    getAnalysis: vi.fn(),
+  },
+}));
+
 const mockFiles: RepositoryFile[] = [
   {
     id: "f-1",

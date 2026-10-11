@@ -14,14 +14,20 @@ import {
   AlertTriangle,
   Clock,
   Layers,
+  ShieldAlert,
+  Play,
 } from "lucide-react";
 import { GithubIcon } from "../common/GithubIcon";
 
 import { Repository, RepositoryFile, RepositoryFileListResponse } from "../../types/api";
+import { AnalysisRun } from "../../types/analysis";
 import { repositoryService } from "../../services/repositoryService";
+import { analysisService } from "../../services/analysisService";
 import { StatusBadge } from "../common/StatusBadge";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { ErrorState } from "../common/ErrorState";
+import { AnalysisSummaryCards } from "../analysis/AnalysisSummaryCards";
+import { FindingsTable } from "../analysis/FindingsTable";
 
 interface RepositoryDetailViewProps {
   repository: Repository;
@@ -83,6 +89,59 @@ export const RepositoryDetailView: React.FC<RepositoryDetailViewProps> = ({
 
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState<"overview" | "analysis">("overview");
+
+  // Analysis state
+  const [analyses, setAnalyses] = useState<AnalysisRun[]>([]);
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const [isStartingAnalysis, setIsStartingAnalysis] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function loadAnalyses() {
+      try {
+        const res = await analysisService.listRepositoryAnalyses(repository.id, 1, 20);
+        if (isCancelled) return;
+        setAnalyses(res.items);
+        if (res.items.length > 0) {
+          setSelectedRunId((curr) => curr || res.items[0].id);
+        }
+      } catch (err: unknown) {
+        if (isCancelled) return;
+        setAnalysisError(err instanceof Error ? err.message : "Failed to load static analyses.");
+      }
+    }
+
+    loadAnalyses();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [repository.id]);
+
+  const handleStartAnalysis = async () => {
+    if (!snapshot) return;
+    setIsStartingAnalysis(true);
+    setAnalysisError(null);
+    try {
+      const run = await analysisService.startAnalysis(repository.id, {
+        snapshot_id: snapshot.id,
+      });
+      setAnalyses((prev) => [run, ...prev.filter((r) => r.id !== run.id)]);
+      setSelectedRunId(run.id);
+      setActiveTab("analysis");
+    } catch (err: unknown) {
+      setAnalysisError(err instanceof Error ? err.message : "Failed to start static analysis.");
+    } finally {
+      setIsStartingAnalysis(false);
+    }
+  };
+
+  const activeRun = analyses.find((r) => r.id === selectedRunId) || analyses[0] || null;
 
   // Actions state
   const [isReingesting, setIsReingesting] = useState(false);
@@ -287,11 +346,47 @@ export const RepositoryDetailView: React.FC<RepositoryDetailViewProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Navigation Tabs */}
+        <div className="flex items-center gap-2 border-b border-[#21262d] -mb-4 pt-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab("overview")}
+            className={`flex items-center gap-2 px-3 py-2 text-xs font-medium border-b-2 transition-colors cursor-pointer ${
+              activeTab === "overview"
+                ? "border-sky-500 text-sky-400 font-semibold"
+                : "border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <FolderTree className="w-3.5 h-3.5" />
+            <span>Files & Structure</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("analysis")}
+            className={`flex items-center gap-2 px-3 py-2 text-xs font-medium border-b-2 transition-colors cursor-pointer ${
+              activeTab === "analysis"
+                ? "border-sky-500 text-sky-400 font-semibold"
+                : "border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <ShieldAlert className="w-3.5 h-3.5" />
+            <span>Static Analysis</span>
+            {activeRun && activeRun.findings_count > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-950 border border-amber-800 text-amber-300">
+                {activeRun.findings_count}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
-      {/* Snapshot Metrics Overview */}
-      {snapshot ? (
+      {/* Tab 1: Files & Structure */}
+      {activeTab === "overview" && (
         <>
+          {snapshot ? (
+            <>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <div className="p-3.5 rounded-lg bg-[#161b22] border border-[#30363d]">
               <div className="flex items-center gap-2 text-slate-400 text-xs font-medium mb-1">
@@ -629,6 +724,127 @@ export const RepositoryDetailView: React.FC<RepositoryDetailViewProps> = ({
           </p>
         </div>
       )}
+    </>
+  )}
+
+  {/* Tab 2: Static Analysis */}
+  {activeTab === "analysis" && (
+    <div className="space-y-6">
+      {/* Analysis Control Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg bg-[#161b22] border border-[#30363d]">
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 text-sky-400" />
+              Deterministic Static Analysis
+            </h2>
+            {activeRun && (
+              <StatusBadge
+                label={activeRun.status}
+                variant={
+                  activeRun.status === "completed"
+                    ? "success"
+                    : activeRun.status === "failed"
+                    ? "danger"
+                    : "warning"
+                }
+              />
+            )}
+          </div>
+          <p className="text-xs text-slate-400 mt-0.5">
+            AST parsing, cyclomatic complexity, function lengths, and duplicate imports
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {analyses.length > 1 && (
+            <select
+              value={selectedRunId || ""}
+              onChange={(e) => setSelectedRunId(e.target.value)}
+              className="px-2.5 py-1.5 rounded-md bg-[#0d1117] border border-[#30363d] text-xs text-slate-200 focus:outline-none focus:border-sky-500"
+            >
+              {analyses.map((run, idx) => (
+                <option key={run.id} value={run.id}>
+                  Run #{analyses.length - idx} ({new Date(run.started_at).toLocaleTimeString()}) - {run.findings_count} findings
+                </option>
+              ))}
+            </select>
+          )}
+
+          <button
+            type="button"
+            onClick={handleStartAnalysis}
+            disabled={isStartingAnalysis || !snapshot || snapshot.status !== "completed"}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+          >
+            {isStartingAnalysis ? (
+              <>
+                <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                <span>Analyzing...</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-3.5 h-3.5" />
+                <span>{activeRun ? "Re-run Analysis" : "Run Static Analysis"}</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {analysisError && (
+        <div className="p-3 rounded-md bg-rose-950/40 border border-rose-800/60 text-xs text-rose-300">
+          {analysisError}
+        </div>
+      )}
+
+      {isStartingAnalysis ? (
+        <div className="p-12 rounded-lg bg-[#161b22] border border-[#30363d]">
+          <LoadingSpinner message="Executing deterministic static analysis pipeline..." />
+        </div>
+      ) : activeRun && activeRun.status === "completed" ? (
+        <>
+          <AnalysisSummaryCards run={activeRun} />
+          <FindingsTable analysisId={activeRun.id} />
+        </>
+      ) : activeRun && activeRun.status === "failed" ? (
+        <div className="p-8 rounded-lg bg-[#161b22] border border-rose-800/50 text-center space-y-3">
+          <AlertTriangle className="w-8 h-8 text-rose-400 mx-auto" />
+          <h3 className="text-sm font-semibold text-slate-200">Analysis Run Failed</h3>
+          <p className="text-xs text-slate-400 max-w-md mx-auto">
+            {activeRun.failure_reason || "Static analysis failed to complete."}
+          </p>
+          <button
+            type="button"
+            onClick={handleStartAnalysis}
+            className="px-3 py-1.5 rounded-md bg-[#21262d] hover:bg-[#30363d] text-xs font-medium text-slate-200 border border-[#30363d] cursor-pointer"
+          >
+            Retry Analysis
+          </button>
+        </div>
+      ) : (
+        <div className="p-12 rounded-lg bg-[#161b22] border border-[#30363d] text-center space-y-3">
+          <div className="w-12 h-12 rounded-full bg-[#0d1117] border border-[#30363d] flex items-center justify-center mx-auto text-sky-400">
+            <ShieldAlert className="w-6 h-6" />
+          </div>
+          <h3 className="text-sm font-semibold text-slate-200">No Static Analysis Executed</h3>
+          <p className="text-xs text-slate-400 max-w-md mx-auto">
+            Run deterministic static analysis on this snapshot to detect syntax errors,
+            excessive complexity, oversized functions, and redundant imports with exact source evidence.
+          </p>
+          <button
+            type="button"
+            onClick={handleStartAnalysis}
+            disabled={!snapshot || snapshot.status !== "completed"}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+          >
+            <Play className="w-3.5 h-3.5" />
+            <span>Run Static Analysis</span>
+          </button>
+        </div>
+      )}
+    </div>
+  )}
     </div>
   );
 };
