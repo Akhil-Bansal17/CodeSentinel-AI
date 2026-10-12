@@ -7,6 +7,7 @@ from sqlalchemy.orm import sessionmaker
 
 # Ensure project root is in sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 
 from backend.app.main import create_application
 from backend.app.core.config import Settings
