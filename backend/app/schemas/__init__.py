@@ -14,6 +14,19 @@ from .repository import (
     SnapshotStatus,
 )
 
+from .dependencies import (
+    AdvisoryImportRequest,
+    AdvisoryImportResponse,
+    AdvisoryStatusResponse,
+    DependencyRunCreateRequest,
+    DependencyRunListResponse,
+    DependencyRunResponse,
+    DependencyVulnerabilityListResponse,
+    DependencyVulnerabilityResponse,
+    RepositoryDependencyListResponse,
+    RepositoryDependencyResponse,
+)
+
 __all__ = [
     "ErrorDetail",
     "ErrorResponse",
@@ -27,4 +40,14 @@ __all__ = [
     "RepositorySourceType",
     "RepositoryStatus",
     "SnapshotStatus",
+    "DependencyRunCreateRequest",
+    "DependencyRunResponse",
+    "DependencyRunListResponse",
+    "RepositoryDependencyResponse",
+    "RepositoryDependencyListResponse",
+    "DependencyVulnerabilityResponse",
+    "DependencyVulnerabilityListResponse",
+    "AdvisoryStatusResponse",
+    "AdvisoryImportRequest",
+    "AdvisoryImportResponse",
 ]
