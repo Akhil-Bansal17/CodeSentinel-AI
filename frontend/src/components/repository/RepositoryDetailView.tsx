@@ -16,6 +16,7 @@ import {
   Layers,
   ShieldAlert,
   Play,
+  Package,
 } from "lucide-react";
 import { GithubIcon } from "../common/GithubIcon";
 
@@ -28,6 +29,7 @@ import { LoadingSpinner } from "../common/LoadingSpinner";
 import { ErrorState } from "../common/ErrorState";
 import { AnalysisSummaryCards } from "../analysis/AnalysisSummaryCards";
 import { FindingsTable } from "../analysis/FindingsTable";
+import { DependencyView } from "../dependency/DependencyView";
 
 interface RepositoryDetailViewProps {
   repository: Repository;
@@ -91,7 +93,7 @@ export const RepositoryDetailView: React.FC<RepositoryDetailViewProps> = ({
   const [fileError, setFileError] = useState<string | null>(null);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<"overview" | "analysis">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "analysis" | "dependencies">("overview");
 
   // Analysis state
   const [analyses, setAnalyses] = useState<AnalysisRun[]>([]);
@@ -378,6 +380,19 @@ export const RepositoryDetailView: React.FC<RepositoryDetailViewProps> = ({
                 {activeRun.findings_count}
               </span>
             )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("dependencies")}
+            className={`flex items-center gap-2 px-3 py-2 text-xs font-medium border-b-2 transition-colors cursor-pointer ${
+              activeTab === "dependencies"
+                ? "border-sky-500 text-sky-400 font-semibold"
+                : "border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Package className="w-3.5 h-3.5" />
+            <span>Dependencies & SCA</span>
           </button>
         </div>
       </div>
@@ -845,6 +860,11 @@ export const RepositoryDetailView: React.FC<RepositoryDetailViewProps> = ({
       )}
     </div>
   )}
+
+      {/* Tab 3: Dependencies & SCA */}
+      {activeTab === "dependencies" && (
+        <DependencyView repository={repository} />
+      )}
     </div>
   );
 };
