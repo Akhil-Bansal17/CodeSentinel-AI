@@ -1,0 +1,191 @@
+{
+  "dataset_version": "2026.10.1",
+  "source_name": "codesentinel_curated_osv",
+  "description": "CodeSentinel AI authoritative initial advisory dataset for PyPI and npm",
+  "advisories": [
+    {
+      "advisory_id": "GHSA-j8r2-6x86-q33q",
+      "ecosystem": "pypi",
+      "package_name": "requests",
+      "summary": "Requests Proxy-Authorization header leak in HTTPS redirects",
+      "description": "Since Requests 2.3.0, Requests forwarded the Proxy-Authorization header to the destination server during HTTPS redirects.",
+      "severity": "MEDIUM",
+      "severity_source": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:C/C:H/I:N/A:N",
+      "cvss_score": 6.1,
+      "cve_ids": ["CVE-2023-32681"],
+      "affected_ranges_json": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {"introduced": "2.3.0"},
+            {"fixed": "2.31.0"}
+          ]
+        }
+      ],
+      "fixed_versions_json": ["2.31.0"],
+      "source_url": "https://github.com/advisories/GHSA-j8r2-6x86-q33q",
+      "published_at": "2023-05-24T21:00:00Z"
+    },
+    {
+      "advisory_id": "GHSA-r64q-w8jr-g9qp",
+      "ecosystem": "pypi",
+      "package_name": "urllib3",
+      "summary": "urllib3 Request body not stripped after redirect from 303 status",
+      "description": "urllib3 does not remove HTTP request bodies when handling redirect responses from 303 status codes.",
+      "severity": "MEDIUM",
+      "severity_source": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:N/A:N",
+      "cvss_score": 3.7,
+      "cve_ids": ["CVE-2023-45803"],
+      "affected_ranges_json": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {"introduced": "1.26.0"},
+            {"fixed": "2.0.7"}
+          ]
+        }
+      ],
+      "fixed_versions_json": ["2.0.7"],
+      "source_url": "https://github.com/advisories/GHSA-r64q-w8jr-g9qp",
+      "published_at": "2023-10-18T20:00:00Z"
+    },
+    {
+      "advisory_id": "GHSA-62mq-555r-55v9",
+      "ecosystem": "pypi",
+      "package_name": "flask",
+      "summary": "Flask unexpected memory disclosure in sessions",
+      "description": "Flask session cookies disclosure under specific key configurations.",
+      "severity": "HIGH",
+      "severity_source": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+      "cvss_score": 7.5,
+      "cve_ids": ["CVE-2023-30861"],
+      "affected_ranges_json": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {"introduced": "0.1"},
+            {"fixed": "2.2.5"}
+          ]
+        }
+      ],
+      "fixed_versions_json": ["2.2.5", "2.3.2"],
+      "source_url": "https://github.com/advisories/GHSA-62mq-555r-55v9",
+      "published_at": "2023-05-02T19:00:00Z"
+    },
+    {
+      "advisory_id": "GHSA-wqvq-5pcm-5x36",
+      "ecosystem": "pypi",
+      "package_name": "cryptography",
+      "summary": "Vulnerable OpenSSL bundled in cryptography wheels",
+      "description": "cryptography versions 39.0.0 through 39.0.1 compiled with vulnerable OpenSSL.",
+      "severity": "HIGH",
+      "severity_source": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "cvss_score": 7.5,
+      "cve_ids": ["CVE-2023-0286"],
+      "affected_ranges_json": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {"introduced": "39.0.0"},
+            {"fixed": "39.0.2"}
+          ]
+        }
+      ],
+      "fixed_versions_json": ["39.0.2"],
+      "source_url": "https://github.com/advisories/GHSA-wqvq-5pcm-5x36",
+      "published_at": "2023-02-08T00:00:00Z"
+    },
+    {
+      "advisory_id": "GHSA-29mw-wpgm-hmr9",
+      "ecosystem": "npm",
+      "package_name": "lodash",
+      "summary": "Prototype Pollution in lodash",
+      "description": "The lodash package before 4.17.21 is vulnerable to Prototype Pollution via zipObjectDeep.",
+      "severity": "HIGH",
+      "severity_source": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:H",
+      "cvss_score": 7.4,
+      "cve_ids": ["CVE-2020-8203"],
+      "affected_ranges_json": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {"introduced": "0"},
+            {"fixed": "4.17.21"}
+          ]
+        }
+      ],
+      "fixed_versions_json": ["4.17.21"],
+      "source_url": "https://github.com/advisories/GHSA-29mw-wpgm-hmr9",
+      "published_at": "2020-07-15T18:00:00Z"
+    },
+    {
+      "advisory_id": "GHSA-qw6h-v8gh-w369",
+      "ecosystem": "npm",
+      "package_name": "express",
+      "summary": "Express open redirect vulnerability via malformed URLs",
+      "description": "Express versions before 4.20.0 allowed open redirect behavior when routing malformed encoded paths.",
+      "severity": "MEDIUM",
+      "severity_source": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
+      "cvss_score": 6.1,
+      "cve_ids": ["CVE-2024-43796"],
+      "affected_ranges_json": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {"introduced": "0"},
+            {"fixed": "4.20.0"}
+          ]
+        }
+      ],
+      "fixed_versions_json": ["4.20.0", "5.0.0"],
+      "source_url": "https://github.com/advisories/GHSA-qw6h-v8gh-w369",
+      "published_at": "2024-09-11T12:00:00Z"
+    },
+    {
+      "advisory_id": "GHSA-8hc4-vh64-cxmj",
+      "ecosystem": "npm",
+      "package_name": "axios",
+      "summary": "Cross-Site Request Forgery (CSRF) in axios",
+      "description": "Axios before version 1.6.0 does not clear headers across origins during cross-domain redirection.",
+      "severity": "HIGH",
+      "severity_source": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:N",
+      "cvss_score": 8.1,
+      "cve_ids": ["CVE-2023-45857"],
+      "affected_ranges_json": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {"introduced": "0"},
+            {"fixed": "1.6.0"}
+          ]
+        }
+      ],
+      "fixed_versions_json": ["1.6.0"],
+      "source_url": "https://github.com/advisories/GHSA-8hc4-vh64-cxmj",
+      "published_at": "2023-11-06T15:00:00Z"
+    },
+    {
+      "advisory_id": "GHSA-v845-jxx5-vc9f",
+      "ecosystem": "npm",
+      "package_name": "semver",
+      "summary": "Regular Expression Denial of Service in semver",
+      "description": "semver prior to versions 7.5.2, 6.3.1, 5.7.2 is vulnerable to ReDoS when parsing long version strings.",
+      "severity": "MEDIUM",
+      "severity_source": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+      "cvss_score": 5.3,
+      "cve_ids": ["CVE-2022-25883"],
+      "affected_ranges_json": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {"introduced": "7.0.0"},
+            {"fixed": "7.5.2"}
+          ]
+        }
+      ],
+      "fixed_versions_json": ["7.5.2"],
+      "source_url": "https://github.com/advisories/GHSA-v845-jxx5-vc9f",
+      "published_at": "2023-06-21T18:00:00Z"
+    }
+  ]
+}
