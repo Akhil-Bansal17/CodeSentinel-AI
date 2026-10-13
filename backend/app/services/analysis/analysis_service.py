@@ -78,6 +78,7 @@ class AnalysisService:
         self,
         analysis_id: str,
         severity: Optional[str] = None,
+        confidence: Optional[str] = None,
         category: Optional[str] = None,
         rule_id: Optional[str] = None,
         file_path: Optional[str] = None,
@@ -92,6 +93,8 @@ class AnalysisService:
         filters = [AnalysisFinding.analysis_run_id == analysis_id]
         if severity:
             filters.append(func.upper(AnalysisFinding.severity) == severity.strip().upper())
+        if confidence:
+            filters.append(func.upper(AnalysisFinding.confidence) == confidence.strip().upper())
         if category:
             filters.append(func.upper(AnalysisFinding.category) == category.strip().upper())
         if rule_id:
@@ -117,6 +120,14 @@ class AnalysisService:
         )
         findings = self.db.scalars(stmt).all()
         return list(findings), total
+
+    def get_analysis_finding(self, analysis_id: str, finding_id: str) -> Optional[AnalysisFinding]:
+        """Fetch a specific finding within an analysis run."""
+        stmt = select(AnalysisFinding).where(
+            AnalysisFinding.analysis_run_id == analysis_id,
+            AnalysisFinding.id == finding_id,
+        )
+        return self.db.scalars(stmt).first()
 
     async def execute_analysis_run(
         self,
@@ -225,6 +236,7 @@ class AnalysisService:
         skipped_count = 0
         persisted_findings: List[AnalysisFinding] = []
         severity_counts: Dict[str, int] = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "INFO": 0}
+        confidence_counts: Dict[str, int] = {"HIGH": 0, "MEDIUM": 0, "LOW": 0}
         category_counts: Dict[str, int] = {}
         language_diagnostics: Dict[str, int] = {}
 
@@ -288,6 +300,9 @@ class AnalysisService:
                                 sev = finding_model.severity.upper()
                                 severity_counts[sev] = severity_counts.get(sev, 0) + 1
 
+                                conf = finding_model.confidence.upper()
+                                confidence_counts[conf] = confidence_counts.get(conf, 0) + 1
+
                                 cat = finding_model.category.upper()
                                 category_counts[cat] = category_counts.get(cat, 0) + 1
                         except Exception as rule_exc:
@@ -314,6 +329,7 @@ class AnalysisService:
             run.summary_json = {
                 "total_findings": len(persisted_findings),
                 "severity_distribution": severity_counts,
+                "confidence_distribution": confidence_counts,
                 "category_distribution": category_counts,
                 "language_diagnostics": language_diagnostics,
                 "analyzed_files": analyzed_count,
