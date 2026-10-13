@@ -247,6 +247,7 @@ class AnalysisFinding(Base, TimestampMixin):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(String(1024), nullable=False)
     severity: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    confidence: Mapped[str] = mapped_column(String(32), default="MEDIUM", nullable=False, server_default="MEDIUM", index=True)
     category: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     file_path: Mapped[str] = mapped_column(String(1024), nullable=False, index=True)
     start_line: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -264,6 +265,7 @@ class AnalysisFinding(Base, TimestampMixin):
 
     __table_args__ = (
         Index("ix_analysis_findings_run_sev", "analysis_run_id", "severity"),
+        Index("ix_analysis_findings_run_conf", "analysis_run_id", "confidence"),
         Index("ix_analysis_findings_run_cat", "analysis_run_id", "category"),
         Index("ix_analysis_findings_run_file", "analysis_run_id", "file_path"),
         Index("ix_analysis_findings_run_rule", "analysis_run_id", "rule_id"),
