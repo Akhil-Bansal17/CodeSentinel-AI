@@ -28,6 +28,14 @@ class RuleCategory(str, Enum):
     SECURITY = "SECURITY"
 
 
+class Confidence(str, Enum):
+    """Confidence level indicating reliability of finding detection."""
+
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+
+
 @dataclass
 class FindingDraft:
     """Pre-normalized finding produced by a static analysis rule."""
@@ -43,6 +51,10 @@ class FindingDraft:
     coordinates: SourceCoordinates
     evidence_summary: str
     metadata: Dict[str, Any] = field(default_factory=dict)
+    confidence: Confidence = Confidence.MEDIUM
+    remediation: Optional[str] = None
+    why_it_matters: Optional[str] = None
+    limitations: Optional[str] = None
 
 
 class BaseRule(ABC):
@@ -51,7 +63,7 @@ class BaseRule(ABC):
     @property
     @abstractmethod
     def rule_id(self) -> str:
-        """Stable unique identifier (e.g. PY-SYNTAX-001)."""
+        """Stable unique identifier (e.g. PY-SYNTAX-001 or PYSEC001)."""
         pass
 
     @property
@@ -78,10 +90,30 @@ class BaseRule(ABC):
         pass
 
     @property
+    def default_confidence(self) -> Confidence:
+        """Default finding confidence level."""
+        return Confidence.MEDIUM
+
+    @property
     @abstractmethod
     def description(self) -> str:
         """Detailed documentation of detection criteria and rationale."""
         pass
+
+    @property
+    def why_it_matters(self) -> str:
+        """Explanation of architectural or security impact."""
+        return ""
+
+    @property
+    def remediation(self) -> str:
+        """Actionable remediation guidance."""
+        return ""
+
+    @property
+    def limitations(self) -> str:
+        """Documented detection boundaries, unsupported syntax, or false-positive risks."""
+        return ""
 
     @property
     @abstractmethod
