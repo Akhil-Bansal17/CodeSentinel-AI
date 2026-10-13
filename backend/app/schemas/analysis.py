@@ -33,6 +33,7 @@ class AnalysisFindingResponse(BaseModel):
     title: str
     description: str
     severity: str
+    confidence: str = Field(default="MEDIUM", description="Confidence level (HIGH, MEDIUM, LOW)")
     category: str
     file_path: str
     start_line: int
@@ -43,6 +44,22 @@ class AnalysisFindingResponse(BaseModel):
     fingerprint: str
     metadata_json: Dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
+
+
+class RuleMetadataResponse(BaseModel):
+    """Schema representing static analysis and security rule metadata."""
+
+    rule_id: str
+    name: str
+    version: str
+    category: str
+    default_severity: str
+    default_confidence: str
+    language: str
+    description: str
+    why_it_matters: Optional[str] = None
+    remediation: Optional[str] = None
+    limitations: Optional[str] = None
 
 
 class AnalysisFindingListResponse(BaseModel):
