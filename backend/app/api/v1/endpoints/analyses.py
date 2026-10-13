@@ -1,6 +1,4 @@
-"""Deterministic Static Analysis API endpoints for CodeSentinel AI Phase 2."""
-
-from typing import Optional
+from typing import List, Optional
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
@@ -12,8 +10,10 @@ from backend.app.schemas.analysis import (
     AnalysisRunCreateRequest,
     AnalysisRunListResponse,
     AnalysisRunResponse,
+    RuleMetadataResponse,
 )
 from backend.app.services.analysis.analysis_service import AnalysisService
+from backend.app.services.analysis.rules.registry import default_rule_registry
 
 # Router for repository-scoped analysis execution & listing
 repo_analyses_router = APIRouter(prefix="/repositories", tags=["Analysis"])
@@ -73,6 +73,32 @@ def list_repository_analyses(
 
 
 @analyses_router.get(
+    "/rules/catalog",
+    response_model=List[RuleMetadataResponse],
+    summary="List all static analysis and security rules in catalog",
+)
+def list_rules_catalog() -> List[RuleMetadataResponse]:
+    """Retrieve metadata for all registered code quality and application security rules."""
+    rules = default_rule_registry.list_rules()
+    return [
+        RuleMetadataResponse(
+            rule_id=r.rule_id,
+            name=r.name,
+            version=r.version,
+            category=r.category.value,
+            default_severity=r.default_severity.value,
+            default_confidence=r.default_confidence.value,
+            language=r.language,
+            description=r.description,
+            why_it_matters=r.why_it_matters or None,
+            remediation=r.remediation or None,
+            limitations=r.limitations or None,
+        )
+        for r in rules
+    ]
+
+
+@analyses_router.get(
     "/{analysis_id}",
     response_model=AnalysisRunResponse,
     summary="Get analysis run status and summary",
@@ -97,7 +123,8 @@ def get_analysis_run(
 def list_analysis_findings(
     analysis_id: str,
     severity: Optional[str] = Query(None, description="Filter by severity (CRITICAL, HIGH, MEDIUM, LOW, INFO)"),
-    category: Optional[str] = Query(None, description="Filter by category (SYNTAX, COMPLEXITY, MAINTAINABILITY, CODE_SMELL)"),
+    confidence: Optional[str] = Query(None, description="Filter by confidence (HIGH, MEDIUM, LOW)"),
+    category: Optional[str] = Query(None, description="Filter by category (SECURITY, SYNTAX, COMPLEXITY, MAINTAINABILITY, CODE_SMELL)"),
     rule_id: Optional[str] = Query(None, description="Filter by rule ID"),
     file_path: Optional[str] = Query(None, description="Filter by relative file path substring"),
     page: int = Query(1, ge=1, description="Page number"),
@@ -109,6 +136,7 @@ def list_analysis_findings(
     findings, total = service.list_analysis_findings(
         analysis_id=analysis_id,
         severity=severity,
+        confidence=confidence,
         category=category,
         rule_id=rule_id,
         file_path=file_path,
@@ -122,3 +150,21 @@ def list_analysis_findings(
         page=page,
         page_size=page_size,
     )
+
+
+@analyses_router.get(
+    "/{analysis_id}/findings/{finding_id}",
+    response_model=AnalysisFindingResponse,
+    summary="Get single finding details",
+)
+def get_analysis_finding(
+    analysis_id: str,
+    finding_id: str,
+    db: Session = Depends(get_db),
+) -> AnalysisFindingResponse:
+    """Retrieve full finding details including evidence, remediation, and rule metadata."""
+    service = AnalysisService(db)
+    finding = service.get_analysis_finding(analysis_id, finding_id)
+    if not finding:
+        raise NotFoundError("AnalysisFinding", finding_id)
+    return AnalysisFindingResponse.model_validate(finding)
