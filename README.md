@@ -30,6 +30,7 @@ CodeSentinel AI is a local-first software engineering intelligence and automated
 | **Immutable Snapshotting** | Generates atomic, point-in-time repository snapshots with SHA-256 file hashing; preserves historical healthy states if a re-scan encounters errors. |
 | **AST-Based Static Code Analysis** | Inspects Python ASTs (`ast.parse`) and JavaScript/TypeScript syntax trees via the official TypeScript compiler API (`ts.createSourceFile`). |
 | **Deterministic Rules Engine** | Evaluates code complexity, function lengths, syntax diagnostics, and duplicate imports with line/column coordinates and reproducible rule IDs. |
+| **Application Security Intelligence** | Detects high-risk syntactic patterns in Python & JS/TS (dynamic code execution, unsafe deserialization, shell injection, disabled TLS verification, weak hashes, raw HTML sinks, and SQL interpolation) with decoupled Severity and Confidence. |
 | **Multi-Ecosystem SCA** | Parses 8 manifest/lockfile formats (`requirements.txt`, `pyproject.toml`, `poetry.lock`, `Pipfile.lock`, `package.json`, `package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`). |
 | **Dual Version Matching Engines** | Evaluates dependency vulnerabilities against OSV event ranges using PEP 440 (`packaging`) and Semver 2.0.0 (`NpmRangeEvaluator`) semantics. |
 | **Offline Advisory Intelligence** | Correlates discovered dependencies against an authoritative, local vulnerability database without runtime external network calls. |
@@ -48,6 +49,8 @@ CodeSentinel AI is a local-first software engineering intelligence and automated
 - **Parses Python and TypeScript ASTs**: Uses stdlib `ast` for Python and an isolated Node.js child process with TypeScript's compiler API for JS/TS/TSX.
 - **Measures McCabe cyclomatic complexity**: Traverses AST branch decision nodes (`if`, `elif`, `for`, `while`, `and`, `or`, `except`, comprehensions) and flags functions exceeding threshold 10.
 - **Flags oversized functions & duplicate imports**: Detects functions spanning over 50 lines and flags duplicate module imports within the same lexical scope.
+- **Identifies Security-Sensitive Patterns (Phase 4)**: Executes 10 deterministic security rules (PYSEC001-PYSEC006, JSSEC001-JSSEC004) covering eval/exec, pickle/shelve deserialization, shell commands, MD5/SHA1, verify=False TLS bypass, innerHTML sinks, and SQL string interpolation.
+- **Decouples Severity from Confidence**: Distinctly tracks impact severity (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, `INFO`) and detection confidence (`HIGH`, `MEDIUM`, `LOW`) with actionable remediation guidance and known limitations.
 - **Inventories direct & transitive dependencies**: Differentiates declared package constraints (e.g. `requests>=2.25.0`) from pinned resolved versions (e.g. `2.31.0`).
 - **Executes offline vulnerability correlation**: Evaluates packages against pre-loaded OSV/CVE advisory records using PEP 440 and Semver 2.0.0 spec-compliant evaluators.
 - **Issues stable SHA-256 finding fingerprints**: Guarantees idempotent issue tracking: `sha256(rule_id:file_path:start_line:evidence_summary)`.
