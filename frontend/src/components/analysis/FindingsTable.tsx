@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Search, Filter, ShieldCheck, ChevronRight, FileCode } from "lucide-react";
-import { AnalysisFinding, FindingSeverity } from "../../types/analysis";
+import { Search, Filter, ShieldCheck, ChevronRight, FileCode, Shield } from "lucide-react";
+import { AnalysisFinding, FindingSeverity, FindingConfidence } from "../../types/analysis";
 import { analysisService } from "../../services/analysisService";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { ErrorState } from "../common/ErrorState";
@@ -18,6 +18,12 @@ const SEVERITY_BADGES: Record<FindingSeverity, { bg: string; text: string; borde
   INFO: { bg: "bg-slate-800", text: "text-slate-300", border: "border-slate-700" },
 };
 
+const CONFIDENCE_BADGES: Record<FindingConfidence, { bg: string; text: string; border: string }> = {
+  HIGH: { bg: "bg-emerald-950/60", text: "text-emerald-300", border: "border-emerald-800" },
+  MEDIUM: { bg: "bg-amber-950/60", text: "text-amber-300", border: "border-amber-800" },
+  LOW: { bg: "bg-slate-800", text: "text-slate-400", border: "border-slate-700" },
+};
+
 export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
   const [findings, setFindings] = useState<AnalysisFinding[]>([]);
   const [totalFindings, setTotalFindings] = useState(0);
@@ -26,6 +32,7 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
 
   const [searchPath, setSearchPath] = useState("");
   const [selectedSeverity, setSelectedSeverity] = useState("");
+  const [selectedConfidence, setSelectedConfidence] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
 
   const [loading, setLoading] = useState(false);
@@ -42,6 +49,7 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
         pageSize,
         filePath: searchPath.trim() || undefined,
         severity: selectedSeverity || undefined,
+        confidence: selectedConfidence || undefined,
         category: selectedCategory || undefined,
       });
       setFindings(res.items);
@@ -51,7 +59,7 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
     } finally {
       setLoading(false);
     }
-  }, [analysisId, page, pageSize, searchPath, selectedSeverity, selectedCategory]);
+  }, [analysisId, page, pageSize, searchPath, selectedSeverity, selectedConfidence, selectedCategory]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -63,6 +71,7 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
           pageSize,
           filePath: searchPath.trim() || undefined,
           severity: selectedSeverity || undefined,
+          confidence: selectedConfidence || undefined,
           category: selectedCategory || undefined,
         });
         if (isCancelled) return;
@@ -83,7 +92,7 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
     return () => {
       isCancelled = true;
     };
-  }, [analysisId, page, pageSize, searchPath, selectedSeverity, selectedCategory]);
+  }, [analysisId, page, pageSize, searchPath, selectedSeverity, selectedConfidence, selectedCategory]);
 
   const totalPages = Math.ceil(totalFindings / pageSize) || 1;
 
@@ -94,7 +103,7 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
         <div>
           <h3 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
             <Filter className="w-4 h-4 text-sky-400" />
-            Static Analysis Findings
+            Static Analysis & Security Findings
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
             Showing {totalFindings} deterministic findings matching current filters
@@ -134,6 +143,21 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
             <option value="INFO">Info</option>
           </select>
 
+          {/* Confidence filter */}
+          <select
+            value={selectedConfidence}
+            onChange={(e) => {
+              setSelectedConfidence(e.target.value);
+              setPage(1);
+            }}
+            className="px-2.5 py-1.5 rounded-md bg-[#0d1117] border border-[#30363d] text-xs text-slate-200 focus:outline-none focus:border-sky-500"
+          >
+            <option value="">All Confidences</option>
+            <option value="HIGH">High Confidence</option>
+            <option value="MEDIUM">Medium Confidence</option>
+            <option value="LOW">Low Confidence</option>
+          </select>
+
           {/* Category filter */}
           <select
             value={selectedCategory}
@@ -144,10 +168,11 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
             className="px-2.5 py-1.5 rounded-md bg-[#0d1117] border border-[#30363d] text-xs text-slate-200 focus:outline-none focus:border-sky-500"
           >
             <option value="">All Categories</option>
-            <option value="SYNTAX">Syntax</option>
+            <option value="SECURITY">Security</option>
             <option value="COMPLEXITY">Complexity</option>
             <option value="MAINTAINABILITY">Maintainability</option>
             <option value="CODE_SMELL">Code Smell</option>
+            <option value="SYNTAX">Syntax</option>
           </select>
         </div>
       </div>
@@ -166,8 +191,8 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
           <div className="p-12 text-center space-y-2">
             <ShieldCheck className="w-8 h-8 text-emerald-400 mx-auto" />
             <h4 className="text-sm font-semibold text-slate-200">No Findings Detected</h4>
-            <p className="text-xs text-slate-400 max-w-sm mx-auto">
-              No static analysis issues matched the selected filters.
+            <p className="text-xs text-slate-400 max-w-md mx-auto">
+              No issues matched the active filters. Note: Zero findings does not imply the codebase is fully secure; the analysis covers documented deterministic rules only.
             </p>
           </div>
         ) : (
@@ -176,6 +201,7 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
               <thead>
                 <tr className="border-b border-[#21262d] text-slate-400 bg-[#0d1117]">
                   <th className="py-2.5 px-4 font-medium">Severity</th>
+                  <th className="py-2.5 px-4 font-medium">Confidence</th>
                   <th className="py-2.5 px-4 font-medium">Rule</th>
                   <th className="py-2.5 px-4 font-medium">Title & Location</th>
                   <th className="py-2.5 px-4 font-medium">Category</th>
@@ -185,6 +211,8 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
               <tbody className="divide-y divide-[#21262d]">
                 {findings.map((f) => {
                   const sevStyle = SEVERITY_BADGES[f.severity] || SEVERITY_BADGES.INFO;
+                  const conf = f.confidence || "MEDIUM";
+                  const confStyle = CONFIDENCE_BADGES[conf] || CONFIDENCE_BADGES.MEDIUM;
                   return (
                     <tr
                       key={f.id}
@@ -200,6 +228,15 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
                         </span>
                       </td>
 
+                      {/* Confidence */}
+                      <td className="py-2.5 px-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border ${confStyle.bg} ${confStyle.text} ${confStyle.border}`}
+                        >
+                          {conf}
+                        </span>
+                      </td>
+
                       {/* Rule ID */}
                       <td className="py-2.5 px-4 whitespace-nowrap">
                         <code className="text-[11px] font-mono text-sky-300 bg-sky-950/40 px-1.5 py-0.5 rounded border border-sky-800/60">
@@ -209,8 +246,11 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
 
                       {/* Title & Location */}
                       <td className="py-2.5 px-4 space-y-0.5 max-w-md">
-                        <div className="font-semibold text-slate-200 group-hover:text-sky-300 transition-colors truncate">
-                          {f.title}
+                        <div className="font-semibold text-slate-200 group-hover:text-sky-300 transition-colors truncate flex items-center gap-1.5">
+                          {f.category === "SECURITY" && (
+                            <Shield className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                          )}
+                          <span className="truncate">{f.title}</span>
                         </div>
                         <div className="font-mono text-[11px] text-slate-400 flex items-center gap-1 truncate">
                           <FileCode className="w-3 h-3 text-slate-500 shrink-0" />
@@ -222,7 +262,13 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
 
                       {/* Category */}
                       <td className="py-2.5 px-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-[#0d1117] border border-[#30363d] text-slate-300">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${
+                            f.category === "SECURITY"
+                              ? "bg-rose-950/40 border-rose-800/60 text-rose-300"
+                              : "bg-[#0d1117] border-[#30363d] text-slate-300"
+                          }`}
+                        >
                           {f.category}
                         </span>
                       </td>
