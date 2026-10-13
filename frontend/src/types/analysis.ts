@@ -1,10 +1,13 @@
 export type FindingSeverity = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFO";
 export type FindingCategory = "SYNTAX" | "COMPLEXITY" | "MAINTAINABILITY" | "CODE_SMELL" | "SECURITY";
 
+export type FindingConfidence = "HIGH" | "MEDIUM" | "LOW";
+
 export interface AnalysisSummary {
   total_findings?: number;
   severity_distribution?: Record<FindingSeverity, number>;
   category_distribution?: Record<string, number>;
+  confidence_distribution?: Record<FindingConfidence, number>;
   language_diagnostics?: Record<string, number>;
   analyzed_files?: number;
   skipped_files?: number;
@@ -39,6 +42,7 @@ export interface AnalysisFinding {
   description: string;
   severity: FindingSeverity;
   category: FindingCategory;
+  confidence?: FindingConfidence;
   file_path: string;
   start_line: number;
   start_column?: number | null;
@@ -48,6 +52,24 @@ export interface AnalysisFinding {
   fingerprint: string;
   metadata_json: Record<string, unknown>;
   created_at: string;
+}
+
+export interface RuleMetadata {
+  rule_id: string;
+  name: string;
+  category: FindingCategory;
+  severity: FindingSeverity;
+  default_confidence: FindingConfidence;
+  language: string;
+  description: string;
+  why_it_matters?: string;
+  remediation?: string;
+  limitations?: string;
+}
+
+export interface RulesCatalogResponse {
+  rules: RuleMetadata[];
+  total: number;
 }
 
 export interface AnalysisRunListResponse {
