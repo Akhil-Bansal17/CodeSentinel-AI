@@ -17,6 +17,7 @@ from backend.app.services.analysis.parsers.base import (
     ParseDiagnostic,
     ParseResult,
     ParserStatus,
+    ParsedSecuritySite,
     SourceCoordinates,
 )
 
@@ -157,6 +158,29 @@ class JsTsParser:
                 )
             )
 
+        security_sites = []
+        for s in data.get("securitySites", []):
+            start_line = max(1, min(s.get("startLine", 1), total_lines or 1))
+            end_line = max(start_line, min(s.get("endLine", start_line), total_lines or 1))
+            coords = SourceCoordinates(
+                start_line=start_line,
+                start_column=s.get("startColumn"),
+                end_line=end_line,
+                end_column=s.get("endColumn"),
+            )
+            security_sites.append(
+                ParsedSecuritySite(
+                    rule_id=s.get("ruleId", "UNKNOWN"),
+                    name=s.get("name", "Security Finding"),
+                    severity=s.get("severity", "MEDIUM"),
+                    confidence=s.get("confidence", "MEDIUM"),
+                    coordinates=coords,
+                    evidence=s.get("evidence", ""),
+                    description=s.get("description", ""),
+                    metadata=s.get("metadata", {}),
+                )
+            )
+
         return ParseResult(
             relative_path=relative_path,
             language=language,
@@ -164,5 +188,6 @@ class JsTsParser:
             total_lines=data.get("totalLines", total_lines),
             diagnostics=diagnostics,
             functions=functions,
+            security_sites=security_sites,
             error_message=data.get("errorMessage"),
         )
