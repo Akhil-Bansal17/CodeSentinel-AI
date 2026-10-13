@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 
 class ParserStatus(str, Enum):
@@ -65,6 +65,20 @@ class ParseDiagnostic:
 
 
 @dataclass
+class ParsedSecuritySite:
+    """Security-sensitive syntax call site discovered during AST parsing."""
+
+    rule_id: str
+    name: str
+    severity: str
+    confidence: str
+    coordinates: SourceCoordinates
+    evidence: str
+    description: str
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
 class ParseResult:
     """Comprehensive, deterministic result of AST parsing."""
 
@@ -75,5 +89,6 @@ class ParseResult:
     diagnostics: List[ParseDiagnostic] = field(default_factory=list)
     functions: List[ParsedFunction] = field(default_factory=list)
     imports: List[ParsedImport] = field(default_factory=list)
+    security_sites: List[ParsedSecuritySite] = field(default_factory=list)
     ast_root: Optional[Any] = None
     error_message: Optional[str] = None
