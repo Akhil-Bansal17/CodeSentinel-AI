@@ -140,12 +140,12 @@ export const AnalysisPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-semibold text-slate-100 flex items-center gap-2">
               <ShieldAlert className="w-5 h-5 text-sky-400" />
-              Deterministic Static Analysis
+              Static Analysis & Security Intelligence
             </h2>
-            <StatusBadge label="Phase 2 Operational" variant="success" />
+            <StatusBadge label="Phase 2 & Phase 4 Operational" variant="success" />
           </div>
           <p className="text-xs text-slate-400 mt-0.5">
-            AST parsing, McCabe cyclomatic complexity, function lengths, and evidence-backed findings
+            AST parsing, McCabe complexity, and Application Security Intelligence (PYSEC / JSSEC deterministic rules)
           </p>
         </div>
 
