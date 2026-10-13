@@ -87,10 +87,20 @@ class FindingNormalizer:
         if end_col is not None and end_col < 1:
             end_col = 1
 
-        # 2. Evidence sanitization
+        # 2. Evidence sanitization & metadata consolidation
         clean_evidence = sanitize_text(draft.evidence_summary)
         clean_title = sanitize_text(draft.title)
         clean_desc = sanitize_text(draft.description)
+
+        metadata = dict(draft.metadata or {})
+        confidence_val = draft.confidence.value if hasattr(draft.confidence, "value") else str(draft.confidence)
+        metadata["confidence"] = confidence_val
+        if draft.remediation:
+            metadata["remediation"] = sanitize_text(draft.remediation)
+        if draft.why_it_matters:
+            metadata["why_it_matters"] = sanitize_text(draft.why_it_matters)
+        if draft.limitations:
+            metadata["limitations"] = sanitize_text(draft.limitations)
 
         # 3. Deterministic fingerprint
         fingerprint = compute_finding_fingerprint(
@@ -111,6 +121,7 @@ class FindingNormalizer:
             title=clean_title,
             description=clean_desc,
             severity=draft.severity.value,
+            confidence=confidence_val,
             category=draft.category.value,
             file_path=norm_path,
             start_line=start_line,
@@ -119,5 +130,5 @@ class FindingNormalizer:
             end_column=end_col,
             evidence_summary=clean_evidence,
             fingerprint=fingerprint,
-            metadata_json=draft.metadata or {},
+            metadata_json=metadata,
         )
