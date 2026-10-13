@@ -168,8 +168,29 @@ function runParser() {
         return;
       }
 
-      // Extract functions
+      // Extract functions and security sites
       const functions = [];
+      const securitySites = [];
+
+      function getSnippet(node) {
+        try {
+          const raw = node.getText(sourceFile).trim().replace(/[\r\n\t]+/g, " ");
+          return raw.length > 160 ? raw.slice(0, 157) + "..." : raw;
+        } catch {
+          return "";
+        }
+      }
+
+      function getCoords(node) {
+        const startPos = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+        const endPos = sourceFile.getLineAndCharacterOfPosition(node.getEnd());
+        return {
+          startLine: startPos.line + 1,
+          startColumn: startPos.character + 1,
+          endLine: endPos.line + 1,
+          endColumn: endPos.character + 1,
+        };
+      }
 
       function traverse(node) {
         if (
@@ -179,22 +200,187 @@ function runParser() {
           ts.isMethodDeclaration(node) ||
           ts.isConstructorDeclaration(node)
         ) {
-          const startPos = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
-          const endPos = sourceFile.getLineAndCharacterOfPosition(node.getEnd());
-          const startLine = startPos.line + 1;
-          const endLine = endPos.line + 1;
-          const lineCount = endLine - startLine + 1;
+          const coords = getCoords(node);
+          const lineCount = coords.endLine - coords.startLine + 1;
           const complexity = calculateFunctionComplexity(node, sourceFile);
 
           functions.push({
             name: getFunctionName(node),
-            startLine,
-            startColumn: startPos.character + 1,
-            endLine,
-            endColumn: endPos.character + 1,
+            startLine: coords.startLine,
+            startColumn: coords.startColumn,
+            endLine: coords.endLine,
+            endColumn: coords.endColumn,
             lineCount,
             cyclomaticComplexity: complexity,
           });
+        }
+
+        // 1. JSSEC001: Dynamic Code Execution (eval, Function, new Function)
+        if (ts.isCallExpression(node)) {
+          if (ts.isIdentifier(node.expression) && (node.expression.text === "eval" || node.expression.text === "Function")) {
+            const coords = getCoords(node);
+            const isLiteral = node.arguments.length > 0 && ts.isStringLiteral(node.arguments[0]);
+            securitySites.push({
+              ruleId: "JSSEC001",
+              name: "Dynamic Code Execution",
+              severity: isLiteral ? "MEDIUM" : "CRITICAL",
+              confidence: isLiteral ? "MEDIUM" : "HIGH",
+              startLine: coords.startLine,
+              startColumn: coords.startColumn,
+              endLine: coords.endLine,
+              endColumn: coords.endColumn,
+              evidence: getSnippet(node),
+              description: `Call to ${node.expression.text}() dynamic code evaluation primitive`,
+              metadata: { is_literal: isLiteral, primitive: node.expression.text },
+            });
+          }
+        } else if (ts.isNewExpression(node)) {
+          if (ts.isIdentifier(node.expression) && node.expression.text === "Function") {
+            const coords = getCoords(node);
+            const isLiteral = node.arguments && node.arguments.length > 0 && ts.isStringLiteral(node.arguments[0]);
+            securitySites.push({
+              ruleId: "JSSEC001",
+              name: "Dynamic Code Execution",
+              severity: isLiteral ? "MEDIUM" : "CRITICAL",
+              confidence: isLiteral ? "MEDIUM" : "HIGH",
+              startLine: coords.startLine,
+              startColumn: coords.startColumn,
+              endLine: coords.endLine,
+              endColumn: coords.endColumn,
+              evidence: getSnippet(node),
+              description: "Call to new Function() dynamic code execution primitive",
+              metadata: { is_literal: isLiteral, primitive: "new Function" },
+            });
+          }
+        }
+
+        // 2. JSSEC002: Dangerous HTML Injection (innerHTML, outerHTML, dangerouslySetInnerHTML)
+        if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+          if (ts.isPropertyAccessExpression(node.left)) {
+            const propName = node.left.name.text;
+            if (propName === "innerHTML" || propName === "outerHTML") {
+              const coords = getCoords(node);
+              securitySites.push({
+                ruleId: "JSSEC002",
+                name: "Dangerous HTML Injection",
+                severity: "HIGH",
+                confidence: "MEDIUM",
+                startLine: coords.startLine,
+                startColumn: coords.startColumn,
+                endLine: coords.endLine,
+                endColumn: coords.endColumn,
+                evidence: getSnippet(node),
+                description: `Assignment to ${propName} browser HTML injection sink`,
+                metadata: { sink: propName },
+              });
+            }
+          }
+        } else if (ts.isJsxAttribute(node)) {
+          if (node.name && node.name.text === "dangerouslySetInnerHTML") {
+            const coords = getCoords(node);
+            securitySites.push({
+              ruleId: "JSSEC002",
+              name: "Dangerous HTML Injection",
+              severity: "HIGH",
+              confidence: "MEDIUM",
+              startLine: coords.startLine,
+              startColumn: coords.startColumn,
+              endLine: coords.endLine,
+              endColumn: coords.endColumn,
+              evidence: getSnippet(node),
+              description: "Use of dangerouslySetInnerHTML raw HTML sink in JSX element",
+              metadata: { sink: "dangerouslySetInnerHTML" },
+            });
+          }
+        }
+
+        // 3. JSSEC003: Shell Execution Risk (exec, execSync, spawn with shell: true)
+        if (ts.isCallExpression(node)) {
+          let callName = "";
+          if (ts.isPropertyAccessExpression(node.expression)) {
+            callName = node.expression.name.text;
+          } else if (ts.isIdentifier(node.expression)) {
+            callName = node.expression.text;
+          }
+
+          if (callName === "exec" || callName === "execSync") {
+            const coords = getCoords(node);
+            const firstArg = node.arguments[0];
+            const isDynamic = firstArg && (ts.isTemplateExpression(firstArg) || ts.isBinaryExpression(firstArg) || ts.isIdentifier(firstArg));
+            securitySites.push({
+              ruleId: "JSSEC003",
+              name: "Shell Command Execution Risk",
+              severity: isDynamic ? "HIGH" : "MEDIUM",
+              confidence: isDynamic ? "HIGH" : "MEDIUM",
+              startLine: coords.startLine,
+              startColumn: coords.startColumn,
+              endLine: coords.endLine,
+              endColumn: coords.endColumn,
+              evidence: getSnippet(node),
+              description: `Call to child_process.${callName}() shell command execution API`,
+              metadata: { api: callName, is_dynamic: isDynamic },
+            });
+          } else if (callName === "spawn" || callName === "spawnSync") {
+            // Check for { shell: true } option
+            let hasShellTrue = false;
+            for (const arg of node.arguments) {
+              if (ts.isObjectLiteralExpression(arg)) {
+                for (const prop of arg.properties) {
+                  if (ts.isPropertyAssignment(prop) && prop.name && prop.name.text === "shell") {
+                    if (prop.initializer && prop.initializer.kind === ts.SyntaxKind.TrueKeyword) {
+                      hasShellTrue = true;
+                    }
+                  }
+                }
+              }
+            }
+            if (hasShellTrue) {
+              const coords = getCoords(node);
+              securitySites.push({
+                ruleId: "JSSEC003",
+                name: "Shell Command Execution Risk",
+                severity: "HIGH",
+                confidence: "HIGH",
+                startLine: coords.startLine,
+                startColumn: coords.startColumn,
+                endLine: coords.endLine,
+                endColumn: coords.endColumn,
+                evidence: getSnippet(node),
+                description: `Call to ${callName}() with { shell: true } option`,
+                metadata: { api: callName, shell_option: true },
+              });
+            }
+          }
+
+          // 4. JSSEC004: SQL Query Construction Risk
+          if (callName === "query" || callName === "execute" || callName === "raw") {
+            const firstArg = node.arguments[0];
+            if (firstArg) {
+              const isTemplate = ts.isTemplateExpression(firstArg);
+              const isConcat = ts.isBinaryExpression(firstArg) && firstArg.operatorToken.kind === ts.SyntaxKind.PlusToken;
+              if (isTemplate || isConcat) {
+                const snippet = getSnippet(firstArg).toUpperCase();
+                const sqlKeywords = ["SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "FROM", "WHERE"];
+                const hasSql = sqlKeywords.some((k) => snippet.includes(k));
+                if (hasSql) {
+                  const coords = getCoords(node);
+                  securitySites.push({
+                    ruleId: "JSSEC004",
+                    name: "SQL Query Construction Risk",
+                    severity: "HIGH",
+                    confidence: "HIGH",
+                    startLine: coords.startLine,
+                    startColumn: coords.startColumn,
+                    endLine: coords.endLine,
+                    endColumn: coords.endColumn,
+                    evidence: getSnippet(node),
+                    description: `SQL query constructed via string interpolation/concatenation in ${callName}()`,
+                    metadata: { api: callName, is_template: isTemplate, is_concat: isConcat },
+                  });
+                }
+              }
+            }
+          }
         }
 
         ts.forEachChild(node, traverse);
@@ -203,6 +389,7 @@ function runParser() {
       traverse(sourceFile);
 
       functions.sort((a, b) => a.startLine - b.startLine || a.startColumn - b.startColumn);
+      securitySites.sort((a, b) => a.startLine - b.startLine || a.startColumn - b.startColumn);
 
       process.stdout.write(
         JSON.stringify({
@@ -210,6 +397,7 @@ function runParser() {
           totalLines,
           diagnostics: [],
           functions,
+          securitySites,
         })
       );
     } catch (err) {
