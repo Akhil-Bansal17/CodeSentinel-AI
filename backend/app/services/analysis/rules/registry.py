@@ -8,33 +8,61 @@ from backend.app.services.analysis.rules.js_rules import (
     JsFunctionLengthRule,
     JsSyntaxRule,
 )
+from backend.app.services.analysis.rules.js_security_rules import (
+    JsDynamicCodeRule,
+    JsHtmlInjectionRule,
+    JsShellExecutionRule,
+    JsSqlQueryRule,
+)
 from backend.app.services.analysis.rules.python_rules import (
     PyComplexityRule,
     PyFunctionLengthRule,
     PyImportRule,
     PySyntaxRule,
 )
+from backend.app.services.analysis.rules.python_security_rules import (
+    PyDynamicCodeRule,
+    PyShellExecutionRule,
+    PySqlQueryConstructionRule,
+    PyTlsVerifyDisabledRule,
+    PyUnsafeDeserializationRule,
+    PyWeakHashRule,
+)
 
 
 class RuleRegistry:
-    """Central registry for all active, versioned static analysis rules."""
+    """Central registry for all active, versioned static analysis and security rules."""
 
     def __init__(self):
         self._rules: Dict[str, BaseRule] = {}
         self._register_default_rules()
 
     def _register_default_rules(self) -> None:
-        """Register initial Phase 2 rules."""
-        # Python rules
+        """Register deterministic code quality and application security rules."""
+        # Phase 2 Code Quality & Complexity Rules (Python)
         self.register(PySyntaxRule())
         self.register(PyComplexityRule())
         self.register(PyFunctionLengthRule())
         self.register(PyImportRule())
 
-        # JavaScript / TypeScript rules
+        # Phase 2 Code Quality & Complexity Rules (JS/TS)
         self.register(JsSyntaxRule())
         self.register(JsComplexityRule())
         self.register(JsFunctionLengthRule())
+
+        # Phase 4 Application Security Intelligence Rules (Python)
+        self.register(PyDynamicCodeRule())
+        self.register(PyUnsafeDeserializationRule())
+        self.register(PyShellExecutionRule())
+        self.register(PyWeakHashRule())
+        self.register(PyTlsVerifyDisabledRule())
+        self.register(PySqlQueryConstructionRule())
+
+        # Phase 4 Application Security Intelligence Rules (JS/TS)
+        self.register(JsDynamicCodeRule())
+        self.register(JsHtmlInjectionRule())
+        self.register(JsShellExecutionRule())
+        self.register(JsSqlQueryRule())
 
     def register(self, rule: BaseRule) -> None:
         """Register a new deterministic rule."""
