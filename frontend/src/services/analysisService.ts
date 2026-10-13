@@ -1,13 +1,16 @@
 import { request } from "./api";
 import {
+  AnalysisFinding,
   AnalysisFindingListResponse,
   AnalysisRun,
   AnalysisRunListResponse,
+  RulesCatalogResponse,
   StartAnalysisPayload,
 } from "../types/analysis";
 
 export interface ListFindingsParams {
   severity?: string;
+  confidence?: string;
   category?: string;
   ruleId?: string;
   filePath?: string;
@@ -50,11 +53,26 @@ export const analysisService = {
     if (params.page) query.set("page", String(params.page));
     if (params.pageSize) query.set("page_size", String(params.pageSize));
     if (params.severity) query.set("severity", params.severity);
+    if (params.confidence) query.set("confidence", params.confidence);
     if (params.category) query.set("category", params.category);
     if (params.ruleId) query.set("rule_id", params.ruleId);
     if (params.filePath) query.set("file_path", params.filePath);
 
     const qs = query.toString();
     return request<AnalysisFindingListResponse>(`/v1/analyses/${analysisId}/findings${qs ? `?${qs}` : ""}`);
+  },
+
+  /**
+   * Fetch single finding with diagnostic evidence and remediation metadata.
+   */
+  async getFinding(analysisId: string, findingId: string): Promise<AnalysisFinding> {
+    return request<AnalysisFinding>(`/v1/analyses/${analysisId}/findings/${findingId}`);
+  },
+
+  /**
+   * Fetch static analysis and security rules catalog.
+   */
+  async getRulesCatalog(): Promise<RulesCatalogResponse> {
+    return request<RulesCatalogResponse>(`/v1/analyses/rules/catalog`);
   },
 };
