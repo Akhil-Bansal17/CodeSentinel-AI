@@ -33,9 +33,13 @@ CodeSentinel AI is a local-first software engineering intelligence and automated
 | **Application Security Intelligence** | Detects high-risk syntactic patterns in Python & JS/TS (dynamic code execution, unsafe deserialization, shell injection, disabled TLS verification, weak hashes, raw HTML sinks, and SQL interpolation) with decoupled Severity and Confidence. |
 | **Multi-Ecosystem SCA** | Parses 8 manifest/lockfile formats (`requirements.txt`, `pyproject.toml`, `poetry.lock`, `Pipfile.lock`, `package.json`, `package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`). |
 | **Dual Version Matching Engines** | Evaluates dependency vulnerabilities against OSV event ranges using PEP 440 (`packaging`) and Semver 2.0.0 (`NpmRangeEvaluator`) semantics. |
-| **Offline Advisory Intelligence** | Correlates discovered dependencies against an authoritative, local vulnerability database without runtime external network calls. |
 | **Cryptographic Fingerprinting** | Computes stable SHA-256 fingerprints for every finding, preventing duplicate alerts across successive scan iterations. |
-| **Modern Developer Dashboard** | Responsive React 19 + Vite 8 + Tailwind CSS dark-mode dashboard with paginated file explorers, dependency graphs, and live telemetry. |
+| **Architectural Dependency Graph** | Extracts deterministic module dependency graphs for Python and JS/TS; resolves internal edges, external libraries, and unresolved imports. |
+| **Martin's Package Coupling Metrics** | Computes Afferent Coupling ($Ca$), Efferent Coupling ($Ce$), Instability ($I$), Abstractness ($A$), and Normalized Main Sequence Distance ($D$). |
+| **Tarjan's SCC Cycle Detection** | Identifies circular dependency clusters and mutual tight coupling across modules using Tarjan's Strongly Connected Components algorithm. |
+| **Declarative Governance Engine** | Enforces layer boundaries and forbidden pattern rules via `codesentinel.architecture.json` with exact line evidence and SHA-256 fingerprints. |
+| **Explainable Codebase Health Index** | Evaluates a 0–100 health index across 5 core pillars (Maintainability, AppSec, Architecture, Dependency Risk, Coverage) with weight normalization and ranked recommendations. |
+| **Modern Developer Dashboard** | Responsive React 19 + Vite 8 + Tailwind CSS dark-mode dashboard with paginated file explorers, dependency graphs, architecture viewers, and live telemetry. |
 
 ---
 
@@ -53,8 +57,14 @@ CodeSentinel AI is a local-first software engineering intelligence and automated
 - **Decouples Severity from Confidence**: Distinctly tracks impact severity (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, `INFO`) and detection confidence (`HIGH`, `MEDIUM`, `LOW`) with actionable remediation guidance and known limitations.
 - **Inventories direct & transitive dependencies**: Differentiates declared package constraints (e.g. `requests>=2.25.0`) from pinned resolved versions (e.g. `2.31.0`).
 - **Executes offline vulnerability correlation**: Evaluates packages against pre-loaded OSV/CVE advisory records using PEP 440 and Semver 2.0.0 spec-compliant evaluators.
+- **Extracts module dependency graphs (Phase 5)**: Resolves static imports across Python and JS/TS, isolating internal module edges from standard library and 3rd-party dependencies.
+- **Measures Martin's package coupling metrics**: Calculates $Ca$, $Ce$, Instability ($I = \frac{Ce}{Ca+Ce}$), Abstractness ($A = \frac{N_a}{N_c}$), and Main Sequence Distance ($D = |A+I-1|$).
+- **Isolates circular dependency clusters**: Traverses import graphs with Tarjan's SCC algorithm to flag circular components and identify cycles.
+- **Enforces architectural governance policies**: Evaluates layer boundaries and forbidden dependencies declared in `codesentinel.architecture.json` with exact source line coordinates and remediation guidance.
+- **Calculates a 5-pillar codebase health score**: Deterministically assesses Maintainability (25%), Security (25%), Architecture (20%), Dependency Risk (15%), and Coverage (15%) with dynamic weight renormalization for missing inputs.
+- **Prioritizes actionable remediation**: Produces ranked recommendation cards sorted by priority and impact with concrete action plans.
 - **Issues stable SHA-256 finding fingerprints**: Guarantees idempotent issue tracking: `sha256(rule_id:file_path:start_line:evidence_summary)`.
-- **Delivers a production REST API & React UI**: Features 15+ OpenAPI endpoints, structured JSON logging, and a low-latency React 19 dashboard.
+- **Delivers a production REST API & React UI**: Features 20+ OpenAPI endpoints, structured JSON logging, and a low-latency React 19 dashboard.
 
 ---
 
@@ -522,12 +532,17 @@ erDiagram
     REPOSITORIES ||--o{ REPOSITORY_SNAPSHOTS : "owns"
     REPOSITORIES ||--o{ ANALYSIS_RUNS : "initiates"
     REPOSITORIES ||--o{ DEPENDENCY_RUNS : "evaluates"
+    REPOSITORIES ||--o{ ARCHITECTURE_RUNS : "governs"
+    REPOSITORIES ||--o{ CODEBASE_HEALTH_ASSESSMENTS : "assesses"
 
     REPOSITORY_SNAPSHOTS ||--o{ REPOSITORY_FILES : "contains"
     REPOSITORY_SNAPSHOTS ||--o{ ANALYSIS_RUNS : "benchmarks"
     REPOSITORY_SNAPSHOTS ||--o{ DEPENDENCY_RUNS : "targets"
+    REPOSITORY_SNAPSHOTS ||--o{ ARCHITECTURE_RUNS : "models"
+    REPOSITORY_SNAPSHOTS ||--o{ CODEBASE_HEALTH_ASSESSMENTS : "grades"
 
     ANALYSIS_RUNS ||--o{ ANALYSIS_FINDINGS : "emits"
+    ARCHITECTURE_RUNS ||--o{ ARCHITECTURE_VIOLATIONS : "detects"
 
     ADVISORY_DATASETS ||--o{ VULNERABILITY_ADVISORIES : "catalogs"
 
@@ -675,6 +690,47 @@ erDiagram
         string manifest_path
         string fingerprint
     }
+
+    ARCHITECTURE_RUNS {
+        string id PK
+        string repository_id FK
+        string snapshot_id FK
+        string status
+        int modules_analyzed
+        int internal_edges_count
+        int external_deps_count
+        int cycles_count
+        int violations_count
+        boolean policy_configured
+        datetime started_at
+        datetime completed_at
+    }
+
+    ARCHITECTURE_VIOLATIONS {
+        string id PK
+        string architecture_run_id FK
+        string repository_id FK
+        string snapshot_id FK
+        string rule_id
+        string violated_boundary
+        string source_module
+        string target_module
+        string severity
+        string fingerprint
+        datetime created_at
+    }
+
+    CODEBASE_HEALTH_ASSESSMENTS {
+        string id PK
+        string repository_id FK
+        string snapshot_id FK
+        string scoring_version
+        float overall_score
+        string status
+        json dimensions_json
+        json recommendations_json
+        datetime assessed_at
+    }
 ```
 
 ---
@@ -766,22 +822,22 @@ The codebase maintains automated test coverage across both backend deterministic
 
 ### Backend Test Suite (Pytest)
 
-The backend test suite includes 43+ tests covering security sandboxing regressions (TarSlip, ZipSlip, SSRF, bomb detection), AST parsers, static rule correctness, multi-manifest SCA parsers, and live PostgreSQL migrations:
+The backend test suite includes **159 automated tests** covering security sandboxing regressions, AST parsers, static rule correctness, multi-manifest SCA parsers, dependency graph resolution, Martin's coupling metrics, Tarjan's SCC cycle detection, architectural policy enforcement, and codebase health scoring:
 
 ```bash
 # Run complete backend test suite
 pytest -v backend/tests
 
+# Run Phase 5 architecture & health tests specifically
+pytest -v backend/tests/test_dependency_graph.py backend/tests/test_architecture_policy.py backend/tests/test_codebase_health.py backend/tests/test_architecture_api.py
+
 # Run security regression tests specifically
 pytest -v backend/tests/test_security_regressions.py
-
-# Run version matching & SCA parser tests
-pytest -v backend/tests/test_version_matching.py backend/tests/test_dependency_parsers.py
 ```
 
 ### Frontend Test Suite (Vitest)
 
-The frontend test suite includes 22+ unit and integration tests written in Vitest and React Testing Library:
+The frontend test suite includes **42 unit and integration tests** across 12 test suites written in Vitest and React Testing Library:
 
 ```bash
 cd frontend
@@ -792,8 +848,8 @@ npm test -- --run
 # Run TypeScript compilation and typecheck
 npm run build
 
-# Run ESLint validation
-npm run lint
+# Run Oxlint validation
+npx oxlint
 ```
 
 ---
