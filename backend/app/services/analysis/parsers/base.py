@@ -45,6 +45,16 @@ class ParsedFunction:
 
 
 @dataclass
+class ParsedClass:
+    """Extracted class or interface metadata."""
+
+    name: str
+    coordinates: SourceCoordinates = field(default_factory=lambda: SourceCoordinates(start_line=1))
+    is_abstract: bool = False
+    methods_count: int = 0
+
+
+@dataclass
 class ParsedImport:
     """Extracted import statement metadata."""
 
@@ -52,6 +62,7 @@ class ParsedImport:
     module: Optional[str] = None
     alias: Optional[str] = None
     is_from: bool = False
+    level: int = 0
     coordinates: SourceCoordinates = field(default_factory=lambda: SourceCoordinates(start_line=1))
 
 
@@ -88,6 +99,7 @@ class ParseResult:
     total_lines: int
     diagnostics: List[ParseDiagnostic] = field(default_factory=list)
     functions: List[ParsedFunction] = field(default_factory=list)
+    classes: List[ParsedClass] = field(default_factory=list)
     imports: List[ParsedImport] = field(default_factory=list)
     security_sites: List[ParsedSecuritySite] = field(default_factory=list)
     ast_root: Optional[Any] = None
