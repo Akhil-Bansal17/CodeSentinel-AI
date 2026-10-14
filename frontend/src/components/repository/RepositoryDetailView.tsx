@@ -17,6 +17,8 @@ import {
   ShieldAlert,
   Play,
   Package,
+  Network,
+  Activity,
 } from "lucide-react";
 import { GithubIcon } from "../common/GithubIcon";
 
@@ -30,6 +32,8 @@ import { ErrorState } from "../common/ErrorState";
 import { AnalysisSummaryCards } from "../analysis/AnalysisSummaryCards";
 import { FindingsTable } from "../analysis/FindingsTable";
 import { DependencyView } from "../dependency/DependencyView";
+import { ArchitectureView } from "../architecture/ArchitectureView";
+import { CodebaseHealthDashboard } from "../architecture/CodebaseHealthDashboard";
 
 interface RepositoryDetailViewProps {
   repository: Repository;
@@ -93,7 +97,7 @@ export const RepositoryDetailView: React.FC<RepositoryDetailViewProps> = ({
   const [fileError, setFileError] = useState<string | null>(null);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<"overview" | "analysis" | "dependencies">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "analysis" | "dependencies" | "architecture" | "health">("overview");
 
   // Analysis state
   const [analyses, setAnalyses] = useState<AnalysisRun[]>([]);
@@ -393,6 +397,32 @@ export const RepositoryDetailView: React.FC<RepositoryDetailViewProps> = ({
           >
             <Package className="w-3.5 h-3.5" />
             <span>Dependencies & SCA</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("architecture")}
+            className={`flex items-center gap-2 px-3 py-2 text-xs font-medium border-b-2 transition-colors cursor-pointer ${
+              activeTab === "architecture"
+                ? "border-sky-500 text-sky-400 font-semibold"
+                : "border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Network className="w-3.5 h-3.5" />
+            <span>Architecture & Coupling</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("health")}
+            className={`flex items-center gap-2 px-3 py-2 text-xs font-medium border-b-2 transition-colors cursor-pointer ${
+              activeTab === "health"
+                ? "border-sky-500 text-sky-400 font-semibold"
+                : "border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Activity className="w-3.5 h-3.5" />
+            <span>Codebase Health</span>
           </button>
         </div>
       </div>
@@ -864,6 +894,16 @@ export const RepositoryDetailView: React.FC<RepositoryDetailViewProps> = ({
       {/* Tab 3: Dependencies & SCA */}
       {activeTab === "dependencies" && (
         <DependencyView repository={repository} />
+      )}
+
+      {/* Tab 4: Architecture & Coupling */}
+      {activeTab === "architecture" && (
+        <ArchitectureView repository={repository} />
+      )}
+
+      {/* Tab 5: Codebase Health */}
+      {activeTab === "health" && (
+        <CodebaseHealthDashboard repository={repository} />
       )}
     </div>
   );
