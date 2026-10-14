@@ -168,8 +168,10 @@ function runParser() {
         return;
       }
 
-      // Extract functions and security sites
+      // Extract functions, classes, imports, and security sites
       const functions = [];
+      const classes = [];
+      const imports = [];
       const securitySites = [];
 
       function getSnippet(node) {
@@ -193,6 +195,126 @@ function runParser() {
       }
 
       function traverse(node) {
+        // Classes & Interfaces for Abstractness
+        if (ts.isClassDeclaration(node)) {
+          const coords = getCoords(node);
+          const isAbstract = Boolean(
+            node.modifiers && node.modifiers.some((m) => m.kind === ts.SyntaxKind.AbstractKeyword)
+          );
+          let methodsCount = 0;
+          if (node.members) {
+            for (const m of node.members) {
+              if (ts.isMethodDeclaration(m) || ts.isConstructorDeclaration(m)) {
+                methodsCount++;
+              }
+            }
+          }
+          classes.push({
+            name: node.name ? node.name.text : "anonymous",
+            isAbstract,
+            methodsCount,
+            startLine: coords.startLine,
+            startColumn: coords.startColumn,
+            endLine: coords.endLine,
+            endColumn: coords.endColumn,
+          });
+        } else if (ts.isInterfaceDeclaration(node)) {
+          const coords = getCoords(node);
+          let methodsCount = 0;
+          if (node.members) {
+            for (const m of node.members) {
+              if (ts.isMethodSignature(m) || ts.isCallSignatureDeclaration(m)) {
+                methodsCount++;
+              }
+            }
+          }
+          classes.push({
+            name: node.name ? node.name.text : "anonymous",
+            isAbstract: true,
+            methodsCount,
+            startLine: coords.startLine,
+            startColumn: coords.startColumn,
+            endLine: coords.endLine,
+            endColumn: coords.endColumn,
+          });
+        }
+
+        // Imports & Dependencies
+        if (ts.isImportDeclaration(node)) {
+          const coords = getCoords(node);
+          const specifier =
+            node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier) ? node.moduleSpecifier.text : "";
+          if (specifier) {
+            if (!node.importClause) {
+              imports.push({
+                name: specifier,
+                module: specifier,
+                alias: null,
+                isFrom: false,
+                startLine: coords.startLine,
+                startColumn: coords.startColumn,
+                endLine: coords.endLine,
+                endColumn: coords.endColumn,
+              });
+            } else {
+              if (node.importClause.name) {
+                imports.push({
+                  name: node.importClause.name.text,
+                  module: specifier,
+                  alias: null,
+                  isFrom: true,
+                  startLine: coords.startLine,
+                  startColumn: coords.startColumn,
+                  endLine: coords.endLine,
+                  endColumn: coords.endColumn,
+                });
+              }
+              if (node.importClause.namedBindings) {
+                if (ts.isNamedImports(node.importClause.namedBindings)) {
+                  for (const el of node.importClause.namedBindings.elements) {
+                    imports.push({
+                      name: el.name.text,
+                      module: specifier,
+                      alias: el.propertyName ? el.name.text : null,
+                      isFrom: true,
+                      startLine: coords.startLine,
+                      startColumn: coords.startColumn,
+                      endLine: coords.endLine,
+                      endColumn: coords.endColumn,
+                    });
+                  }
+                } else if (ts.isNamespaceImport(node.importClause.namedBindings)) {
+                  imports.push({
+                    name: node.importClause.namedBindings.name.text,
+                    module: specifier,
+                    alias: null,
+                    isFrom: true,
+                    startLine: coords.startLine,
+                    startColumn: coords.startColumn,
+                    endLine: coords.endLine,
+                    endColumn: coords.endColumn,
+                  });
+                }
+              }
+            }
+          }
+        } else if (ts.isExportDeclaration(node)) {
+          if (node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
+            const coords = getCoords(node);
+            const specifier = node.moduleSpecifier.text;
+            imports.push({
+              name: specifier,
+              module: specifier,
+              alias: null,
+              isFrom: true,
+              startLine: coords.startLine,
+              startColumn: coords.startColumn,
+              endLine: coords.endLine,
+              endColumn: coords.endColumn,
+            });
+          }
+        }
+
         if (
           ts.isFunctionDeclaration(node) ||
           ts.isFunctionExpression(node) ||
@@ -389,6 +511,8 @@ function runParser() {
       traverse(sourceFile);
 
       functions.sort((a, b) => a.startLine - b.startLine || a.startColumn - b.startColumn);
+      classes.sort((a, b) => a.startLine - b.startLine || a.startColumn - b.startColumn || a.name.localeCompare(b.name));
+      imports.sort((a, b) => a.startLine - b.startLine || a.startColumn - b.startColumn || a.name.localeCompare(b.name));
       securitySites.sort((a, b) => a.startLine - b.startLine || a.startColumn - b.startColumn);
 
       process.stdout.write(
@@ -397,6 +521,8 @@ function runParser() {
           totalLines,
           diagnostics: [],
           functions,
+          classes,
+          imports,
           securitySites,
         })
       );
