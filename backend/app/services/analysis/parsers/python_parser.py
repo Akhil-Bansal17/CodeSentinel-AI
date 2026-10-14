@@ -9,6 +9,7 @@ import ast
 from typing import List, Set
 
 from backend.app.services.analysis.parsers.base import (
+    ParsedClass,
     ParsedFunction,
     ParsedImport,
     ParseDiagnostic,
@@ -114,8 +115,9 @@ class PythonParser:
                 error_message=f"Parser error: {type(exc).__name__}: {exc}",
             )
 
-        # Extract functions and imports
+        # Extract functions, classes, and imports
         functions: List[ParsedFunction] = []
+        classes: List[ParsedClass] = []
         imports: List[ParsedImport] = []
 
         for node in ast.walk(tree):
@@ -145,6 +147,50 @@ class PythonParser:
                     )
                 )
 
+            elif isinstance(node, ast.ClassDef):
+                start_line = node.lineno
+                start_col = (node.col_offset or 0) + 1
+                end_line = getattr(node, "end_lineno", node.lineno)
+                end_col = getattr(node, "end_col_offset", None)
+                if end_col is not None:
+                    end_col = end_col + 1
+
+                coords = SourceCoordinates(
+                    start_line=start_line,
+                    start_column=start_col,
+                    end_line=end_line,
+                    end_column=end_col,
+                )
+
+                # Check if abstract: inherits from ABC/Protocol or has @abstractmethod
+                is_abstract = False
+                for base in node.bases:
+                    if isinstance(base, ast.Name) and base.id in ("ABC", "Protocol"):
+                        is_abstract = True
+                        break
+                    elif isinstance(base, ast.Attribute) and base.attr in ("ABC", "Protocol"):
+                        is_abstract = True
+                        break
+
+                methods_count = 0
+                for item in node.body:
+                    if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                        methods_count += 1
+                        for dec in item.decorator_list:
+                            if isinstance(dec, ast.Name) and dec.id == "abstractmethod":
+                                is_abstract = True
+                            elif isinstance(dec, ast.Attribute) and dec.attr == "abstractmethod":
+                                is_abstract = True
+
+                classes.append(
+                    ParsedClass(
+                        name=node.name,
+                        coordinates=coords,
+                        is_abstract=is_abstract,
+                        methods_count=methods_count,
+                    )
+                )
+
             elif isinstance(node, ast.Import):
                 for alias in node.names:
                     coords = SourceCoordinates(
@@ -158,12 +204,14 @@ class PythonParser:
                             name=alias.name,
                             alias=alias.asname,
                             is_from=False,
+                            level=0,
                             coordinates=coords,
                         )
                     )
 
             elif isinstance(node, ast.ImportFrom):
                 mod = node.module or ""
+                level = getattr(node, "level", 0) or 0
                 for alias in node.names:
                     coords = SourceCoordinates(
                         start_line=node.lineno,
@@ -177,12 +225,14 @@ class PythonParser:
                             module=mod,
                             alias=alias.asname,
                             is_from=True,
+                            level=level,
                             coordinates=coords,
                         )
                     )
 
-        # Sort functions and imports deterministically by start_line
+        # Sort functions, classes, and imports deterministically
         functions.sort(key=lambda f: (f.coordinates.start_line, f.coordinates.start_column or 0, f.name))
+        classes.sort(key=lambda c: (c.coordinates.start_line, c.coordinates.start_column or 0, c.name))
         imports.sort(key=lambda i: (i.coordinates.start_line, i.coordinates.start_column or 0, i.name))
 
         return ParseResult(
@@ -191,6 +241,7 @@ class PythonParser:
             status=ParserStatus.SUCCESS,
             total_lines=total_lines,
             functions=functions,
+            classes=classes,
             imports=imports,
             ast_root=tree,
         )
