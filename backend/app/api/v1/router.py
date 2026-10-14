@@ -1,5 +1,13 @@
 from fastapi import APIRouter
-from backend.app.api.v1.endpoints import advisories, analyses, dependencies, health, repositories
+from backend.app.api.v1.endpoints import (
+    advisories,
+    analyses,
+    architecture,
+    codebase_health,
+    dependencies,
+    health,
+    repositories,
+)
 
 api_router = APIRouter()
 
@@ -23,3 +31,16 @@ api_router.include_router(dependencies.dependency_analyses_router, prefix="/v1")
 api_router.include_router(dependencies.dependency_analyses_router)
 api_router.include_router(advisories.router, prefix="/v1")
 api_router.include_router(advisories.router)
+
+# Register Phase 5 Architectural Intelligence and Governance endpoints under /api/v1 and /api
+api_router.include_router(architecture.repo_architecture_router, prefix="/v1")
+api_router.include_router(architecture.repo_architecture_router)
+api_router.include_router(architecture.architecture_router, prefix="/v1")
+api_router.include_router(architecture.architecture_router)
+
+# Register Phase 5 Codebase Health Intelligence endpoints under /api/v1 and /api
+api_router.include_router(codebase_health.repo_health_router, prefix="/v1")
+api_router.include_router(codebase_health.repo_health_router)
+api_router.include_router(codebase_health.health_assessments_router, prefix="/v1")
+api_router.include_router(codebase_health.health_assessments_router)
+
