@@ -21,6 +21,32 @@ vi.mock("../src/services/analysisService", () => ({
   },
 }));
 
+vi.mock("../src/services/architectureService", () => ({
+  listArchitectureRuns: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, page_size: 20 }),
+  startArchitectureRun: vi.fn(),
+  listModules: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, page_size: 50 }),
+  getModuleDetail: vi.fn(),
+  listViolations: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, page_size: 50 }),
+  getArchitectureGraph: vi.fn().mockResolvedValue({ nodes: [], internal_edges: [], external_edges: [], unresolved_imports: [], cycles: [], metadata: { total_modules: 0, total_internal_edges: 0, total_external_edges: 0, total_cycles: 0, analyzed_languages: [] } }),
+  getActivePolicy: vi.fn().mockResolvedValue({ is_configured: false, fingerprint: "default", policy: null }),
+}));
+
+vi.mock("../src/services/healthService", () => ({
+  getRepositoryHealth: vi.fn().mockResolvedValue({
+    id: "health-1",
+    repository_id: "repo-1",
+    snapshot_id: "snap-1",
+    scoring_version: "1.0.0",
+    overall_score: 85.0,
+    status: "completed",
+    dimensions: {},
+    contributing_runs: {},
+    missing_inputs: [],
+    recommendations: [],
+    assessed_at: new Date().toISOString(),
+  }),
+}));
+
 const mockFiles: RepositoryFile[] = [
   {
     id: "f-1",
@@ -173,6 +199,31 @@ describe("RepositoryDetailView Component", () => {
 
     await waitFor(() => {
       expect(repositoryService.listSnapshotFiles).toHaveBeenCalled();
+    });
+  });
+
+  it("switches to Architecture and Codebase Health tabs", async () => {
+    render(
+      <RepositoryDetailView
+        repository={mockRepository}
+        onBack={vi.fn()}
+        onRepositoryUpdated={vi.fn()}
+        onRepositoryDeleted={vi.fn()}
+      />
+    );
+
+    const archTab = screen.getByRole("button", { name: /Architecture & Coupling/i });
+    fireEvent.click(archTab);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Architecture Governance & Coupling/i)).toBeInTheDocument();
+    });
+
+    const healthTab = screen.getByRole("button", { name: /Codebase Health/i });
+    fireEvent.click(healthTab);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Codebase Health Index/i)).toBeInTheDocument();
     });
   });
 });
