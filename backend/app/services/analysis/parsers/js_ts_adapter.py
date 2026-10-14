@@ -13,7 +13,9 @@ from typing import Optional
 
 from backend.app.core.logging import logger
 from backend.app.services.analysis.parsers.base import (
+    ParsedClass,
     ParsedFunction,
+    ParsedImport,
     ParseDiagnostic,
     ParseResult,
     ParserStatus,
@@ -158,6 +160,46 @@ class JsTsParser:
                 )
             )
 
+        classes = []
+        for c in data.get("classes", []):
+            start_line = max(1, min(c.get("startLine", 1), total_lines or 1))
+            end_line = max(start_line, min(c.get("endLine", start_line), total_lines or 1))
+            coords = SourceCoordinates(
+                start_line=start_line,
+                start_column=c.get("startColumn"),
+                end_line=end_line,
+                end_column=c.get("endColumn"),
+            )
+            classes.append(
+                ParsedClass(
+                    name=c.get("name", "anonymous"),
+                    coordinates=coords,
+                    is_abstract=c.get("isAbstract", False),
+                    methods_count=c.get("methodsCount", 0),
+                )
+            )
+
+        imports = []
+        for imp in data.get("imports", []):
+            start_line = max(1, min(imp.get("startLine", 1), total_lines or 1))
+            end_line = max(start_line, min(imp.get("endLine", start_line), total_lines or 1))
+            coords = SourceCoordinates(
+                start_line=start_line,
+                start_column=imp.get("startColumn"),
+                end_line=end_line,
+                end_column=imp.get("endColumn"),
+            )
+            imports.append(
+                ParsedImport(
+                    name=imp.get("name", ""),
+                    module=imp.get("module"),
+                    alias=imp.get("alias"),
+                    is_from=imp.get("isFrom", False),
+                    level=0,
+                    coordinates=coords,
+                )
+            )
+
         security_sites = []
         for s in data.get("securitySites", []):
             start_line = max(1, min(s.get("startLine", 1), total_lines or 1))
@@ -188,6 +230,8 @@ class JsTsParser:
             total_lines=data.get("totalLines", total_lines),
             diagnostics=diagnostics,
             functions=functions,
+            classes=classes,
+            imports=imports,
             security_sites=security_sites,
             error_message=data.get("errorMessage"),
         )
