@@ -68,6 +68,12 @@ class Repository(Base, TimestampMixin):
         cascade="all, delete-orphan",
         order_by="desc(DependencyRun.started_at)",
     )
+    architecture_analyses: Mapped[List["ArchitectureRun"]] = relationship(
+        "ArchitectureRun",
+        back_populates="repository",
+        cascade="all, delete-orphan",
+        order_by="desc(ArchitectureRun.started_at)",
+    )
 
 
 class RepositorySnapshot(Base, TimestampMixin):
@@ -125,6 +131,12 @@ class RepositorySnapshot(Base, TimestampMixin):
         back_populates="snapshot",
         cascade="all, delete-orphan",
         order_by="desc(DependencyRun.started_at)",
+    )
+    architecture_analyses: Mapped[List["ArchitectureRun"]] = relationship(
+        "ArchitectureRun",
+        back_populates="snapshot",
+        cascade="all, delete-orphan",
+        order_by="desc(ArchitectureRun.started_at)",
     )
 
 
@@ -513,3 +525,168 @@ class DependencyVulnerability(Base, TimestampMixin):
         Index("ix_dep_vulns_run_eco", "dependency_run_id", "ecosystem"),
         Index("ix_dep_vulns_fingerprint", "fingerprint"),
     )
+
+
+class ArchitectureRun(Base, TimestampMixin):
+    """Execution run of deterministic architectural dependency and governance analysis on a snapshot."""
+
+    __tablename__ = "architecture_runs"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    repository_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("repositories.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    snapshot_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("repository_snapshots.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    status: Mapped[str] = mapped_column(String(32), default="pending", nullable=False, index=True)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    modules_analyzed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    internal_edges_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    external_deps_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    unresolved_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    cycles_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    violations_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    policy_configured: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    policy_path: Mapped[Optional[str]] = mapped_column(String(255), default="codesentinel.architecture.json", nullable=True)
+    failure_code: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    failure_reason: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
+    summary_json: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+
+    # Relationships
+    repository: Mapped["Repository"] = relationship("Repository", back_populates="architecture_analyses")
+    snapshot: Mapped["RepositorySnapshot"] = relationship("RepositorySnapshot", back_populates="architecture_analyses")
+    violations: Mapped[List["ArchitectureViolation"]] = relationship(
+        "ArchitectureViolation",
+        back_populates="architecture_run",
+        cascade="all, delete-orphan",
+        order_by="ArchitectureViolation.rule_id",
+    )
+
+
+class ArchitectureViolation(Base, TimestampMixin):
+    """Evidence-backed architectural layer or boundary policy violation."""
+
+    __tablename__ = "architecture_violations"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    architecture_run_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("architecture_runs.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    repository_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("repositories.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    snapshot_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("repository_snapshots.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    rule_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    policy_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_module: Mapped[str] = mapped_column(String(1024), nullable=False, index=True)
+    target_module: Mapped[str] = mapped_column(String(1024), nullable=False, index=True)
+    edge_specifier: Mapped[str] = mapped_column(String(255), nullable=False)
+    line_number: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    violated_boundary: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(String(1024), nullable=False)
+    remediation: Mapped[str] = mapped_column(String(1024), nullable=False)
+    severity: Mapped[str] = mapped_column(String(32), default="HIGH", nullable=False, index=True)
+    confidence: Mapped[str] = mapped_column(String(32), default="HIGH", nullable=False, index=True)
+    fingerprint: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    metadata_json: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+
+    # Relationships
+    architecture_run: Mapped["ArchitectureRun"] = relationship("ArchitectureRun", back_populates="violations")
+    repository: Mapped["Repository"] = relationship("Repository")
+    snapshot: Mapped["RepositorySnapshot"] = relationship("RepositorySnapshot")
+
+    __table_args__ = (
+        Index("ix_arch_violations_run_sev", "architecture_run_id", "severity"),
+        Index("ix_arch_violations_fingerprint", "fingerprint"),
+    )
+
+
+class CodebaseHealthAssessment(Base, TimestampMixin):
+    """Synthesized deterministic codebase health assessment record."""
+
+    __tablename__ = "codebase_health_assessments"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    repository_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("repositories.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    snapshot_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("repository_snapshots.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    analysis_run_id: Mapped[Optional[str]] = mapped_column(
+        String(36),
+        ForeignKey("analysis_runs.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    dependency_run_id: Mapped[Optional[str]] = mapped_column(
+        String(36),
+        ForeignKey("dependency_runs.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    architecture_run_id: Mapped[Optional[str]] = mapped_column(
+        String(36),
+        ForeignKey("architecture_runs.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    scoring_version: Mapped[str] = mapped_column(String(32), default="1.0.0", nullable=False)
+    overall_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    status: Mapped[str] = mapped_column(String(32), default="completed", nullable=False, index=True)
+    dimensions_json: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    metrics_json: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    recommendations_json: Mapped[List[Any]] = mapped_column(JSON, default=list, nullable=False)
+
+    # Relationships
+    repository: Mapped["Repository"] = relationship("Repository")
+    snapshot: Mapped["RepositorySnapshot"] = relationship("RepositorySnapshot")
+    analysis_run: Mapped[Optional["AnalysisRun"]] = relationship("AnalysisRun")
+    dependency_run: Mapped[Optional["DependencyRun"]] = relationship("DependencyRun")
+    architecture_run: Mapped[Optional["ArchitectureRun"]] = relationship("ArchitectureRun")
+
+    __table_args__ = (
+        Index("ix_health_assessments_repo_snap", "repository_id", "snapshot_id"),
+    )
+
