@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
-from sqlalchemy import BigInteger, Boolean, DateTime, Float, ForeignKey, Index, Integer, JSON, String
+from sqlalchemy import BigInteger, Boolean, DateTime, Float, ForeignKey, Index, Integer, JSON, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -74,6 +74,12 @@ class Repository(Base, TimestampMixin):
         cascade="all, delete-orphan",
         order_by="desc(ArchitectureRun.started_at)",
     )
+    index_runs: Mapped[List["CodeIndexRun"]] = relationship(
+        "CodeIndexRun",
+        back_populates="repository",
+        cascade="all, delete-orphan",
+        order_by="desc(CodeIndexRun.started_at)",
+    )
 
 
 class RepositorySnapshot(Base, TimestampMixin):
@@ -137,6 +143,12 @@ class RepositorySnapshot(Base, TimestampMixin):
         back_populates="snapshot",
         cascade="all, delete-orphan",
         order_by="desc(ArchitectureRun.started_at)",
+    )
+    index_runs: Mapped[List["CodeIndexRun"]] = relationship(
+        "CodeIndexRun",
+        back_populates="snapshot",
+        cascade="all, delete-orphan",
+        order_by="desc(CodeIndexRun.started_at)",
     )
 
 
@@ -688,5 +700,113 @@ class CodebaseHealthAssessment(Base, TimestampMixin):
 
     __table_args__ = (
         Index("ix_health_assessments_repo_snap", "repository_id", "snapshot_id"),
+    )
+
+
+class CodeIndexRun(Base, TimestampMixin):
+    """Execution run of source code indexing and vector embedding for search & Q&A."""
+
+    __tablename__ = "code_index_runs"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    repository_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("repositories.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    snapshot_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("repository_snapshots.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    status: Mapped[str] = mapped_column(String(32), default="pending", nullable=False, index=True)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    index_version: Mapped[str] = mapped_column(String(32), default="1.0.0", nullable=False)
+    chunk_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    files_indexed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    files_skipped: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    embedding_provider: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    embedding_model: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    embedding_dimension: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    failure_code: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    failure_reason: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
+    summary_json: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+
+    # Relationships
+    repository: Mapped["Repository"] = relationship("Repository", back_populates="index_runs")
+    snapshot: Mapped["RepositorySnapshot"] = relationship("RepositorySnapshot", back_populates="index_runs")
+    chunks: Mapped[List["CodeChunk"]] = relationship(
+        "CodeChunk",
+        back_populates="index_run",
+        cascade="all, delete-orphan",
+        order_by="CodeChunk.chunk_index",
+    )
+
+
+class CodeChunk(Base, TimestampMixin):
+    """Syntax-aware or line-bounded code/doc chunk with coordinates and optional embedding."""
+
+    __tablename__ = "code_chunks"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    index_run_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("code_index_runs.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    repository_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("repositories.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    snapshot_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("repository_snapshots.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    relative_path: Mapped[str] = mapped_column(String(1024), nullable=False, index=True)
+    file_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    language: Mapped[str] = mapped_column(String(64), default="Unknown", nullable=False, index=True)
+    chunk_index: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    chunk_type: Mapped[str] = mapped_column(String(32), default="code_block", nullable=False, index=True)
+    symbol_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    symbol_type: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    start_line: Mapped[int] = mapped_column(Integer, nullable=False)
+    end_line: Mapped[int] = mapped_column(Integer, nullable=False)
+    start_column: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    end_column: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    chunk_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    embedding: Mapped[Optional[List[float]]] = mapped_column(JSON, nullable=True)
+    metadata_json: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+
+    # Relationships
+    index_run: Mapped["CodeIndexRun"] = relationship("CodeIndexRun", back_populates="chunks")
+    repository: Mapped["Repository"] = relationship("Repository")
+    snapshot: Mapped["RepositorySnapshot"] = relationship("RepositorySnapshot")
+
+    __table_args__ = (
+        Index("ix_code_chunks_snap_lang", "snapshot_id", "language"),
+        Index("ix_code_chunks_snap_path", "snapshot_id", "relative_path"),
+        Index("ix_code_chunks_snap_sym", "snapshot_id", "symbol_name"),
     )
 
