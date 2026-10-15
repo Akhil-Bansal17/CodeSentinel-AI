@@ -7,6 +7,7 @@ from backend.app.api.v1.endpoints import (
     dependencies,
     health,
     repositories,
+    search,
 )
 
 api_router = APIRouter()
@@ -44,3 +45,8 @@ api_router.include_router(codebase_health.repo_health_router)
 api_router.include_router(codebase_health.health_assessments_router, prefix="/v1")
 api_router.include_router(codebase_health.health_assessments_router)
 
+# Register Phase 6 Code Search & Repository Q&A endpoints under /api/v1 and /api
+api_router.include_router(search.repo_search_router, prefix="/v1")
+api_router.include_router(search.repo_search_router)
+api_router.include_router(search.search_router, prefix="/v1")
+api_router.include_router(search.search_router)
