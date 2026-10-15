@@ -48,9 +48,9 @@ export const App: React.FC = () => {
       case "analysis":
         return <AnalysisPage />;
       case "code-search":
-        return <CodeSearchPage />;
+        return <CodeSearchPage initialRepoId={selectedRepoId} />;
       case "ai-assistant":
-        return <AIAssistantPage />;
+        return <AIAssistantPage initialRepoId={selectedRepoId} />;
       case "settings":
         return <SettingsPage healthState={healthState} />;
       default:
