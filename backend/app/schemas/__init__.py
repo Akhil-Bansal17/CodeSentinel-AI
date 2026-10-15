@@ -27,6 +27,19 @@ from .dependencies import (
     RepositoryDependencyResponse,
 )
 
+from .search import (
+    CodeChunkDetailResponse,
+    CodeIndexRunResponse,
+    CodeSearchQueryPayload,
+    CodeSearchResponse,
+    EvidenceItemResponse,
+    QAPayload,
+    QAResponse,
+    SearchCapabilitiesResponse,
+    SearchResultItem,
+    StartIndexPayload,
+)
+
 __all__ = [
     "ErrorDetail",
     "ErrorResponse",
@@ -50,4 +63,14 @@ __all__ = [
     "AdvisoryStatusResponse",
     "AdvisoryImportRequest",
     "AdvisoryImportResponse",
+    "StartIndexPayload",
+    "CodeIndexRunResponse",
+    "SearchCapabilitiesResponse",
+    "CodeSearchQueryPayload",
+    "SearchResultItem",
+    "CodeSearchResponse",
+    "CodeChunkDetailResponse",
+    "QAPayload",
+    "EvidenceItemResponse",
+    "QAResponse",
 ]
