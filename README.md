@@ -39,7 +39,10 @@ CodeSentinel AI is a local-first software engineering intelligence and automated
 | **Tarjan's SCC Cycle Detection** | Identifies circular dependency clusters and mutual tight coupling across modules using Tarjan's Strongly Connected Components algorithm. |
 | **Declarative Governance Engine** | Enforces layer boundaries and forbidden pattern rules via `codesentinel.architecture.json` with exact line evidence and SHA-256 fingerprints. |
 | **Explainable Codebase Health Index** | Evaluates a 0–100 health index across 5 core pillars (Maintainability, AppSec, Architecture, Dependency Risk, Coverage) with weight normalization and ranked recommendations. |
-| **Modern Developer Dashboard** | Responsive React 19 + Vite 8 + Tailwind CSS dark-mode dashboard with paginated file explorers, dependency graphs, architecture viewers, and live telemetry. |
+| **Syntax-Aware Code Chunking** | AST-based chunking for Python and JS/TS extracting functions, classes, and declarations, with Markdown heading chunking and sliding window fallbacks. |
+| **Intelligent Code Search** | Multi-mode search supporting BM25Okapi lexical retrieval with identifier tokenization, dense vector cosine similarity semantic retrieval, and Reciprocal Rank Fusion (RRF) hybrid retrieval. |
+| **Evidence-Backed Repository Q&A** | Deterministic evidence-backed repository answers citing verified source locations with line ranges, uncertainty detection, and prompt injection defense. |
+| **Modern Developer Dashboard** | Responsive React 19 + Vite 8 + Tailwind CSS dark-mode dashboard with Code Search, AI Assistant, paginated file explorers, dependency graphs, architecture viewers, and live telemetry. |
 
 ---
 
@@ -62,9 +65,12 @@ CodeSentinel AI is a local-first software engineering intelligence and automated
 - **Isolates circular dependency clusters**: Traverses import graphs with Tarjan's SCC algorithm to flag circular components and identify cycles.
 - **Enforces architectural governance policies**: Evaluates layer boundaries and forbidden dependencies declared in `codesentinel.architecture.json` with exact source line coordinates and remediation guidance.
 - **Calculates a 5-pillar codebase health score**: Deterministically assesses Maintainability (25%), Security (25%), Architecture (20%), Dependency Risk (15%), and Coverage (15%) with dynamic weight renormalization for missing inputs.
-- **Prioritizes actionable remediation**: Produces ranked recommendation cards sorted by priority and impact with concrete action plans.
+- **Indexes Codebases Incrementally (Phase 6)**: Extracts syntax-aware chunks (functions, classes, methods, imports, doc sections) from immutable snapshot source files with SHA-256 content fingerprints and line/column coordinates.
+- **Performs Lexical, Semantic & Hybrid Code Search**: BM25Okapi lexical retrieval with snake_case/camelCase sub-tokenization and symbol boosting; dense vector cosine similarity; and Reciprocal Rank Fusion ($k=60$) hybrid ranking.
+- **Answers Repository Inquiries Grounded in Evidence**: Evaluates evidence sufficiency, answers questions with verifiable line-coordinate citations, detects insufficient evidence honestly, and sandboxes retrieved code against prompt injection.
+- **Provides Zero-Key Operation with Optional Pluggable LLM/Embeddings**: Works out of the box with zero external API keys via deterministic grounded synthesis; optionally connects to configured local or external embedding and LLM providers.
 - **Issues stable SHA-256 finding fingerprints**: Guarantees idempotent issue tracking: `sha256(rule_id:file_path:start_line:evidence_summary)`.
-- **Delivers a production REST API & React UI**: Features 20+ OpenAPI endpoints, structured JSON logging, and a low-latency React 19 dashboard.
+- **Delivers a production REST API & React UI**: Features 26+ OpenAPI endpoints, structured JSON logging, and a low-latency React 19 dashboard with dedicated Code Search and AI Assistant consoles.
 
 ---
 
@@ -534,15 +540,19 @@ erDiagram
     REPOSITORIES ||--o{ DEPENDENCY_RUNS : "evaluates"
     REPOSITORIES ||--o{ ARCHITECTURE_RUNS : "governs"
     REPOSITORIES ||--o{ CODEBASE_HEALTH_ASSESSMENTS : "assesses"
+    REPOSITORIES ||--o{ CODE_INDEX_RUNS : "indexes"
 
     REPOSITORY_SNAPSHOTS ||--o{ REPOSITORY_FILES : "contains"
     REPOSITORY_SNAPSHOTS ||--o{ ANALYSIS_RUNS : "benchmarks"
     REPOSITORY_SNAPSHOTS ||--o{ DEPENDENCY_RUNS : "targets"
     REPOSITORY_SNAPSHOTS ||--o{ ARCHITECTURE_RUNS : "models"
     REPOSITORY_SNAPSHOTS ||--o{ CODEBASE_HEALTH_ASSESSMENTS : "grades"
+    REPOSITORY_SNAPSHOTS ||--o{ CODE_INDEX_RUNS : "targets"
+    REPOSITORY_SNAPSHOTS ||--o{ CODE_CHUNKS : "chunks"
 
     ANALYSIS_RUNS ||--o{ ANALYSIS_FINDINGS : "emits"
     ARCHITECTURE_RUNS ||--o{ ARCHITECTURE_VIOLATIONS : "detects"
+    CODE_INDEX_RUNS ||--o{ CODE_CHUNKS : "produces"
 
     ADVISORY_DATASETS ||--o{ VULNERABILITY_ADVISORIES : "catalogs"
 
@@ -731,6 +741,43 @@ erDiagram
         json recommendations_json
         datetime assessed_at
     }
+
+    CODE_INDEX_RUNS {
+        string id PK
+        string repository_id FK
+        string snapshot_id FK
+        string status
+        string index_version
+        string embedding_provider
+        string embedding_model
+        int chunk_count
+        int files_indexed
+        bigint total_bytes_indexed
+        string error_message
+        json summary_json
+        datetime started_at
+        datetime completed_at
+    }
+
+    CODE_CHUNKS {
+        string id PK
+        string repository_id FK
+        string snapshot_id FK
+        string index_run_id FK
+        string relative_path
+        int start_line
+        int end_line
+        int start_col
+        int end_col
+        string symbol_name
+        string symbol_type
+        string language
+        string chunking_strategy
+        string content_hash
+        text content
+        json embedding
+        datetime created_at
+    }
 ```
 
 ---
@@ -796,6 +843,98 @@ $$\text{Fingerprint} = \text{SHA-256}(\text{rule\_id} + \text{":"} + \text{file\
 
 This fingerprint allows CI/CD systems and development teams to differentiate net-new issues from acknowledged existing findings across repeated pull request scans without relying on fragile auto-incrementing database identifiers.
 
+### 4. Syntax-Aware AST Code Chunking & Fingerprinting
+
+To avoid splitting logical symbols across arbitrary line boundaries, CodeSentinel AI employs syntax-aware AST chunking:
+- **Python**: Traverses `ast.parse` trees to isolate top-level and nested classes, methods, functions, and import blocks with exact `lineno`, `end_lineno`, `col_offset`, and `end_col_offset`.
+- **JavaScript & TypeScript**: Parses function declarations, arrow functions, class declarations, and methods with accurate line coordinates.
+- **Documentation**: Splits Markdown files along heading anchors (`#`, `##`, `###`) to preserve conceptual sections.
+- **Sliding-Window Fallback**: For unrecognized file types or non-AST syntax, uses bounded line windows (default: 80 lines with 15-line overlap).
+- **Chunk Fingerprint**: Every chunk is indexed with a deterministic SHA-256 identifier:
+  $$\text{Chunk ID} = \text{SHA-256}(\text{repo\_id} + \text{":"} + \text{snapshot\_id} + \text{":"} + \text{relative\_path} + \text{":"} + \text{start\_line} + \text{":"} + \text{end\_line} + \text{":"} + \text{content\_hash})$$
+
+### 5. Multi-Mode Search & Hybrid Reciprocal Rank Fusion
+
+CodeSentinel AI implements three distinct retrieval modes without vendor lock-in:
+1. **Lexical Retrieval (BM25Okapi)**: Tokenizes source code into both complete identifiers and sub-tokens via `camelCase` and `snake_case` boundary splitting. Query tokens matching exact symbol names or file path components receive deterministic relevance boosts ($1.5\times$ to $2.0\times$).
+2. **Dense Vector Semantic Search**: Evaluates cosine similarity between query embeddings and chunk embeddings stored in PostgreSQL/SQLite:
+   $$\text{sim}(q, c) = \frac{\mathbf{q} \cdot \mathbf{c}}{\|\mathbf{q}\| \|\mathbf{c}\|}$$
+3. **Hybrid Reciprocal Rank Fusion (RRF)**: Combines ranked result lists from both lexical and semantic pipelines using constant $k=60$:
+   $$RRF(d) = \sum_{m \in \{\text{lexical}, \text{semantic}\}} \frac{w_m}{60 + r_m(d)}$$
+   When an embedding model is not configured (`EMBEDDING_PROVIDER="none"`), the system honestly discloses that semantic search is unavailable and returns lexical results with an explanatory notice.
+
+### 6. Grounded Evidence-Backed Q&A & Prompt-Injection Containment
+
+The repository Q&A pipeline enforces strict grounding and sandbox guarantees:
+1. **Repository Access & Snapshot Verification**: Queries are bounded to the exact immutable snapshot of the target repository.
+2. **Evidence Retrieval & Deduplication**: Retrieves top $N$ candidate chunks using hybrid RRF, deduplicating identical file spans.
+3. **Evidence Sufficiency Scoring**: Verifies whether top retrieved chunks cross the relevance threshold ($\ge 0.05$). If evidence is insufficient, the system returns an honest `insufficient` status without guessing or fabricating answers.
+4. **Deterministic Answer Synthesis (Zero-Key Mode)**: Generates structured, evidence-backed answers summarizing discovered symbols, line ranges, and file relationships without requiring any LLM API key.
+5. **Prompt-Injection Defense**: All retrieved code, documentation, and user input are treated as untrusted text. System prompts encapsulate evidence inside `<untrusted_repository_evidence>` blocks and sanitize prompt-hijacking strings (`"ignore previous instructions"`, `"system:"`, etc.).
+6. **Citation Validation**: Returned citations are verified against actual chunks in the database. Citations pointing to non-existent files or mismatched line ranges are pruned.
+
+---
+
+## Semantic Code Search & Evidence-Backed Repository Q&A (Phase 6)
+
+### Indexing Lifecycle
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Dev as Developer
+    participant UI as React UI (CodeSearch / AIAssistant)
+    participant API as FastAPI Router (/api/v1/search)
+    participant Indexer as IndexingService
+    participant Parser as AST Chunker
+    participant DB as Relational DB (PostgreSQL / SQLite)
+
+    Dev->>UI: Click "Index Snapshot"
+    UI->>API: POST /api/v1/search/index {repo_id, snapshot_id}
+    API->>Indexer: index_snapshot(repo_id, snapshot_id)
+    Indexer->>DB: Check for existing completed CodeIndexRun
+    alt Already Indexed
+        Indexer-->>API: Return existing index run (Idempotent)
+    else New or Stale Index
+        Indexer->>DB: Create CodeIndexRun (Status: RUNNING)
+        Indexer->>Indexer: Discover snapshot files (exclude .env, .pem, id_rsa, vendor)
+        loop For each valid source file
+            Indexer->>Parser: chunk_source_file(file_path, content)
+            Parser-->>Indexer: Yield List[CodeChunk]
+        end
+        Indexer->>DB: Bulk insert CodeChunk records
+        Indexer->>DB: Update CodeIndexRun (Status: COMPLETED, chunk_count, bytes)
+        Indexer-->>API: CodeIndexStatusResponse
+    end
+    API-->>UI: Display Index Status & Chunk Count
+```
+
+### Search & Q&A REST Endpoints
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/v1/search/index` | Trigger indexing of an immutable repository snapshot (idempotent). |
+| `GET` | `/api/v1/search/index/status` | Query indexing progress, chunk counts, and completion status. |
+| `GET` | `/api/v1/search/index/capabilities` | Inspect active search capabilities (lexical, semantic, LLM provider). |
+| `POST` | `/api/v1/search/search` | Search code using lexical, semantic, or hybrid retrieval with language and path filters. |
+| `GET` | `/api/v1/search/chunks/{chunk_id}` | Retrieve full source content and coordinates for a specific chunk. |
+| `POST` | `/api/v1/search/qa` | Ask a grounded question against an indexed repository snapshot. |
+
+### Configuration & Resource Limits
+
+| Setting | Default | Description |
+| :--- | :--- | :--- |
+| `INDEX_VERSION` | `1.0.0` | Invalidation version for chunk parsing and indexing rules. |
+| `MAX_FILE_SIZE_BYTES` | `500,000` (500 KB) | Files larger than this threshold are skipped during indexing. |
+| `MAX_INDEX_FILES` | `2,500` | Maximum number of files indexed per repository snapshot. |
+| `CHUNK_MAX_LINES` | `120` | Maximum line span for an individual symbol chunk before splitting. |
+| `CHUNK_FALLBACK_LINES` | `80` | Fallback chunk window for unrecognized languages. |
+| `CHUNK_OVERLAP_LINES` | `15` | Overlap between sliding window fallback chunks. |
+| `EMBEDDING_PROVIDER` | `none` | Embedding provider (`none`, `local`, `test`, `openai`). |
+| `LLM_PROVIDER` | `none` | Question answering LLM provider (`none`, `test`, `http`). |
+| `QA_MAX_EVIDENCE_CHUNKS` | `8` | Maximum evidence chunks retrieved for synthesis. |
+| `QA_RELEVANCE_THRESHOLD` | `0.05` | Minimum relevance score required to consider evidence sufficient. |
+
 ---
 
 ## Error Handling Reference
@@ -822,34 +961,44 @@ The codebase maintains automated test coverage across both backend deterministic
 
 ### Backend Test Suite (Pytest)
 
-The backend test suite includes **159 automated tests** covering security sandboxing regressions, AST parsers, static rule correctness, multi-manifest SCA parsers, dependency graph resolution, Martin's coupling metrics, Tarjan's SCC cycle detection, architectural policy enforcement, and codebase health scoring:
+The backend test suite includes **180 automated tests** (with 3 skipped tests reserved for standalone PostgreSQL instances):
 
 ```bash
 # Run complete backend test suite
-pytest -v backend/tests
+pytest -q backend/tests
 
-# Run Phase 5 architecture & health tests specifically
-pytest -v backend/tests/test_dependency_graph.py backend/tests/test_architecture_policy.py backend/tests/test_codebase_health.py backend/tests/test_architecture_api.py
+# Run Phase 6 code search and Q&A tests specifically
+pytest -v backend/tests/test_search_chunker.py \
+          backend/tests/test_search_retrieval.py \
+          backend/tests/test_qa_service.py \
+          backend/tests/test_search_api.py \
+          backend/tests/test_search_database.py
 
-# Run security regression tests specifically
+# Run Phase 5 architecture & health tests
+pytest -v backend/tests/test_dependency_graph.py \
+          backend/tests/test_architecture_policy.py \
+          backend/tests/test_codebase_health.py \
+          backend/tests/test_architecture_api.py
+
+# Run security regression tests
 pytest -v backend/tests/test_security_regressions.py
 ```
 
 ### Frontend Test Suite (Vitest)
 
-The frontend test suite includes **42 unit and integration tests** across 12 test suites written in Vitest and React Testing Library:
+The frontend test suite includes **48 automated unit and integration tests** across 14 test suites written in Vitest and React Testing Library:
 
 ```bash
 cd frontend
 
 # Run complete Vitest suite
-npm test -- --run
+npm test
 
 # Run TypeScript compilation and typecheck
 npm run build
 
 # Run Oxlint validation
-npx oxlint
+npm run lint
 ```
 
 ---
@@ -887,14 +1036,26 @@ npx oxlint
   - Canonical package normalization (PEP 503 PyPI & npm)
   - PEP 440 (`packaging`) and Semver 2.0.0 (`NpmRangeEvaluator`) range matching engines
   - Offline vulnerability advisory catalog ingestion with provenance tracking
-- [ ] **Phase 4: Semantic Knowledge Graph & Multi-Language ASTs (In Progress)**
-  - Tree-sitter parser integration for Go, Rust, Java, and C/C++
-  - Cross-file symbol dependency and call-graph generation
-  - Test runner intelligence and line coverage correlation
-- [ ] **Phase 5: Grounded AI Reasoning & Bounded Agency (Planned)**
-  - PostgreSQL `pgvector` indexing and hybrid semantic/AST code search
-  - Retrieval-Augmented Generation (RAG) strictly grounded in verified deterministic findings
-  - AI Codebase Assistant explaining root causes and drafting verifiable, test-backed pull request diffs
+- [x] **Phase 4: Application Security Intelligence & Semantic Rules (Complete)**
+  - Decoupled Severity (`CRITICAL` to `INFO`) and Confidence (`HIGH`, `MEDIUM`, `LOW`)
+  - 10 deterministic security rules for Python and JS/TS
+  - Remediation guidance and why-it-matters contextual explanations
+- [x] **Phase 5: Architectural Governance, Module Graphs & Codebase Health (Complete)**
+  - Module dependency graphs for Python and JS/TS
+  - Martin's package coupling metrics ($Ca$, $Ce$, $I$, $A$, $D$)
+  - Tarjan's SCC cycle detection
+  - Declarative architectural boundary policies (`codesentinel.architecture.json`)
+  - 5-pillar codebase health score index (0–100) with dynamic weight renormalization
+- [x] **Phase 6: Semantic Code Search & Evidence-Backed Repository Q&A (Complete)**
+  - Syntax-aware AST chunking for Python, TypeScript, JavaScript, and Markdown
+  - BM25Okapi lexical retrieval with sub-word identifier tokenization and symbol boosting
+  - Dense vector semantic search and Reciprocal Rank Fusion (RRF) hybrid retrieval
+  - Evidence-backed repository Q&A grounded in verified snapshot source code
+  - Verifiable citation coordinates, uncertainty detection, and prompt injection defense
+  - Zero-key local execution with optional pluggable LLM and embedding providers
+- [ ] **Phase 7: Automated Remediation & Safe Pull Request Synthesis (Planned)**
+  - AST-guided patch generation strictly constrained to verified findings
+  - Local git diff preview and syntactically validated code transformations
 
 ---
 
