@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Union
+from typing import List, Optional, Union
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -102,6 +102,80 @@ class Settings(BaseSettings):
     RULE_SET_VERSION: str = Field(
         default="1.0.0",
         description="Current static analysis rule set version",
+    )
+
+    # Phase 6: Code Indexing, Search & Evidence-Backed Q&A
+    INDEX_VERSION: str = Field(
+        default="1.0.0",
+        description="Current code index schema and chunking version",
+    )
+    MAX_INDEX_FILES: int = Field(
+        default=1000,
+        description="Maximum number of files indexed per repository snapshot",
+    )
+    MAX_CHUNKS_PER_FILE: int = Field(
+        default=500,
+        description="Maximum number of syntax/text chunks per file",
+    )
+    MAX_CHUNK_BYTES: int = Field(
+        default=8192,
+        description="Maximum byte size for a single code chunk",
+    )
+    MAX_TOTAL_INDEX_BYTES: int = Field(
+        default=52428800,  # 50 MB
+        description="Maximum cumulative file bytes indexed during an indexing run",
+    )
+    INDEXING_OVERLAP_LINES: int = Field(
+        default=5,
+        description="Overlap lines for fallback window chunking",
+    )
+    EMBEDDING_PROVIDER: str = Field(
+        default="none",
+        description="Semantic embedding provider: none, local, test, openai_compatible, ollama",
+    )
+    EMBEDDING_API_URL: Optional[str] = Field(
+        default=None,
+        description="Base URL for external or local embedding API",
+    )
+    EMBEDDING_API_KEY: Optional[str] = Field(
+        default=None,
+        description="API key for optional embedding provider (never exposed to frontend)",
+    )
+    EMBEDDING_MODEL: str = Field(
+        default="text-embedding-3-small",
+        description="Embedding model identifier",
+    )
+    EMBEDDING_DIMENSION: int = Field(
+        default=384,
+        description="Expected vector dimension for embeddings",
+    )
+    LLM_PROVIDER: str = Field(
+        default="none",
+        description="LLM provider for Q&A answer generation: none, test, openai_compatible, ollama",
+    )
+    LLM_API_URL: Optional[str] = Field(
+        default=None,
+        description="Base URL for external or local LLM API",
+    )
+    LLM_API_KEY: Optional[str] = Field(
+        default=None,
+        description="API key for optional LLM provider (never exposed to frontend)",
+    )
+    LLM_MODEL: str = Field(
+        default="gpt-4o-mini",
+        description="LLM model identifier",
+    )
+    LLM_TIMEOUT_SECONDS: int = Field(
+        default=30,
+        description="Timeout for LLM question-answering requests in seconds",
+    )
+    QA_MAX_EVIDENCE_CHUNKS: int = Field(
+        default=8,
+        description="Maximum number of retrieved evidence chunks passed to Q&A synthesis",
+    )
+    QA_RELEVANCE_THRESHOLD: float = Field(
+        default=0.05,
+        description="Minimum score threshold for evidence to be considered sufficient",
     )
 
     @field_validator("CORS_ORIGINS", mode="before")
