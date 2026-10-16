@@ -4,7 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-0.1.0-emerald.svg)](https://github.com/Akhil-Bansal17/CodeSentinel-AI/releases)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](#running-automated-tests)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](#testing)
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.14-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-19.0-61DAFB.svg)](https://react.dev/)
@@ -16,11 +16,11 @@
 
 ## Overview
 
-CodeSentinel AI is a local-first software engineering intelligence and automated codebase governance platform engineered for engineering leads, security teams, and platform architects who need transparent, verifiable repository diagnostics without relying on hallucinating LLMs. Unlike generic "AI coding wrappers" that blindly pipe unvetted source files into language models and fabricate non-existent CVEs or synthetic quality scores, CodeSentinel AI strictly decouples **deterministic static inspection** from **high-level reasoning**. Grounded in AST parsing, McCabe cyclomatic complexity calculation, multi-manifest Software Composition Analysis (SCA), and specification-compliant version matching (PEP 440 and Semver 2.0.0), every finding emitted by CodeSentinel AI is cryptographically fingerprinted, isolated to exact source line/column coordinates, and backed by verifiable evidence.
+CodeSentinel AI is a local-first software engineering intelligence and automated codebase governance platform engineered for engineering leads, security teams, and platform architects who need transparent, verifiable repository diagnostics without relying on hallucinating LLMs. Unlike generic "AI coding wrappers" that blindly pipe unvetted source files into language models and fabricate non-existent CVEs or synthetic quality scores, CodeSentinel AI strictly decouples **deterministic static inspection** from **high-level reasoning**. Grounded in AST parsing, McCabe cyclomatic complexity calculation, multi-manifest Software Composition Analysis (SCA), specification-compliant version matching (PEP 440 and Semver 2.0.0), Martin's architectural coupling metrics, Tarjan's cycle detection, syntax-aware chunking, and Reciprocal Rank Fusion code retrieval, every finding emitted by CodeSentinel AI is cryptographically fingerprinted, isolated to exact source line/column coordinates, and backed by verifiable evidence with zero untrusted code execution.
 
 ---
 
-## Feature Matrix
+## Feature Table
 
 | Feature | Description |
 | :--- | :--- |
@@ -46,7 +46,7 @@ CodeSentinel AI is a local-first software engineering intelligence and automated
 
 ---
 
-## What It Can Do Now
+## "What It Can Do Now"
 
 - **Ingests public GitHub repositories safely**: Downloads archives via streaming HTTP, validates redirect chains against SSRF filters, strips root wrappers, and auto-detects default branches.
 - **Audits local workspaces securely**: Resolves and scans local filesystem trees strictly bounded within explicitly whitelisted `LOCAL_REPOSITORY_ROOTS`.
@@ -84,6 +84,7 @@ Engineering leaders and platform teams struggle to maintain codebase health, tra
 | **Execution Safety** | **Risky**: Cloud-dependent; source code leaves security perimeters to third-party APIs. | **Moderate**: Requires proprietary agents or heavyweight server compute. | **High Risk**: Many tools run build hooks (`setup.py`, `npm postinstall`) during scan. | **Zero Execution**: Code is parsed statically; never built, executed, or exported off-host. |
 | **Air-Gap Capability** | **None**: Requires active internet connectivity to external LLM providers. | **Complex**: Expensive on-premise appliances with heavy license servers. | **Manual**: Requires configuring multiple disconnected offline package mirrors. | **Native**: Fully autonomous; runs locally with bundled, version-controlled advisory catalogs. |
 | **Dependency Precision** | **Hallucinated**: Guesses transitive dependencies based on prompt tokens. | **Variable**: Often assumes top-level constraint equals installed version. | **Brittle**: Inconsistent between npm audit, pip-audit, and manual regex checks. | **Rigorous**: PEP 440 and Semver 2.0.0 specs; clearly separates declared vs. resolved versions. |
+| **Architectural Governance** | **Surface-level**: Summarizes files textually without graph-theoretical rigor. | **Opaque**: Complex enterprise setups requiring deep configuration. | **Fragmented**: Separate import-linter configs with no unified health score. | **Formal**: Martin's coupling metrics, Tarjan's SCC cycle clusters, and JSON declarative boundary policies. |
 | **Operational Cost** | **High**: Escalating per-token billing and cloud inference subscriptions. | **Very High**: Six-figure enterprise contracts with restrictive seat quotas. | **Low**: Open-source, but requires hundreds of engineering hours to integrate. | **Zero Per-Seat Cost**: Self-hosted, lightweight Docker stack running on commodity hardware. |
 
 ---
@@ -166,7 +167,7 @@ docker compose logs -f backend
 
 ## Example Input → Output
 
-### Ingest a Repository & Execute Static Analysis
+### 1. Ingest a Repository & Execute Static Analysis
 
 #### Request: Ingest a GitHub Repository
 ```bash
@@ -231,6 +232,40 @@ curl -X POST http://127.0.0.1:8000/api/v1/repositories/7f920be3-c21e-4509-9ec4-f
 }
 ```
 
+### 2. Evidence-Backed Repository Q&A Response
+
+#### Request: Ask an Architectural Question
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/search/qa \
+  -H "Content-Type: application/json" \
+  -d '{
+    "repository_id": "7f920be3-c21e-4509-9ec4-ff70d8a25c11",
+    "question": "Where is user authentication implemented in this repository?"
+  }'
+```
+
+#### Output: Grounded Evidence with Citations
+```json
+{
+  "answer": "User authentication is implemented in 'backend/app/services/auth/service.py'. Specifically, the 'authenticate_user' function (lines 45-82) validates bearer JWT credentials against password hashes stored in the database.",
+  "repository_id": "7f920be3-c21e-4509-9ec4-ff70d8a25c11",
+  "snapshot_id": "a4d3e8e1-5e72-4d51-87c2-9e9f1a0e3b62",
+  "status": "answered",
+  "retrieval_mode": "hybrid",
+  "used_llm": false,
+  "confidence": 0.94,
+  "citations": [
+    {
+      "chunk_id": "9d41b6...f3",
+      "file_path": "backend/app/services/auth/service.py",
+      "start_line": 45,
+      "end_line": 82,
+      "symbol_name": "authenticate_user"
+    }
+  ]
+}
+```
+
 ---
 
 ## API Usage
@@ -275,19 +310,46 @@ curl -X GET "http://127.0.0.1:8000/api/v1/analyses/b213c909-11fa-4f9e-990a-5c621
 curl -X POST "http://127.0.0.1:8000/api/v1/repositories/7f920be3-c21e-4509-9ec4-ff70d8a25c11/dependency-analyses"
 ```
 
-### 6. Inspect Discovered Dependency Inventory
+### 6. Inspect Discovered Dependency Inventory & Vulnerabilities
 ```bash
 curl -X GET "http://127.0.0.1:8000/api/v1/dependency-analyses/6d1c9ef0-0a22-4876-9d3e-90f77ea61190/dependencies?ecosystem=npm&is_direct=true"
-```
-
-### 7. Inspect Matched Security Vulnerabilities
-```bash
 curl -X GET "http://127.0.0.1:8000/api/v1/dependency-analyses/6d1c9ef0-0a22-4876-9d3e-90f77ea61190/vulnerabilities?severity=HIGH"
 ```
 
-### 8. Verify Advisory Catalog Status & Provenance
+### 7. Run Architectural Governance & Coupling Evaluation
 ```bash
-curl -X GET "http://127.0.0.1:8000/api/v1/advisories/status"
+curl -X POST "http://127.0.0.1:8000/api/v1/architecture/runs" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "repository_id": "7f920be3-c21e-4509-9ec4-ff70d8a25c11"
+  }'
+```
+
+### 8. Fetch Codebase Health Score & Dimension Telemetry
+```bash
+curl -X GET "http://127.0.0.1:8000/api/v1/architecture/health/7f920be3-c21e-4509-9ec4-ff70d8a25c11"
+```
+
+### 9. Index Codebase Snapshot for Search & Q&A
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/search/index" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "repository_id": "7f920be3-c21e-4509-9ec4-ff70d8a25c11",
+    "snapshot_id": "a4d3e8e1-5e72-4d51-87c2-9e9f1a0e3b62"
+  }'
+```
+
+### 10. Execute Hybrid Code Search
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/search/search" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "repository_id": "7f920be3-c21e-4509-9ec4-ff70d8a25c11",
+    "query": "SSRF guard redirect check",
+    "mode": "hybrid",
+    "limit": 10
+  }'
 ```
 
 ---
@@ -321,12 +383,21 @@ CodeSentinel AI is configured via environment variables or a `.env` file loaded 
 | `MAX_ANALYSIS_FILE_BYTES` | `1048576` (1 MB) | Maximum file size for AST parser consumption |
 | `RULE_COMPLEXITY_DEFAULT_THRESHOLD` | `10` | McCabe cyclomatic complexity limit before triggering `*-COMPLEXITY-001` |
 | `RULE_FUNCTION_LENGTH_DEFAULT_THRESHOLD`| `50` | Function body length threshold in lines before triggering `*-FUNCTION-001` |
+| `INDEX_VERSION` | `1.0.0` | Invalidation version for chunk parsing and indexing rules |
+| `MAX_INDEX_FILES` | `2500` | Maximum number of source files indexed per repository snapshot |
+| `CHUNK_MAX_LINES` | `120` | Maximum line span for an individual symbol chunk before splitting |
+| `CHUNK_FALLBACK_LINES` | `80` | Fallback chunk window for unrecognized languages |
+| `CHUNK_OVERLAP_LINES` | `15` | Overlap between sliding window fallback chunks |
+| `EMBEDDING_PROVIDER` | `none` | Embedding provider (`none`, `local`, `test`, `openai`) |
+| `LLM_PROVIDER` | `none` | Question answering LLM provider (`none`, `test`, `http`) |
+| `QA_MAX_EVIDENCE_CHUNKS` | `8` | Maximum evidence chunks retrieved for synthesis |
+| `QA_RELEVANCE_THRESHOLD` | `0.05` | Minimum relevance score required to consider evidence sufficient |
 
 ---
 
-## System Architecture
+## System Architecture Diagram
 
-The following diagram illustrates the physical request path through the system's runtime layers, highlighting the strict separation between deterministic ingestion/analysis engines and persisted state.
+*Figure 1: Multi-tiered system topology illustrating decoupled ingestion, static analysis, architectural governance, search, and persistence pipelines.*
 
 ```mermaid
 flowchart TD
@@ -340,7 +411,7 @@ flowchart TD
         Middleware["Security Middleware<br/>(CORS, Audit Logger, Error Trap)"]
     end
 
-    subgraph IngestionSandbox["Sandbox & Repository Ingestion Engine"]
+    subgraph IngestionTier["Sandbox & Ingestion Engine"]
         Validator["Source Validator & SSRF Guard"]
         Acquisition["Streaming Downloader & Local Resolver"]
         SafeExtract["Safe Extractor<br/>(TarSlip / ZipSlip / Bomb Guard)"]
@@ -348,14 +419,15 @@ flowchart TD
         Metrics["Deterministic Metrics Engine<br/>(LOC & Proportional Language Shares)"]
     end
 
-    subgraph StaticAnalysisEngine["Phase 2: Deterministic AST Analysis Core"]
+    subgraph AnalysisTier["Deterministic AST Analysis Engine"]
         PyParser["Python AST Parser<br/>(stdlib ast.parse)"]
         TsParser["TypeScript AST Adapter<br/>(Node.js + ts.createSourceFile)"]
         RuleRegistry["Deterministic Rule Registry<br/>(McCabe Complexity, Function Span, Syntax)"]
+        SecRules["AppSec Intelligence Rules<br/>(Dynamic Exec, Deserialization, SQL Injection)"]
         Normalizer["Finding Normalizer & Fingerprinter<br/>(SHA-256 Hasher)"]
     end
 
-    subgraph SCAEngine["Phase 3: Software Composition Analysis Core"]
+    subgraph SCATier["Dependency Intelligence & SCA Engine"]
         ManifestParser["Manifest & Lockfile Parsers<br/>(pip, poetry, pipenv, npm, pnpm, yarn)"]
         InventoryNormalizer["Identity Normalizer<br/>(PEP 503 PyPI & npm Canonicalization)"]
         PEP440Engine["PEP 440 Matcher<br/>(packaging.version)"]
@@ -363,10 +435,29 @@ flowchart TD
         AdvisoryCatalog[("Local Advisory Catalog<br/>(OSV / CVE Datasets)")]
     end
 
+    subgraph ArchitectureTier["Architectural Governance & Health Engine"]
+        ModuleGraph["Module Import Graph Builder<br/>(Internal vs External Edges)"]
+        CouplingCalc["Martin's Coupling Metrics<br/>(Ca, Ce, Instability, Abstractness, Distance)"]
+        TarjanSCC["Tarjan's SCC Cycle Detector<br/>(Circular Dependency Clusters)"]
+        PolicyEngine["Declarative Boundary Policy<br/>(codesentinel.architecture.json)"]
+        HealthIndex["5-Pillar Health Score Aggregator<br/>(Maintainability, Security, Arch, Deps, Cov)"]
+    end
+
+    subgraph SearchTier["Semantic Code Search & Grounded Q&A Engine"]
+        Chunker["Syntax-Aware AST Chunker<br/>(Python, JS/TS, Markdown)"]
+        LexicalBM25["BM25Okapi Lexical Indexer<br/>(CamelCase & Snake_Case Sub-Tokens)"]
+        CosineVector["Dense Vector Semantic Evaluator<br/>(Cosine Similarity Engine)"]
+        RRF["Reciprocal Rank Fusion<br/>(RRF k=60 Hybrid Combiner)"]
+        PromptGuard["Prompt Injection Guard<br/>(Untrusted Delimiters)"]
+        QASynthesizer["Evidence-Backed Grounded Q&A<br/>(Deterministic Zero-Key / Optional LLM)"]
+    end
+
     subgraph StorageTier["Persistence & Telemetry Layer"]
         Postgres[("PostgreSQL 16 Engine<br/>(SQLAlchemy 2.0 + Alembic)")]
         Snapshots[("Snapshot & File Metadata")]
         FindingsDB[("Findings & Vulnerabilities")]
+        ArchDB[("Architecture Runs & Violations")]
+        ChunkDB[("Code Chunks & Embeddings")]
     end
 
     UI --> APIClient
@@ -385,7 +476,8 @@ flowchart TD
     Snapshots --> TsParser
     PyParser --> RuleRegistry
     TsParser --> RuleRegistry
-    RuleRegistry --> Normalizer
+    RuleRegistry --> SecRules
+    SecRules --> Normalizer
     Normalizer --> FindingsDB
 
     Snapshots --> ManifestParser
@@ -397,20 +489,42 @@ flowchart TD
     PEP440Engine --> FindingsDB
     SemverEngine --> FindingsDB
 
+    Snapshots --> ModuleGraph
+    ModuleGraph --> CouplingCalc
+    ModuleGraph --> TarjanSCC
+    ModuleGraph --> PolicyEngine
+    PolicyEngine --> ArchDB
+    CouplingCalc --> HealthIndex
+    TarjanSCC --> HealthIndex
+    FindingsDB --> HealthIndex
+    HealthIndex --> ArchDB
+
+    Snapshots --> Chunker
+    Chunker --> ChunkDB
+    ChunkDB --> LexicalBM25
+    ChunkDB --> CosineVector
+    LexicalBM25 --> RRF
+    CosineVector --> RRF
+    RRF --> PromptGuard
+    PromptGuard --> QASynthesizer
+    QASynthesizer --> APIClient
+
     classDef critical fill:#1e3a8a,stroke:#3b82f6,stroke-width:2px,color:#ffffff;
     classDef security fill:#831843,stroke:#ec4899,stroke-width:2px,color:#ffffff;
     classDef engine fill:#14532d,stroke:#22c55e,stroke-width:2px,color:#ffffff;
+    classDef ai fill:#581c87,stroke:#a855f7,stroke-width:2px,color:#ffffff;
 
-    class SafeExtract,Validator security;
-    class RuleRegistry,PEP440Engine,SemverEngine critical;
-    class Metrics,Discovery,ManifestParser engine;
+    class SafeExtract,Validator,PromptGuard security;
+    class RuleRegistry,PEP440Engine,SemverEngine,PolicyEngine critical;
+    class Metrics,Discovery,ManifestParser,CouplingCalc,TarjanSCC,HealthIndex engine;
+    class Chunker,RRF,QASynthesizer ai;
 ```
 
 ---
 
-## Core Workflow Sequence
+## Core Workflow Sequence Diagram
 
-The sequence diagram below models the complete lifecycle of a repository audit—from ingestion and sandboxing to AST static code analysis and offline SCA dependency matching.
+*Figure 2: End-to-end repository audit lifecycle across ingestion, AST evaluation, SCA correlation, architectural analysis, indexing, and grounded retrieval.*
 
 ```mermaid
 sequenceDiagram
@@ -423,6 +537,8 @@ sequenceDiagram
     participant DB as PostgreSQL 16
     participant AnalysisSvc as Static Analysis Engine
     participant SCASvc as Dependency SCA Engine
+    participant ArchSvc as Architecture Governance Engine
+    participant SearchSvc as Search & Q&A Engine
 
     Dev->>UI: Connect Repository (URL or Path)
     UI->>API: POST /api/v1/repositories
@@ -445,17 +561,17 @@ sequenceDiagram
         API-->>UI: Render Repository Overview
     end
 
-    opt Trigger Code Quality Scan
+    opt Trigger Code Quality & AppSec Scan
         Dev->>UI: Click "Run Static Analysis"
         UI->>API: POST /api/v1/repositories/{id}/analyses
         API->>AnalysisSvc: execute_analysis_run(repo_id, snapshot_id)
-        AnalysisSvc->>DB: Read Snapshot File Inventory
-        AnalysisSvc->>AnalysisSvc: Parse ASTs (Python & TypeScript)
-        AnalysisSvc->>AnalysisSvc: Evaluate McCabe Complexity & Rule Registry
-        AnalysisSvc->>AnalysisSvc: Generate SHA-256 Fingerprints
+        AnalysisSvc->>DB: Load source file paths
+        AnalysisSvc->>AnalysisSvc: Parse ASTs (Python stdlib & TS compiler)
+        AnalysisSvc->>AnalysisSvc: Evaluate complexity & 10 AppSec rules
+        AnalysisSvc->>AnalysisSvc: Compute SHA-256 finding fingerprints
         AnalysisSvc->>DB: Persist AnalysisRun & AnalysisFindings
         AnalysisSvc-->>API: AnalysisRunResponse (Completed)
-        API-->>UI: Display Paginated Findings
+        API-->>UI: Display Paginated Findings & Severity Breakdown
     end
 
     opt Trigger SCA Vulnerability Scan
@@ -469,13 +585,39 @@ sequenceDiagram
         SCASvc-->>API: DependencyRunResponse (Completed)
         API-->>UI: Display Discovered Dependencies & Matched CVEs
     end
+
+    opt Trigger Architecture & Codebase Health Scan
+        Dev->>UI: Click "Evaluate Architecture"
+        UI->>API: POST /api/v1/architecture/runs
+        API->>ArchSvc: execute_architecture_run(repo_id, snapshot_id)
+        ArchSvc->>ArchSvc: Extract module import edges (Python & JS/TS)
+        ArchSvc->>ArchSvc: Compute Martin's coupling metrics (Ca, Ce, I, A, D)
+        ArchSvc->>ArchSvc: Detect circular dependency clusters (Tarjan's SCC)
+        ArchSvc->>ArchSvc: Enforce layer boundary rules (codesentinel.architecture.json)
+        ArchSvc->>ArchSvc: Calculate 5-pillar health score (0-100)
+        ArchSvc->>DB: Persist ArchitectureRun, Violations, & Health Assessment
+        ArchSvc-->>API: ArchitectureRunResponse (Completed)
+        API-->>UI: Render Dependency Graph, Cycles, & Health Index
+    end
+
+    opt Index Snapshot & Query Repository Q&A
+        Dev->>UI: Ask Question: "Where is authentication handled?"
+        UI->>API: POST /api/v1/search/qa
+        API->>SearchSvc: answer_question(repo_id, snapshot_id, query)
+        SearchSvc->>DB: Retrieve top candidate chunks via RRF Hybrid Search
+        SearchSvc->>SearchSvc: Check evidence sufficiency (score >= 0.05)
+        SearchSvc->>SearchSvc: Sandbox retrieved code in <untrusted_repository_evidence>
+        SearchSvc->>SearchSvc: Synthesize grounded answer & validate citations
+        SearchSvc-->>API: QAResponse (Answer + Line Citations + Confidence)
+        API-->>UI: Render Answer with Verifiable Inline Citations
+    end
 ```
 
 ---
 
-## Key Decision & Logic Flow
+## Key Decision & Logic Flow: Ingestion Sandbox
 
-The flowchart below documents the multi-layered security validation and decompression sandbox executed whenever a repository archive or local directory is submitted.
+*Figure 3: Multi-stage security validation, path traversal guard, and decompression bomb mitigation pipeline.*
 
 ```mermaid
 flowchart TD
@@ -529,9 +671,9 @@ flowchart TD
 
 ---
 
-## Database Entity Relationship Diagram
+## Database / Entity Relationship Diagram
 
-The following diagram models the PostgreSQL relational schema implemented via SQLAlchemy 2.0 and versioned with Alembic migrations (`0001_initial` through `0004_phase3_dependency_intelligence`).
+*Figure 4: Complete PostgreSQL relational schema illustrating domain entities, snapshot relationships, findings, architectural graphs, and code chunk indexes.*
 
 ```mermaid
 erDiagram
@@ -609,7 +751,7 @@ erDiagram
         string rule_set_version
         int files_discovered
         int files_analyzed
-        int findings_count
+        int total_findings
         json summary_json
         datetime started_at
         datetime completed_at
@@ -618,27 +760,30 @@ erDiagram
     ANALYSIS_FINDINGS {
         string id PK
         string analysis_run_id FK
-        string repository_id FK
-        string snapshot_id FK
         string rule_id
-        string severity
+        string rule_name
         string category
+        string severity
+        string confidence
         string file_path
         int start_line
         int start_column
         int end_line
+        int end_column
         string evidence_summary
         string fingerprint
         json metadata_json
+        datetime created_at
     }
 
     ADVISORY_DATASETS {
         string id PK
-        string dataset_version UK
+        string dataset_version
+        string ecosystem
         string source_name
+        int advisory_count
         string status
-        int records_count
-        string checksum
+        datetime imported_at
     }
 
     VULNERABILITY_ADVISORIES {
@@ -647,11 +792,12 @@ erDiagram
         string advisory_id
         string ecosystem
         string package_name
+        string summary
+        string details
         string severity
         float cvss_score
-        json cve_ids
-        json affected_ranges_json
-        json fixed_versions_json
+        json affected_versions_json
+        datetime published_at
     }
 
     DEPENDENCY_RUNS {
@@ -784,7 +930,7 @@ erDiagram
 
 ## Core Algorithm & Logic Explanation
 
-CodeSentinel AI guarantees reproducible codebase intelligence by relying on three deterministic algorithms:
+CodeSentinel AI guarantees reproducible codebase intelligence by relying on six deterministic algorithms:
 
 ### 1. McCabe Cyclomatic Complexity Calculation
 
@@ -804,54 +950,30 @@ When auditing package dependencies, generic regex engines produce catastrophic e
 - **Python (PEP 440)**: Uses Python's canonical `packaging.version.Version` and `packaging.specifiers.SpecifierSet` to evaluate epochs, pre-releases, and OSV event ranges (`introduced <= version < fixed`).
 - **Node.js / npm (Semver 2.0.0)**: Implements a pure-Python `NpmRangeEvaluator` supporting hyphen ranges (`1.0.0 - 2.5.0`), carets (`^1.2.3`), tildes (`~1.2.3`), wildcards (`2.x`), and logical disjunctions (`||`).
 
-```mermaid
-flowchart TD
-    PackageInput["Discovered Package & Resolved Version"] --> CheckEco{"Ecosystem?"}
+### 3. Martin's Package Coupling & Tarjan's SCC Cycle Detection
 
-    CheckEco -->|"Python / PyPI"| PyPEP503["Normalize Name (PEP 503)"]
-    CheckEco -->|"npm / Node.js"| NpmNorm["Normalize Scoped / Unscoped Name"]
+Architectural quality is quantified using Robert C. Martin's package coupling metrics:
+- **Afferent Coupling ($Ca$)**: Count of external modules that depend on this module.
+- **Efferent Coupling ($Ce$)**: Count of external modules this module depends upon.
+- **Instability ($I$)**:
+  $$I = \frac{Ce}{Ca + Ce}$$
+- **Abstractness ($A$)**: Ratio of abstract classes/interfaces ($N_a$) to total classes ($N_c$).
+- **Normalized Distance ($D$)**: Distance from the Main Sequence line $A + I = 1$:
+  $$D = |A + I - 1|$$
 
-    PyPEP503 --> AdvisoryQuery["Query Active Offline Advisory Dataset"]
-    NpmNorm --> AdvisoryQuery
+Circular dependency clusters are detected in $O(V + E)$ linear time using **Tarjan's Strongly Connected Components (SCC)** algorithm, identifying mutual import deadlocks across modules.
 
-    AdvisoryQuery --> HasAdvisories{"Matching Advisories Found?"}
-    HasAdvisories -->|"No"| MarkSafe["Mark Dependency as UNFLAGGED"]
-    HasAdvisories -->|"Yes"| EvalRange{"Evaluate Version against Affected Range"}
+### 4. Explainable 5-Pillar Codebase Health Index
 
-    EvalRange -->|"Python (PEP 440 Engine)"| PEPCheck{"Version in SpecifierSet OR OSV introduced <= v < fixed?"}
-    EvalRange -->|"npm (Semver Engine)"| SemverCheck{"Version matches NpmRangeEvaluator?"}
+The overall codebase health score (0–100) is evaluated across five weighted engineering dimensions:
+- **Maintainability (25%)**: Evaluated against AST complexity, oversized functions, and LOC density.
+- **Application Security (25%)**: Evaluated against high-severity security findings.
+- **Architecture (20%)**: Evaluated against coupling instability, circular dependencies, and boundary policy violations.
+- **Dependency Risk (15%)**: Evaluated against matched CVE counts and CVSS severity scores.
+- **Test Coverage (15%)**: Evaluated against unit test file existence and coverage telemetry.
 
-    PEPCheck -->|"True"| EmitVuln["Emit DependencyVulnerability Record"]
-    PEPCheck -->|"False"| MarkSafe
-    SemverCheck -->|"True"| EmitVuln
-    SemverCheck -->|"False"| MarkSafe
-
-    EmitVuln --> Fingerprint["Compute Stable SHA-256 Fingerprint"]
-    Fingerprint --> PersistFinding["Save to PostgreSQL with Remediation Version"]
-
-    classDef alert fill:#831843,stroke:#ec4899,stroke-width:2px,color:#ffffff;
-    classDef safe fill:#14532d,stroke:#22c55e,stroke-width:2px,color:#ffffff;
-    class EmitVuln alert;
-    class MarkSafe safe;
-```
-
-### 3. Cryptographic Evidence Fingerprinting
-
-Every finding generated by the platform receives an immutable SHA-256 fingerprint:
-
-$$\text{Fingerprint} = \text{SHA-256}(\text{rule\_id} + \text{":"} + \text{file\_path} + \text{":"} + \text{start\_line} + \text{":"} + \text{evidence\_summary})$$
-
-This fingerprint allows CI/CD systems and development teams to differentiate net-new issues from acknowledged existing findings across repeated pull request scans without relying on fragile auto-incrementing database identifiers.
-
-### 4. Syntax-Aware AST Code Chunking & Fingerprinting
-
-To avoid splitting logical symbols across arbitrary line boundaries, CodeSentinel AI employs syntax-aware AST chunking:
-- **Python**: Traverses `ast.parse` trees to isolate top-level and nested classes, methods, functions, and import blocks with exact `lineno`, `end_lineno`, `col_offset`, and `end_col_offset`.
-- **JavaScript & TypeScript**: Parses function declarations, arrow functions, class declarations, and methods with accurate line coordinates.
-- **Documentation**: Splits Markdown files along heading anchors (`#`, `##`, `###`) to preserve conceptual sections.
-- **Sliding-Window Fallback**: For unrecognized file types or non-AST syntax, uses bounded line windows (default: 80 lines with 15-line overlap).
-- **Chunk Fingerprint**: Every chunk is indexed with a deterministic SHA-256 identifier:
-  $$\text{Chunk ID} = \text{SHA-256}(\text{repo\_id} + \text{":"} + \text{snapshot\_id} + \text{":"} + \text{relative\_path} + \text{":"} + \text{start\_line} + \text{":"} + \text{end\_line} + \text{":"} + \text{content\_hash})$$
+When an input dimension lacks data (e.g., no test files configured), the engine dynamically normalizes the remaining weights to ensure honest, unskewed composite scores:
+$$H = \frac{\sum_{i} w_i S_i}{\sum_{i} w_i}$$
 
 ### 5. Multi-Mode Search & Hybrid Reciprocal Rank Fusion
 
@@ -861,79 +983,57 @@ CodeSentinel AI implements three distinct retrieval modes without vendor lock-in
    $$\text{sim}(q, c) = \frac{\mathbf{q} \cdot \mathbf{c}}{\|\mathbf{q}\| \|\mathbf{c}\|}$$
 3. **Hybrid Reciprocal Rank Fusion (RRF)**: Combines ranked result lists from both lexical and semantic pipelines using constant $k=60$:
    $$RRF(d) = \sum_{m \in \{\text{lexical}, \text{semantic}\}} \frac{w_m}{60 + r_m(d)}$$
-   When an embedding model is not configured (`EMBEDDING_PROVIDER="none"`), the system honestly discloses that semantic search is unavailable and returns lexical results with an explanatory notice.
 
 ### 6. Grounded Evidence-Backed Q&A & Prompt-Injection Containment
 
 The repository Q&A pipeline enforces strict grounding and sandbox guarantees:
 1. **Repository Access & Snapshot Verification**: Queries are bounded to the exact immutable snapshot of the target repository.
 2. **Evidence Retrieval & Deduplication**: Retrieves top $N$ candidate chunks using hybrid RRF, deduplicating identical file spans.
-3. **Evidence Sufficiency Scoring**: Verifies whether top retrieved chunks cross the relevance threshold ($\ge 0.05$). If evidence is insufficient, the system returns an honest `insufficient` status without guessing or fabricating answers.
+3. **Evidence Sufficiency Scoring**: Verifies whether top retrieved chunks cross the relevance threshold ($\ge 0.05$). If evidence is insufficient, the system returns an honest `insufficient` status without guessing.
 4. **Deterministic Answer Synthesis (Zero-Key Mode)**: Generates structured, evidence-backed answers summarizing discovered symbols, line ranges, and file relationships without requiring any LLM API key.
 5. **Prompt-Injection Defense**: All retrieved code, documentation, and user input are treated as untrusted text. System prompts encapsulate evidence inside `<untrusted_repository_evidence>` blocks and sanitize prompt-hijacking strings (`"ignore previous instructions"`, `"system:"`, etc.).
 6. **Citation Validation**: Returned citations are verified against actual chunks in the database. Citations pointing to non-existent files or mismatched line ranges are pruned.
 
----
-
-## Semantic Code Search & Evidence-Backed Repository Q&A (Phase 6)
-
-### Indexing Lifecycle
+*Figure 5: Hybrid multi-strategy code retrieval and grounded evidence synthesis flow.*
 
 ```mermaid
-sequenceDiagram
-    autonumber
-    actor Dev as Developer
-    participant UI as React UI (CodeSearch / AIAssistant)
-    participant API as FastAPI Router (/api/v1/search)
-    participant Indexer as IndexingService
-    participant Parser as AST Chunker
-    participant DB as Relational DB (PostgreSQL / SQLite)
+flowchart TD
+    UserQuery["User Natural Language Query"] --> Chunker["Tokenize Query (CamelCase, Snake_case, Morphological)"]
 
-    Dev->>UI: Click "Index Snapshot"
-    UI->>API: POST /api/v1/search/index {repo_id, snapshot_id}
-    API->>Indexer: index_snapshot(repo_id, snapshot_id)
-    Indexer->>DB: Check for existing completed CodeIndexRun
-    alt Already Indexed
-        Indexer-->>API: Return existing index run (Idempotent)
-    else New or Stale Index
-        Indexer->>DB: Create CodeIndexRun (Status: RUNNING)
-        Indexer->>Indexer: Discover snapshot files (exclude .env, .pem, id_rsa, vendor)
-        loop For each valid source file
-            Indexer->>Parser: chunk_source_file(file_path, content)
-            Parser-->>Indexer: Yield List[CodeChunk]
-        end
-        Indexer->>DB: Bulk insert CodeChunk records
-        Indexer->>DB: Update CodeIndexRun (Status: COMPLETED, chunk_count, bytes)
-        Indexer-->>API: CodeIndexStatusResponse
+    subgraph RetrievalEngines["Multi-Strategy Retrieval Engines"]
+        Chunker --> BM25["BM25Okapi Lexical Search<br/>(Symbol & Path Match Boosts)"]
+        Chunker --> Embeddings["Dense Vector Embedding<br/>(Optional Local SentenceTransformer)"]
+        Embeddings --> Cosine["Cosine Vector Similarity"]
     end
-    API-->>UI: Display Index Status & Chunk Count
+
+    BM25 --> RRFCombiner["Reciprocal Rank Fusion<br/>RRF(d) = Σ w / (60 + r(d))"]
+    Cosine --> RRFCombiner
+
+    RRFCombiner --> Deduplication["Deduplicate Spans & Apply File Filters"]
+    Deduplication --> SufficiencyCheck{"Evidence Sufficiency Check<br/>(Top Relevance Score >= 0.05?)"}
+
+    SufficiencyCheck -->|"No (Insufficient Evidence)"| UncertaintyResponse["Return Honest Uncertainty Status<br/>('Cannot answer confidently from available code')"]
+    SufficiencyCheck -->|"Yes (Sufficient Ground Truth)"| SandboxWrap["Enclose Chunks in Sandbox:<br/>&lt;untrusted_repository_evidence&gt;"]
+
+    SandboxWrap --> AnsweringEngine{"LLM Mode Configured?"}
+    AnsweringEngine -->|"No (Default Zero-Key)"| DeterministicSynth["Deterministic Grounded Synthesizer<br/>(Summarize symbols, locations, coordinates)"]
+    AnsweringEngine -->|"Yes (Optional HTTP Provider)"| BoundedLLM["Bounded LLM Answer Generation<br/>(Strict evidence constraint & prompt guard)"]
+
+    DeterministicSynth --> CitationValidator["Citation Coordinate Validator<br/>(Verify against actual snapshot chunk spans)"]
+    BoundedLLM --> CitationValidator
+
+    CitationValidator --> FinalOutput(["Verified Grounded Answer with File/Line Citations"])
+
+    classDef secure fill:#14532d,stroke:#22c55e,stroke-width:2px,color:#ffffff;
+    classDef check fill:#1e293b,stroke:#94a3b8,stroke-width:1px,color:#ffffff;
+    classDef caution fill:#7f1d1d,stroke:#ef4444,stroke-width:2px,color:#ffffff;
+    classDef smart fill:#581c87,stroke:#a855f7,stroke-width:2px,color:#ffffff;
+
+    class FinalOutput,DeterministicSynth secure;
+    class UncertaintyResponse caution;
+    class SufficiencyCheck,AnsweringEngine check;
+    class RRFCombiner,CitationValidator smart;
 ```
-
-### Search & Q&A REST Endpoints
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `POST` | `/api/v1/search/index` | Trigger indexing of an immutable repository snapshot (idempotent). |
-| `GET` | `/api/v1/search/index/status` | Query indexing progress, chunk counts, and completion status. |
-| `GET` | `/api/v1/search/index/capabilities` | Inspect active search capabilities (lexical, semantic, LLM provider). |
-| `POST` | `/api/v1/search/search` | Search code using lexical, semantic, or hybrid retrieval with language and path filters. |
-| `GET` | `/api/v1/search/chunks/{chunk_id}` | Retrieve full source content and coordinates for a specific chunk. |
-| `POST` | `/api/v1/search/qa` | Ask a grounded question against an indexed repository snapshot. |
-
-### Configuration & Resource Limits
-
-| Setting | Default | Description |
-| :--- | :--- | :--- |
-| `INDEX_VERSION` | `1.0.0` | Invalidation version for chunk parsing and indexing rules. |
-| `MAX_FILE_SIZE_BYTES` | `500,000` (500 KB) | Files larger than this threshold are skipped during indexing. |
-| `MAX_INDEX_FILES` | `2,500` | Maximum number of files indexed per repository snapshot. |
-| `CHUNK_MAX_LINES` | `120` | Maximum line span for an individual symbol chunk before splitting. |
-| `CHUNK_FALLBACK_LINES` | `80` | Fallback chunk window for unrecognized languages. |
-| `CHUNK_OVERLAP_LINES` | `15` | Overlap between sliding window fallback chunks. |
-| `EMBEDDING_PROVIDER` | `none` | Embedding provider (`none`, `local`, `test`, `openai`). |
-| `LLM_PROVIDER` | `none` | Question answering LLM provider (`none`, `test`, `http`). |
-| `QA_MAX_EVIDENCE_CHUNKS` | `8` | Maximum evidence chunks retrieved for synthesis. |
-| `QA_RELEVANCE_THRESHOLD` | `0.05` | Minimum relevance score required to consider evidence sufficient. |
 
 ---
 
@@ -955,7 +1055,7 @@ CodeSentinel AI implements centralized, typed exception handling. Errors never l
 
 ---
 
-## Testing & Quality Assurance
+## Testing
 
 The codebase maintains automated test coverage across both backend deterministic engines and frontend interactive components.
 
@@ -1005,20 +1105,20 @@ npm run lint
 
 ## Design Philosophy
 
-1. **Truth-First Determinism Over LLM Hallucinations**
+1. **Truth-First Determinism Over LLM Hallucinations**  
    Language models must never be permitted to invent facts about a codebase. AST parsing, cyclomatic complexity, physical LOC, and version comparisons are strictly deterministic. AI is reserved exclusively for explaining and prioritizing verified ground-truth evidence.
-2. **Zero Untrusted Code Execution**
+2. **Zero Untrusted Code Execution**  
    Analyzing a repository must never introduce an exploitation vector. Target source code is never executed, built, imported, or executed via package managers (`npm install` or `pip install` are never invoked on analyzed code).
-3. **Reproducible, Evidence-Grounded Findings**
+3. **Reproducible, Evidence-Grounded Findings**  
    Every finding must produce an unambiguous audit trail: exact file paths, line/column coordinates, rule versions, and cryptographic fingerprints. If a scan is executed twice on identical inputs, it must yield byte-for-byte identical findings.
-4. **Local-First & Air-Gapped Autonomy**
+4. **Local-First & Air-Gapped Autonomy**  
    Security tools should not mandate external cloud dependencies. CodeSentinel AI is fully capable of running completely offline, using bundled, cryptographically checked advisory datasets.
-5. **Zero Synthetic Vanity Metrics**
+5. **Zero Synthetic Vanity Metrics**  
    CodeSentinel AI rejects subjective, proprietary "quality scores" (e.g., arbitrary "82/100 code health"). We report objective measurements: cyclomatic complexity, physical LOC, exact dependency versions, and verified CVE records.
 
 ---
 
-## Product Roadmap
+## Roadmap
 
 - [x] **Phase 1: Deterministic Ingestion & Sandbox (Complete)**
   - Public GitHub streaming tarball ingestion with redirect validation
