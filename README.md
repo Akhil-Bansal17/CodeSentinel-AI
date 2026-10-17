@@ -42,7 +42,8 @@ CodeSentinel AI is a local-first software engineering intelligence and automated
 | **Syntax-Aware Code Chunking** | AST-based chunking for Python and JS/TS extracting functions, classes, and declarations, with Markdown heading chunking and sliding window fallbacks. |
 | **Intelligent Code Search** | Multi-mode search supporting BM25Okapi lexical retrieval with identifier tokenization, dense vector cosine similarity semantic retrieval, and Reciprocal Rank Fusion (RRF) hybrid retrieval. |
 | **Evidence-Backed Repository Q&A** | Deterministic evidence-backed repository answers citing verified source locations with line ranges, uncertainty detection, and prompt injection defense. |
-| **Modern Developer Dashboard** | Responsive React 19 + Vite 8 + Tailwind CSS dark-mode dashboard with Code Search, AI Assistant, paginated file explorers, dependency graphs, architecture viewers, and live telemetry. |
+| **Automated Remediation & Safe Patch Synthesis** | Transforms supported static and dependency findings into reviewable, validated patch proposals with in-memory AST syntax validation, anti-drift hashing, and safe human-approved application. |
+| **Modern Developer Dashboard** | Responsive React 19 + Vite 8 + Tailwind CSS dark-mode dashboard with Code Search, AI Assistant, Remediation Console, paginated file explorers, dependency graphs, architecture viewers, and live telemetry. |
 
 ---
 
@@ -69,8 +70,12 @@ CodeSentinel AI is a local-first software engineering intelligence and automated
 - **Performs Lexical, Semantic & Hybrid Code Search**: BM25Okapi lexical retrieval with snake_case/camelCase sub-tokenization and symbol boosting; dense vector cosine similarity; and Reciprocal Rank Fusion ($k=60$) hybrid ranking.
 - **Answers Repository Inquiries Grounded in Evidence**: Evaluates evidence sufficiency, answers questions with verifiable line-coordinate citations, detects insufficient evidence honestly, and sandboxes retrieved code against prompt injection.
 - **Provides Zero-Key Operation with Optional Pluggable LLM/Embeddings**: Works out of the box with zero external API keys via deterministic grounded synthesis; optionally connects to configured local or external embedding and LLM providers.
+- **Synthesizes Validated Code Patches (Phase 7)**: Transforms verified security and dependency findings into line-accurate unified diffs using deterministic AST transformations (`FIX-PYSEC001`, `FIX-PYSEC005`, `FIX-PYSEC004`, `FIX-PYSEC003`, `FIX-DEP-UPGRADE-VERSION`).
+- **Enforces 5-Stage In-Memory Patch Validation**: Validates source integrity, patch structure, AST syntax parsing (`ast.parse`), deterministic static security rule elimination, and regression risk disclosure before human review without executing target repository code.
+- **Requires Explicit Human Approval for Patch Application**: Enforces strict lifecycle decoupling (`PROPOSED` → `VALIDATING` → `VALIDATED` → `APPROVED` → `APPLIED`), preventing unauthorized or automatic filesystem modifications.
+- **Guarantees Anti-Drift & Path Traversal Confinement**: Enforces pre-write and post-write SHA-256 hash checks, atomic temporary file replacement, protected path blocking (`.env`, `.git`), and read-only archive fallback to diff exports.
 - **Issues stable SHA-256 finding fingerprints**: Guarantees idempotent issue tracking: `sha256(rule_id:file_path:start_line:evidence_summary)`.
-- **Delivers a production REST API & React UI**: Features 26+ OpenAPI endpoints, structured JSON logging, and a low-latency React 19 dashboard with dedicated Code Search and AI Assistant consoles.
+- **Delivers a production REST API & React UI**: Features 36+ OpenAPI endpoints, structured JSON logging, and a low-latency React 19 dashboard with dedicated Code Search, AI Assistant, and Remediation Review consoles.
 
 ---
 
@@ -349,6 +354,41 @@ curl -X POST "http://127.0.0.1:8000/api/v1/search/search" \
     "query": "SSRF guard redirect check",
     "mode": "hybrid",
     "limit": 10
+  }'
+```
+
+### 11. Check Finding Remediation Availability
+```bash
+curl -X GET "http://127.0.0.1:8000/api/v1/remediation/findings/e812a674-c5a4-4a57-b249-1d428bf61298/availability"
+```
+
+### 12. Synthesize & Validate a Remediation Patch Proposal
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/remediation/proposals" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "repository_id": "7f920be3-c21e-4509-9ec4-ff70d8a25c11",
+    "snapshot_id": "a4d3e8e1-5e72-4d51-87c2-9e9f1a0e3b62",
+    "finding_id": "e812a674-c5a4-4a57-b249-1d428bf61298"
+  }'
+```
+
+### 13. Approve a Validated Patch Proposal
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/remediation/proposals/3c847d01-e28a-4d2b-91c8-2b1239845701/approve" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "approved_by": "akhil@codesentinel.ai",
+    "notes": "Verified that literal_eval safely replaces eval for parsing user configuration"
+  }'
+```
+
+### 14. Apply an Approved Patch to Local Workspace
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/remediation/proposals/3c847d01-e28a-4d2b-91c8-2b1239845701/apply" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "applied_by": "akhil@codesentinel.ai"
   }'
 ```
 
@@ -702,6 +742,12 @@ erDiagram
     DEPENDENCY_RUNS ||--o{ DEPENDENCY_VULNERABILITIES : "matches"
     REPOSITORY_DEPENDENCIES ||--o{ DEPENDENCY_VULNERABILITIES : "flags"
 
+    REPOSITORIES ||--o{ REMEDIATION_PROPOSALS : "owns"
+    REPOSITORY_SNAPSHOTS ||--o{ REMEDIATION_PROPOSALS : "targets"
+    ANALYSIS_FINDINGS ||--o{ REMEDIATION_PROPOSALS : "generates"
+    REMEDIATION_PROPOSALS ||--o{ REMEDIATION_VALIDATIONS : "validates"
+    REMEDIATION_PROPOSALS ||--o{ REMEDIATION_AUDITS : "audits"
+
     REPOSITORIES {
         string id PK
         string name
@@ -924,13 +970,57 @@ erDiagram
         json embedding
         datetime created_at
     }
+
+    REMEDIATION_PROPOSALS {
+        string id PK
+        string repository_id FK
+        string snapshot_id FK
+        string finding_id FK
+        string remediation_rule_id
+        string target_path
+        string original_source_hash
+        string target_source_hash
+        string status
+        string risk_level
+        string confidence
+        int start_line
+        int end_line
+        text original_snippet
+        text proposed_replacement
+        text unified_diff
+        text rationale
+        datetime created_at
+        datetime updated_at
+    }
+
+    REMEDIATION_VALIDATIONS {
+        string id PK
+        string proposal_id FK
+        string check_id
+        string status
+        string message
+        json details_json
+        datetime executed_at
+    }
+
+    REMEDIATION_AUDITS {
+        string id PK
+        string proposal_id FK
+        string action
+        string from_status
+        string to_status
+        string performed_by
+        text notes
+        json metadata_json
+        datetime created_at
+    }
 ```
 
 ---
 
 ## Core Algorithm & Logic Explanation
 
-CodeSentinel AI guarantees reproducible codebase intelligence by relying on six deterministic algorithms:
+CodeSentinel AI guarantees reproducible codebase intelligence by relying on seven deterministic algorithms:
 
 ### 1. McCabe Cyclomatic Complexity Calculation
 
@@ -1035,6 +1125,60 @@ flowchart TD
     class RRFCombiner,CitationValidator smart;
 ```
 
+### 7. Automated Remediation & Safe Patch Application Workflow
+
+CodeSentinel AI implements a strict, multi-stage remediation workflow that transforms supported static security and dependency findings into verified, reviewable patch proposals:
+
+```mermaid
+flowchart TD
+    Finding["Static / Dependency Finding<br/>(PYSEC001-005, JSSEC001-002, VULN)"] --> AvailCheck{"Remediation Available?<br/>(Rule Registry Match & Preconditions)"}
+    AvailCheck -->|"No"| ManualReq["Emit MANUAL_REMEDIATION_REQUIRED<br/>(Rationale & Contextual Guidance)"]
+    AvailCheck -->|"Yes"| ProposalSynth["Patch Proposal Engine<br/>(Exact-Match Line Slicing & Unified Diff)"]
+
+    subgraph InMemoryValidation["In-Memory Validation Pipeline (Zero Untrusted Execution)"]
+        ProposalSynth --> V1["Check 1: Source & Drift Integrity (SHA-256)"]
+        V1 --> V2["Check 2: Patch Structure & Reconstitution"]
+        V2 --> V3["Check 3: AST Syntax Parsing (ast.parse)"]
+        V3 --> V4["Check 4: Static Rule Re-Check (Verify Vulnerability Eliminated)"]
+        V4 --> V5["Check 5: Semantic Regression Risk Disclosure"]
+    end
+
+    V5 --> ValidationPass{"All Required Checks Passed?"}
+    ValidationPass -->|"No"| ValFail["Status: VALIDATION_FAILED<br/>(Application Strictly Disabled)"]
+    ValidationPass -->|"Yes"| ValPass["Status: VALIDATED<br/>(Ready for Human Review)"]
+
+    ValPass --> HumanReview["Developer Review Console<br/>(Side-by-Side & Unified Diffs, Risk, Audit)"]
+    HumanReview --> HumanDecision{"Human Decision"}
+    HumanDecision -->|"Reject"| Rejected["Status: REJECTED<br/>(No Disk Files Altered)"]
+    HumanDecision -->|"Approve"| Approved["Status: APPROVED<br/>(Application Permission Granted)"]
+
+    Approved --> ApplyTrigger["Trigger Patch Application<br/>(Explicit Separate User Action)"]
+    ApplyTrigger --> PreWriteCheck{"Pre-Write Anti-Drift Check<br/>(Disk SHA-256 == Original Hash?)"}
+    PreWriteCheck -->|"No (File Modified)"| StaleAbort["Status: STALE<br/>(Write Aborted to Prevent Overwrite)"]
+    PreWriteCheck -->|"Yes"| AtomicWrite["Atomic Write (.tmp file -> os.replace)"]
+
+    AtomicWrite --> PostWriteCheck{"Post-Write Verification<br/>(Disk SHA-256 == Target Hash?)"}
+    PostWriteCheck -->|"No"| Rollback["Safe Rollback & Report Failure"]
+    PostWriteCheck -->|"Yes"| AppliedDone(["Status: APPLIED<br/>(Audit Log Recorded)"])
+
+    classDef success fill:#14532d,stroke:#22c55e,stroke-width:2px,color:#ffffff;
+    classDef warning fill:#78350f,stroke:#f59e0b,stroke-width:2px,color:#ffffff;
+    classDef danger fill:#7f1d1d,stroke:#ef4444,stroke-width:2px,color:#ffffff;
+    classDef neutral fill:#1e293b,stroke:#94a3b8,stroke-width:1px,color:#ffffff;
+
+    class AppliedDone,ValPass success;
+    class Approved,HumanReview,ProposalSynth warning;
+    class ValFail,Rejected,StaleAbort,Rollback danger;
+    class AvailCheck,ValidationPass,HumanDecision,PreWriteCheck,PostWriteCheck neutral;
+```
+
+Key Safety Guarantees:
+1. **Decoupled Approval and Application**: Generating a proposal or passing validation NEVER writes to disk. Application requires an explicit separate approval and confirmation.
+2. **Zero Untrusted Execution**: Source code from the target repository is never executed or imported. Validation uses Python's standard `ast.parse` and static rule AST re-checking.
+3. **Anti-Drift Protection**: If a file changes on disk after proposal synthesis, the pre-write SHA-256 check fails, marking the proposal `STALE` and refusing the write.
+4. **Protected Paths Confinement**: Writes targeting `.env`, `.git`, `.ssh`, `id_rsa`, or path traversals (`../`) are rejected unconditionally.
+5. **Read-Only Archive Preservation**: Historical snapshots are immutable. If no local writable workspace is configured, the engine falls back to exporting unified diffs.
+
 ---
 
 ## Error Handling Reference
@@ -1061,13 +1205,20 @@ The codebase maintains automated test coverage across both backend deterministic
 
 ### Backend Test Suite (Pytest)
 
-The backend test suite includes **180 automated tests** (with 3 skipped tests reserved for standalone PostgreSQL instances):
+The backend test suite includes **216 automated tests** (with 3 skipped tests reserved for standalone PostgreSQL instances):
 
 ```bash
 # Run complete backend test suite
 pytest -q backend/tests
 
-# Run Phase 6 code search and Q&A tests specifically
+# Run Phase 7 automated remediation and patch engine tests specifically
+pytest -v backend/tests/test_remediation_rules.py \
+          backend/tests/test_patch_engine.py \
+          backend/tests/test_remediation_validator.py \
+          backend/tests/test_remediation_api.py \
+          backend/tests/test_remediation_security.py
+
+# Run Phase 6 code search and Q&A tests
 pytest -v backend/tests/test_search_chunker.py \
           backend/tests/test_search_retrieval.py \
           backend/tests/test_qa_service.py \
@@ -1086,7 +1237,7 @@ pytest -v backend/tests/test_security_regressions.py
 
 ### Frontend Test Suite (Vitest)
 
-The frontend test suite includes **48 automated unit and integration tests** across 14 test suites written in Vitest and React Testing Library:
+The frontend test suite includes **53 automated unit and integration tests** across 15 test suites written in Vitest and React Testing Library:
 
 ```bash
 cd frontend
@@ -1153,9 +1304,15 @@ npm run lint
   - Evidence-backed repository Q&A grounded in verified snapshot source code
   - Verifiable citation coordinates, uncertainty detection, and prompt injection defense
   - Zero-key local execution with optional pluggable LLM and embedding providers
-- [ ] **Phase 7: Automated Remediation & Safe Pull Request Synthesis (Planned)**
-  - AST-guided patch generation strictly constrained to verified findings
-  - Local git diff preview and syntactically validated code transformations
+- [x] **Phase 7: Automated Remediation & Safe Code Patch Synthesis (Complete)**
+  - Deterministic remediation strategy catalog for Python security findings (`PYSEC001-005`) and dependency version upgrades
+  - Exact-line deterministic patch engine with line-accurate unified diffs, SHA-256 anchoring, and line-ending preservation
+  - 5-stage in-memory patch validation (source integrity, patch structure, AST syntax parsing, deterministic static rule elimination, regression risk disclosure) without untrusted code execution
+  - Decoupled developer review console in React 19 with split and unified diff viewers, validation checklists, and audit history
+  - Strict human approval gate and safe atomic patch application with pre/post-write anti-drift verification, protected path blocking (`.env`, `.git`), and read-only archive diff export fallback
+- [ ] **Phase 8: Automated CI/CD Workflows & Pull Request Synthesis (Planned)**
+  - GitHub Actions and GitLab CI automated governance workflows
+  - Headless PR creation and commit generation for approved remediation patches
 
 ---
 
