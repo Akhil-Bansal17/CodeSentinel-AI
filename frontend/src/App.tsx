@@ -3,6 +3,7 @@ import { AppShell } from "./components/layout/AppShell";
 import { OverviewPage } from "./pages/OverviewPage";
 import { RepositoriesPage } from "./pages/RepositoriesPage";
 import { AnalysisPage } from "./pages/AnalysisPage";
+import { RemediationPage } from "./pages/RemediationPage";
 import { CodeSearchPage } from "./pages/CodeSearchPage";
 import { AIAssistantPage } from "./pages/AIAssistantPage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -15,6 +16,7 @@ export const App: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<NavigationTab>("overview");
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null);
+  const [selectedProposalId, setSelectedProposalId] = useState<string | null>(null);
   const healthState = useHealth(20000);
 
   const handleRepositoryCreated = (newRepo: Repository) => {
@@ -47,6 +49,13 @@ export const App: React.FC = () => {
         );
       case "analysis":
         return <AnalysisPage />;
+      case "remediation":
+        return (
+          <RemediationPage
+            initialProposalId={selectedProposalId}
+            onClearInitialProposal={() => setSelectedProposalId(null)}
+          />
+        );
       case "code-search":
         return <CodeSearchPage initialRepoId={selectedRepoId} />;
       case "ai-assistant":
