@@ -25,12 +25,16 @@ export const Header: React.FC<HeaderProps> = ({
         return "Connected Repositories";
       case "analysis":
         return "Deterministic Analysis Engine";
+      case "remediation":
+        return "Automated Remediation & Safe Patches";
       case "code-search":
         return "AST & Code Search";
       case "ai-assistant":
         return "AI Codebase Assistant";
       case "settings":
         return "Platform Settings";
+      default:
+        return "System Overview";
     }
   };
 

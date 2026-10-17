@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   FolderGit2,
   FileCode2,
+  Wrench,
   Search,
   Bot,
   Settings,
@@ -24,9 +25,10 @@ interface SidebarProps {
 const NAV_ITEMS: NavigationItem[] = [
   { id: "overview", label: "Overview" },
   { id: "repositories", label: "Repositories" },
-  { id: "analysis", label: "Analysis", badge: "Phase 1", isComingSoon: true },
-  { id: "code-search", label: "Code Search", badge: "Phase 2", isComingSoon: true },
-  { id: "ai-assistant", label: "AI Assistant", badge: "Phase 3", isComingSoon: true },
+  { id: "analysis", label: "Analysis" },
+  { id: "remediation", label: "Remediation", badge: "Phase 7" },
+  { id: "code-search", label: "Code Search" },
+  { id: "ai-assistant", label: "AI Assistant" },
   { id: "settings", label: "Settings" },
 ];
 
@@ -45,6 +47,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         return <FolderGit2 className="w-4 h-4" />;
       case "analysis":
         return <FileCode2 className="w-4 h-4" />;
+      case "remediation":
+        return <Wrench className="w-4 h-4" />;
       case "code-search":
         return <Search className="w-4 h-4" />;
       case "ai-assistant":
