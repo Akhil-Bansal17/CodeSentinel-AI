@@ -2,6 +2,7 @@ export type NavigationTab =
   | "overview"
   | "repositories"
   | "analysis"
+  | "remediation"
   | "code-search"
   | "ai-assistant"
   | "settings";
