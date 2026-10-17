@@ -6,6 +6,7 @@ from backend.app.api.v1.endpoints import (
     codebase_health,
     dependencies,
     health,
+    remediation,
     repositories,
     search,
 )
@@ -50,3 +51,8 @@ api_router.include_router(search.repo_search_router, prefix="/v1")
 api_router.include_router(search.repo_search_router)
 api_router.include_router(search.search_router, prefix="/v1")
 api_router.include_router(search.search_router)
+
+# Register Phase 7 Automated Remediation & Safe Patches endpoints under /api/v1 and /api
+api_router.include_router(remediation.remediation_router, prefix="/v1")
+api_router.include_router(remediation.remediation_router)
+
