@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   X,
   MapPin,
@@ -10,12 +10,19 @@ import {
   CheckCircle2,
   HelpCircle,
   Shield,
+  Wrench,
+  Sparkles,
+  ExternalLink,
+  Loader2,
 } from "lucide-react";
 import { AnalysisFinding, FindingSeverity, FindingConfidence } from "../../types/analysis";
+import { RemediationAvailability, RemediationProposal } from "../../types/remediation";
+import { remediationService } from "../../services/remediationService";
 
 interface FindingDetailModalProps {
   finding: AnalysisFinding | null;
   onClose: () => void;
+  onViewProposal?: (proposalId: string) => void;
 }
 
 const SEVERITY_COLORS: Record<FindingSeverity, { bg: string; text: string; border: string }> = {
@@ -32,7 +39,13 @@ const CONFIDENCE_COLORS: Record<FindingConfidence, { bg: string; text: string; b
   LOW: { bg: "bg-slate-800", text: "text-slate-400", border: "border-slate-700" },
 };
 
-export const FindingDetailModal: React.FC<FindingDetailModalProps> = ({ finding, onClose }) => {
+export const FindingDetailModal: React.FC<FindingDetailModalProps> = ({ finding, onClose, onViewProposal }) => {
+  const [availability, setAvailability] = useState<RemediationAvailability | null>(null);
+  const [availLoading, setAvailLoading] = useState<boolean>(false);
+  const [synthesisLoading, setSynthesisLoading] = useState<boolean>(false);
+  const [generatedProposal, setGeneratedProposal] = useState<RemediationProposal | null>(null);
+  const [synthesisError, setSynthesisError] = useState<string | null>(null);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -40,6 +53,44 @@ export const FindingDetailModal: React.FC<FindingDetailModalProps> = ({ finding,
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
+
+  const findingId = finding?.id;
+  useEffect(() => {
+    if (!findingId) return;
+    let isMounted = true;
+    const fetchAvail = async () => {
+      try {
+        setAvailLoading(true);
+        const res = await remediationService.checkAvailability(findingId);
+        if (isMounted) setAvailability(res);
+      } catch {
+        if (isMounted) setAvailability(null);
+      } finally {
+        if (isMounted) setAvailLoading(false);
+      }
+    };
+    fetchAvail();
+    return () => {
+      isMounted = false;
+    };
+  }, [findingId]);
+
+  const handleSynthesize = async () => {
+    if (!finding) return;
+    try {
+      setSynthesisLoading(true);
+      setSynthesisError(null);
+      const prop = await remediationService.createProposal({
+        repository_id: finding.repository_id,
+        finding_id: finding.id,
+      });
+      setGeneratedProposal(prop);
+    } catch (err: unknown) {
+      setSynthesisError(err instanceof Error ? err.message : "Patch synthesis failed.");
+    } finally {
+      setSynthesisLoading(false);
+    }
+  };
 
   if (!finding) return null;
 
@@ -186,6 +237,109 @@ export const FindingDetailModal: React.FC<FindingDetailModalProps> = ({ finding,
             </p>
           </div>
         )}
+
+        {/* Phase 7 Automated Remediation & Safe Patch Synthesis Card */}
+        <div className="p-4 rounded-xl border border-emerald-900/60 bg-emerald-950/20 space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Wrench className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span className="text-xs font-bold text-slate-100">
+                Phase 7 Automated Remediation & Safe Patch
+              </span>
+            </div>
+
+            {availLoading ? (
+              <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                <Loader2 className="w-3 h-3 animate-spin" /> Checking feasibility...
+              </span>
+            ) : availability?.is_supported ? (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-950/80 border border-emerald-800 text-emerald-300">
+                  {availability.confidence} CONFIDENCE
+                </span>
+                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-950/80 border border-amber-800 text-amber-300">
+                  {availability.risk_level} RISK
+                </span>
+              </div>
+            ) : (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-400">
+                MANUAL ONLY
+              </span>
+            )}
+          </div>
+
+          {availLoading ? (
+            <p className="text-[11px] text-slate-400">
+              Assessing whether AST can be safely and deterministically rewritten...
+            </p>
+          ) : availability?.is_supported ? (
+            <div className="space-y-2 text-xs">
+              <div className="text-[11px] font-semibold text-emerald-300">
+                Strategy: {availability.strategy_name} ({availability.remediation_rule_id})
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                {availability.rationale || availability.description}
+              </p>
+
+              {synthesisError && (
+                <div className="p-2 rounded bg-rose-950/60 border border-rose-800 text-rose-300 text-[11px]">
+                  {synthesisError}
+                </div>
+              )}
+
+              {generatedProposal ? (
+                <div className="p-3 rounded-lg bg-[#0d1117] border border-emerald-800/80 flex items-center justify-between gap-3 flex-wrap">
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Patch Proposal Synthesized ({generatedProposal.status})
+                    </div>
+                    <div className="text-[11px] text-slate-400 font-mono">
+                      Target SHA-256: {generatedProposal.target_content_hash.substring(0, 16)}...
+                    </div>
+                  </div>
+                  {onViewProposal && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onViewProposal(generatedProposal.id);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Review in Console
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSynthesize}
+                  disabled={synthesisLoading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors disabled:opacity-50 shadow-md"
+                >
+                  {synthesisLoading ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Validating & Generating Patch...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Synthesize Safe Patch Proposal</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          ) : (
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              {availability?.unsupported_reason ||
+                "No automated remediation strategy currently exists for this finding rule. Automated patching is only permitted for proven safe deterministic transformations."}
+            </p>
+          )}
+        </div>
 
         {/* Detection Method & Limitations */}
         {limitations && (
