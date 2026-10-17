@@ -12,6 +12,9 @@ from backend.app.models.base import (
     CodeIndexRun,
     DependencyRun,
     DependencyVulnerability,
+    RemediationAudit,
+    RemediationProposal,
+    RemediationValidation,
     Repository,
     RepositoryDependency,
     RepositoryFile,
@@ -36,4 +39,7 @@ __all__ = [
     "CodebaseHealthAssessment",
     "CodeIndexRun",
     "CodeChunk",
+    "RemediationProposal",
+    "RemediationValidation",
+    "RemediationAudit",
 ]

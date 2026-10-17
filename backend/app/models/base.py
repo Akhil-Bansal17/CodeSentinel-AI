@@ -80,6 +80,12 @@ class Repository(Base, TimestampMixin):
         cascade="all, delete-orphan",
         order_by="desc(CodeIndexRun.started_at)",
     )
+    remediation_proposals: Mapped[List["RemediationProposal"]] = relationship(
+        "RemediationProposal",
+        back_populates="repository",
+        cascade="all, delete-orphan",
+        order_by="desc(RemediationProposal.created_at)",
+    )
 
 
 class RepositorySnapshot(Base, TimestampMixin):
@@ -149,6 +155,12 @@ class RepositorySnapshot(Base, TimestampMixin):
         back_populates="snapshot",
         cascade="all, delete-orphan",
         order_by="desc(CodeIndexRun.started_at)",
+    )
+    remediation_proposals: Mapped[List["RemediationProposal"]] = relationship(
+        "RemediationProposal",
+        back_populates="snapshot",
+        cascade="all, delete-orphan",
+        order_by="desc(RemediationProposal.created_at)",
     )
 
 
@@ -286,6 +298,11 @@ class AnalysisFinding(Base, TimestampMixin):
     analysis_run: Mapped["AnalysisRun"] = relationship("AnalysisRun", back_populates="findings")
     repository: Mapped["Repository"] = relationship("Repository")
     snapshot: Mapped["RepositorySnapshot"] = relationship("RepositorySnapshot")
+    remediation_proposals: Mapped[List["RemediationProposal"]] = relationship(
+        "RemediationProposal",
+        back_populates="finding",
+        cascade="all, delete-orphan",
+    )
 
     __table_args__ = (
         Index("ix_analysis_findings_run_sev", "analysis_run_id", "severity"),
@@ -808,5 +825,144 @@ class CodeChunk(Base, TimestampMixin):
         Index("ix_code_chunks_snap_lang", "snapshot_id", "language"),
         Index("ix_code_chunks_snap_path", "snapshot_id", "relative_path"),
         Index("ix_code_chunks_snap_sym", "snapshot_id", "symbol_name"),
+    )
+
+
+class RemediationProposal(Base, TimestampMixin):
+    """Proposal for automated or reviewable remediation patch of a finding."""
+
+    __tablename__ = "remediation_proposals"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    repository_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("repositories.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    snapshot_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("repository_snapshots.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    finding_id: Mapped[Optional[str]] = mapped_column(
+        String(36),
+        ForeignKey("analysis_findings.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    finding_type: Mapped[str] = mapped_column(String(32), default="STATIC_ANALYSIS", nullable=False)
+    remediation_rule_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(32), default="PROPOSED", nullable=False, index=True)
+    file_path: Mapped[str] = mapped_column(String(1024), nullable=False, index=True)
+    original_content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    target_content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    start_line: Mapped[int] = mapped_column(Integer, nullable=False)
+    end_line: Mapped[int] = mapped_column(Integer, nullable=False)
+    start_column: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    end_column: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    original_code_snippet: Mapped[str] = mapped_column(Text, nullable=False)
+    proposed_code_snippet: Mapped[str] = mapped_column(Text, nullable=False)
+    unified_diff: Mapped[str] = mapped_column(Text, nullable=False)
+    rationale: Mapped[str] = mapped_column(Text, nullable=False)
+    confidence: Mapped[str] = mapped_column(String(32), default="HIGH", nullable=False)
+    risk_level: Mapped[str] = mapped_column(String(32), default="LOW", nullable=False)
+    is_llm_assisted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    failure_reason: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
+    applied_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    applied_by: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    metadata_json: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+
+    # Relationships
+    repository: Mapped["Repository"] = relationship("Repository", back_populates="remediation_proposals")
+    snapshot: Mapped["RepositorySnapshot"] = relationship("RepositorySnapshot", back_populates="remediation_proposals")
+    finding: Mapped[Optional["AnalysisFinding"]] = relationship("AnalysisFinding", back_populates="remediation_proposals")
+    validations: Mapped[List["RemediationValidation"]] = relationship(
+        "RemediationValidation",
+        back_populates="proposal",
+        cascade="all, delete-orphan",
+        order_by="RemediationValidation.created_at",
+    )
+    audits: Mapped[List["RemediationAudit"]] = relationship(
+        "RemediationAudit",
+        back_populates="proposal",
+        cascade="all, delete-orphan",
+        order_by="desc(RemediationAudit.created_at)",
+    )
+
+    __table_args__ = (
+        Index("ix_remediation_props_repo_snap", "repository_id", "snapshot_id"),
+        Index("ix_remediation_props_status", "status"),
+        Index("ix_remediation_props_finding", "finding_id"),
+    )
+
+
+class RemediationValidation(Base, TimestampMixin):
+    """Validation check result executed against a proposed patch in memory."""
+
+    __tablename__ = "remediation_validations"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    proposal_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("remediation_proposals.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    check_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    check_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    explanation: Mapped[str] = mapped_column(Text, nullable=False)
+    diagnostic_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Relationships
+    proposal: Mapped["RemediationProposal"] = relationship("RemediationProposal", back_populates="validations")
+
+    __table_args__ = (
+        Index("ix_remediation_val_prop", "proposal_id"),
+    )
+
+
+class RemediationAudit(Base, TimestampMixin):
+    """Audit log entry capturing state transitions, reviews, and applications."""
+
+    __tablename__ = "remediation_audits"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    proposal_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("remediation_proposals.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    repository_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("repositories.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    action: Mapped[str] = mapped_column(String(64), nullable=False)
+    actor: Mapped[str] = mapped_column(String(128), default="system", nullable=False)
+    details_json: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+
+    # Relationships
+    proposal: Mapped["RemediationProposal"] = relationship("RemediationProposal", back_populates="audits")
+    repository: Mapped["Repository"] = relationship("Repository")
+
+    __table_args__ = (
+        Index("ix_remediation_audit_prop", "proposal_id"),
     )
 
