@@ -27,6 +27,8 @@ export const Header: React.FC<HeaderProps> = ({
         return "Deterministic Analysis Engine";
       case "remediation":
         return "Automated Remediation & Safe Patches";
+      case "cicd-audit":
+        return "CI/CD Workflows & Security Audits";
       case "code-search":
         return "AST & Code Search";
       case "ai-assistant":
