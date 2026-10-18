@@ -4,6 +4,7 @@ import { OverviewPage } from "./pages/OverviewPage";
 import { RepositoriesPage } from "./pages/RepositoriesPage";
 import { AnalysisPage } from "./pages/AnalysisPage";
 import { RemediationPage } from "./pages/RemediationPage";
+import { CiCdAuditPage } from "./pages/CiCdAuditPage";
 import { CodeSearchPage } from "./pages/CodeSearchPage";
 import { AIAssistantPage } from "./pages/AIAssistantPage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -56,6 +57,8 @@ export const App: React.FC = () => {
             onClearInitialProposal={() => setSelectedProposalId(null)}
           />
         );
+      case "cicd-audit":
+        return <CiCdAuditPage initialRepoId={selectedRepoId} />;
       case "code-search":
         return <CodeSearchPage initialRepoId={selectedRepoId} />;
       case "ai-assistant":
