@@ -9,6 +9,7 @@ import {
   Settings,
   ShieldCheck,
   Circle,
+  Workflow,
 } from "lucide-react";
 import { NavigationItem, NavigationTab } from "../../types/navigation";
 import { HealthState } from "../../hooks/useHealth";
@@ -27,6 +28,7 @@ const NAV_ITEMS: NavigationItem[] = [
   { id: "repositories", label: "Repositories" },
   { id: "analysis", label: "Analysis" },
   { id: "remediation", label: "Remediation", badge: "Phase 7" },
+  { id: "cicd-audit", label: "CI/CD & Audits", badge: "Phase 8" },
   { id: "code-search", label: "Code Search" },
   { id: "ai-assistant", label: "AI Assistant" },
   { id: "settings", label: "Settings" },
@@ -49,6 +51,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         return <FileCode2 className="w-4 h-4" />;
       case "remediation":
         return <Wrench className="w-4 h-4" />;
+      case "cicd-audit":
+        return <Workflow className="w-4 h-4" />;
       case "code-search":
         return <Search className="w-4 h-4" />;
       case "ai-assistant":
