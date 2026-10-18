@@ -43,7 +43,11 @@ CodeSentinel AI is a local-first software engineering intelligence and automated
 | **Intelligent Code Search** | Multi-mode search supporting BM25Okapi lexical retrieval with identifier tokenization, dense vector cosine similarity semantic retrieval, and Reciprocal Rank Fusion (RRF) hybrid retrieval. |
 | **Evidence-Backed Repository Q&A** | Deterministic evidence-backed repository answers citing verified source locations with line ranges, uncertainty detection, and prompt injection defense. |
 | **Automated Remediation & Safe Patch Synthesis** | Transforms supported static and dependency findings into reviewable, validated patch proposals with in-memory AST syntax validation, anti-drift hashing, and safe human-approved application. |
-| **Modern Developer Dashboard** | Responsive React 19 + Vite 8 + Tailwind CSS dark-mode dashboard with Code Search, AI Assistant, Remediation Console, paginated file explorers, dependency graphs, architecture viewers, and live telemetry. |
+| **Hardened CI/CD Workflow Generation** | Synthesizes repository-appropriate GitHub Actions pipelines with immutable commit-pinned action SHAs, least-privilege permissions (`contents: read`), and shell injection sanitization. |
+| **Reusable 6-Pillar Codebase Audit Runner** | Orchestrates unified, read-only multi-pillar evaluations across Phases 1–7 and exports standardized OASIS SARIF 2.1.0 and Markdown reports. |
+| **Secure CI Result Webhook Ingestion** | Ingests external CI pipeline payloads with HMAC-SHA256 signature verification, 5MB payload ceilings, and replay protection via idempotency keys. |
+| **Safe PR Synthesis & Patch Bundle Export** | Detects line-span overlaps and conflicts across approved proposals, refuses unsafe combinations deterministically, and exports unified Git `.patch` bundles with evidence-grounded PR descriptions. |
+| **Modern Developer Dashboard** | Responsive React 19 + Vite 8 + Tailwind CSS dark-mode dashboard with CI/CD & Audits console, PR synthesis, Code Search, AI Assistant, Remediation Console, and live telemetry. |
 
 ---
 
@@ -74,8 +78,13 @@ CodeSentinel AI is a local-first software engineering intelligence and automated
 - **Enforces 5-Stage In-Memory Patch Validation**: Validates source integrity, patch structure, AST syntax parsing (`ast.parse`), deterministic static security rule elimination, and regression risk disclosure before human review without executing target repository code.
 - **Requires Explicit Human Approval for Patch Application**: Enforces strict lifecycle decoupling (`PROPOSED` → `VALIDATING` → `VALIDATED` → `APPROVED` → `APPLIED`), preventing unauthorized or automatic filesystem modifications.
 - **Guarantees Anti-Drift & Path Traversal Confinement**: Enforces pre-write and post-write SHA-256 hash checks, atomic temporary file replacement, protected path blocking (`.env`, `.git`), and read-only archive fallback to diff exports.
+- **Generates Secure CI/CD Workflows (Phase 8)**: Emits hardened GitHub Actions pipelines with immutable commit-pinned action SHAs, least-privilege `contents: read`, timeout/concurrency controls, and shell injection guards.
+- **Executes 6-Pillar Codebase Audits**: Orchestrates comprehensive, read-only multi-pillar assessments across Ingestion, Static AST, Dependency SCA, AppSec, Architecture, and Remediation Feasibility.
+- **Exports RFC-Standard SARIF 2.1.0 & Markdown Reports**: Normalizes multi-pillar audit findings into standardized OASIS SARIF JSON with rule driver dictionaries and file coordinates.
+- **Protects CI Webhook Ingestion**: Enforces HMAC-SHA256 signature verification, a 5MB payload size ceiling, and replay protection with idempotency keys.
+- **Safely Composes Multi-Proposal PRs**: Detects overlapping edits across proposals, prevents patch collisions, and synthesizes clean Git `.patch` bundles with evidence-backed PR markdown descriptions.
 - **Issues stable SHA-256 finding fingerprints**: Guarantees idempotent issue tracking: `sha256(rule_id:file_path:start_line:evidence_summary)`.
-- **Delivers a production REST API & React UI**: Features 36+ OpenAPI endpoints, structured JSON logging, and a low-latency React 19 dashboard with dedicated Code Search, AI Assistant, and Remediation Review consoles.
+- **Delivers a production REST API & React UI**: Features 42+ OpenAPI endpoints, structured JSON logging, and a low-latency React 19 dashboard with dedicated CI/CD & Audits, Code Search, AI Assistant, and Remediation Review consoles.
 
 ---
 
