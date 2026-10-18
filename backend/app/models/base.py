@@ -86,6 +86,24 @@ class Repository(Base, TimestampMixin):
         cascade="all, delete-orphan",
         order_by="desc(RemediationProposal.created_at)",
     )
+    audit_runs: Mapped[List["AuditRun"]] = relationship(
+        "AuditRun",
+        back_populates="repository",
+        cascade="all, delete-orphan",
+        order_by="desc(AuditRun.created_at)",
+    )
+    ci_audit_runs: Mapped[List["CIAuditRun"]] = relationship(
+        "CIAuditRun",
+        back_populates="repository",
+        cascade="all, delete-orphan",
+        order_by="desc(CIAuditRun.created_at)",
+    )
+    pr_preparations: Mapped[List["PrPreparation"]] = relationship(
+        "PrPreparation",
+        back_populates="repository",
+        cascade="all, delete-orphan",
+        order_by="desc(PrPreparation.created_at)",
+    )
 
 
 class RepositorySnapshot(Base, TimestampMixin):
@@ -161,6 +179,18 @@ class RepositorySnapshot(Base, TimestampMixin):
         back_populates="snapshot",
         cascade="all, delete-orphan",
         order_by="desc(RemediationProposal.created_at)",
+    )
+    audit_runs: Mapped[List["AuditRun"]] = relationship(
+        "AuditRun",
+        back_populates="snapshot",
+        cascade="all, delete-orphan",
+        order_by="desc(AuditRun.created_at)",
+    )
+    pr_preparations: Mapped[List["PrPreparation"]] = relationship(
+        "PrPreparation",
+        back_populates="snapshot",
+        cascade="all, delete-orphan",
+        order_by="desc(PrPreparation.created_at)",
     )
 
 
@@ -965,4 +995,129 @@ class RemediationAudit(Base, TimestampMixin):
     __table_args__ = (
         Index("ix_remediation_audit_prop", "proposal_id"),
     )
+
+
+class AuditRun(Base, TimestampMixin):
+    """Execution record for a unified multi-pillar audit run."""
+
+    __tablename__ = "audit_runs"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    repository_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("repositories.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    snapshot_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("repository_snapshots.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    status: Mapped[str] = mapped_column(String(32), default="COMPLETED", nullable=False)
+    overall_status: Mapped[str] = mapped_column(String(32), default="PASSED", nullable=False)
+    summary_json: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    checks_json: Mapped[List[Dict[str, Any]]] = mapped_column(JSON, default=list, nullable=False)
+    findings_json: Mapped[List[Dict[str, Any]]] = mapped_column(JSON, default=list, nullable=False)
+    markdown_report: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    sarif_json: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+    completed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    # Relationships
+    repository: Mapped["Repository"] = relationship("Repository", back_populates="audit_runs")
+    snapshot: Mapped["RepositorySnapshot"] = relationship("RepositorySnapshot", back_populates="audit_runs")
+
+    __table_args__ = (
+        Index("ix_audit_runs_repo_snap", "repository_id", "snapshot_id"),
+        Index("ix_audit_runs_overall", "overall_status"),
+    )
+
+
+class CIAuditRun(Base, TimestampMixin):
+    """External CI run results ingested via secure webhook."""
+
+    __tablename__ = "ci_audit_runs"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    repository_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("repositories.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False, unique=True, index=True)
+    ci_provider: Mapped[str] = mapped_column(String(64), default="github_actions", nullable=False)
+    commit_sha: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    branch: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    event_name: Mapped[str] = mapped_column(String(64), default="push", nullable=False)
+    workflow_name: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    status: Mapped[str] = mapped_column(String(32), default="SUCCESS", nullable=False)
+    payload_json: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    signature_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    # Relationships
+    repository: Mapped["Repository"] = relationship("Repository", back_populates="ci_audit_runs")
+
+    __table_args__ = (
+        Index("ix_ci_audit_runs_repo_key", "repository_id", "idempotency_key"),
+    )
+
+
+class PrPreparation(Base, TimestampMixin):
+    """Change set synthesis for human-reviewed Pull Request creation."""
+
+    __tablename__ = "pr_preparations"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    repository_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("repositories.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    snapshot_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("repository_snapshots.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="PREPARED", nullable=False)
+    proposal_ids_json: Mapped[List[str]] = mapped_column(JSON, default=list, nullable=False)
+    combined_diff: Mapped[str] = mapped_column(Text, nullable=False)
+    patch_bundle: Mapped[str] = mapped_column(Text, nullable=False)
+    conflict_details_json: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    risk_summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Relationships
+    repository: Mapped["Repository"] = relationship("Repository", back_populates="pr_preparations")
+    snapshot: Mapped["RepositorySnapshot"] = relationship("RepositorySnapshot", back_populates="pr_preparations")
+
+    __table_args__ = (
+        Index("ix_pr_preparations_repo_snap", "repository_id", "snapshot_id"),
+        Index("ix_pr_preparations_status", "status"),
+    )
+
 
