@@ -54,6 +54,20 @@ from .remediation import (
     RemediationValidationItem,
 )
 
+from .cicd import (
+    AuditCheckItem,
+    AuditRunCreateRequest,
+    AuditRunListResponse,
+    AuditRunResponse,
+    AuditRunSummary,
+    CIIngestRequest,
+    CIIngestResponse,
+    PrPrepareRequest,
+    PrPrepareResponse,
+    WorkflowGenerateRequest,
+    WorkflowGenerateResponse,
+)
+
 __all__ = [
     "ErrorDetail",
     "ErrorResponse",
@@ -98,4 +112,15 @@ __all__ = [
     "RemediationApplyRequest",
     "RemediationApplyResponse",
     "RemediationAuditItem",
+    "WorkflowGenerateRequest",
+    "WorkflowGenerateResponse",
+    "AuditCheckItem",
+    "AuditRunSummary",
+    "AuditRunCreateRequest",
+    "AuditRunResponse",
+    "AuditRunListResponse",
+    "CIIngestRequest",
+    "CIIngestResponse",
+    "PrPrepareRequest",
+    "PrPrepareResponse",
 ]
