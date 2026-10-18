@@ -5,6 +5,7 @@ Used strictly for testing vector indexing, persistence, and cosine similarity.
 Does not make network calls or download models.
 """
 
+import hashlib
 import math
 import re
 from typing import List
@@ -45,9 +46,9 @@ class DeterministicTestEmbeddingProvider(BaseEmbeddingProvider):
             return vec
 
         for token in tokens:
-            # Hash token across dimensions
-            h = hash(token)
-            bucket = abs(h) % self._dim
+            # Deterministic hash token across dimensions using SHA-256
+            h = int(hashlib.sha256(token.encode("utf-8")).hexdigest()[:8], 16)
+            bucket = h % self._dim
             sign = 1.0 if (h >> 1) % 2 == 0 else -1.0
             vec[bucket] += sign
 
