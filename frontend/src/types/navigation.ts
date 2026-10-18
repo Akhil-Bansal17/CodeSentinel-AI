@@ -3,6 +3,7 @@ export type NavigationTab =
   | "repositories"
   | "analysis"
   | "remediation"
+  | "cicd-audit"
   | "code-search"
   | "ai-assistant"
   | "settings";
