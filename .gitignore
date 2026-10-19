@@ -40,7 +40,11 @@ yarn-error.log*
 
 # Environment & Secrets (NEVER COMMIT)
 .env
+.env.*
+!.env.example
 backend/.env
+backend/.env.*
+!backend/.env.example
 frontend/.env.local
 *.local
 
@@ -57,3 +61,6 @@ Thumbs.db
 *.sqlite
 *.sqlite3
 *.db
+
+# Vercel
+.vercel
