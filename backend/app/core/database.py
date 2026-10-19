@@ -11,12 +11,21 @@ if settings.DATABASE_URL.startswith("sqlite"):
 elif "postgresql" in settings.DATABASE_URL:
     connect_args = {"connect_timeout": 3}
 
+engine_kwargs = {
+    "pool_pre_ping": True,
+    "echo": settings.DEBUG,
+    "connect_args": connect_args,
+}
+if not settings.DATABASE_URL.startswith("sqlite"):
+    engine_kwargs["pool_size"] = settings.DB_POOL_SIZE
+    engine_kwargs["max_overflow"] = settings.DB_MAX_OVERFLOW
+    engine_kwargs["pool_timeout"] = settings.DB_POOL_TIMEOUT
+    engine_kwargs["pool_recycle"] = 3600
+
 try:
     engine = create_engine(
         settings.DATABASE_URL,
-        pool_pre_ping=True,
-        connect_args=connect_args,
-        echo=settings.DEBUG,
+        **engine_kwargs,
     )
 except Exception as e:
     logger.warning("Failed to initialize primary database engine: %s", str(e))
