@@ -1,4 +1,5 @@
 import time
+import uuid
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 from fastapi import FastAPI, Request, status
@@ -25,7 +26,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         settings.ENVIRONMENT,
     )
 
-    # 2. Verify database connection
+    # 2. Enforce strict configuration validation in production
+    settings.validate_production_settings()
+
+    # 3. Verify database connection
     db_status = check_database_health()
     logger.info("Initial database connection status: %s", db_status)
 
@@ -56,26 +60,30 @@ def create_application() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Request timing and security headers middleware
+    # Request timing, correlation ID and security headers middleware
     @app.middleware("http")
     async def process_request_middleware(request: Request, call_next):
         start_time = time.perf_counter()
+        request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
         response = await call_next(request)
         process_time_ms = round((time.perf_counter() - start_time) * 1000, 2)
 
-        # Append audit headers
+        # Append audit and correlation headers
+        response.headers["X-Request-ID"] = request_id
         response.headers["X-Process-Time-Ms"] = str(process_time_ms)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
-        # Log request summary
+        # Log request summary with correlation identifier
         logger.info(
-            "%s %s -> %s (%sms)",
+            "%s %s -> %s (%sms) [req_id=%s]",
             request.method,
             request.url.path,
             response.status_code,
             process_time_ms,
+            request_id,
+            extra={"request_id": request_id},
         )
         return response
 
