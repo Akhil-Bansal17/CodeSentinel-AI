@@ -5,12 +5,15 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-0.1.0-emerald.svg)](https://github.com/Akhil-Bansal17/CodeSentinel-AI/releases)
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](#testing)
+[![Deployed on Vercel](https://img.shields.io/badge/Vercel-Live_Demo-black.svg?logo=vercel&logoColor=white)](https://codesentinel-ai-six.vercel.app)
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.14-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-19.0-61DAFB.svg)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6.svg)](https://www.typescriptlang.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791.svg)](https://www.postgresql.org/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](docker-compose.yml)
+
+> 🚀 **Live Production Deployment:** [https://codesentinel-ai-six.vercel.app](https://codesentinel-ai-six.vercel.app)
 
 ---
 
