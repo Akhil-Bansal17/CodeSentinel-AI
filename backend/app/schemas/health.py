@@ -26,6 +26,28 @@ class HealthResponse(BaseModel):
     }
 
 
+class ReadinessResponse(BaseModel):
+    """Schema for the GET /api/health/ready endpoint response."""
+
+    status: str = Field(..., description="Readiness status: 'ready' or 'not_ready'")
+    service: str = Field(..., description="Service identifier name")
+    version: str = Field(..., description="Service version string")
+    database: str = Field(..., description="Database connection health status ('connected', 'disconnected', 'unconfigured')")
+    environment: Optional[str] = Field(default=None, description="Active execution environment")
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "status": "ready",
+                "service": "codesentinel-api",
+                "version": "0.1.0",
+                "database": "connected",
+                "environment": "production",
+            }
+        }
+    }
+
+
 class HealthDimensionResponse(BaseModel):
     """Health dimension response schema."""
 
