@@ -30,7 +30,15 @@ class Settings(BaseSettings):
     DB_MAX_OVERFLOW: int = Field(default=10, ge=0, le=50)
     DB_POOL_TIMEOUT: int = Field(default=30, ge=1, le=120)
 
-    # Security & CORS
+    # Security, Keys & Secrets
+    SECRET_KEY: str = Field(
+        default="codesentinel-dev-secret-key-change-in-production-min32chars",
+        description="Secret key for cryptographically signing sessions and tokens",
+    )
+    CI_WEBHOOK_SECRET: str = Field(
+        default="codesentinel-ci-default-secret",
+        description="HMAC secret for verifying external CI/CD audit webhooks",
+    )
     CORS_ORIGINS: Union[List[str], str] = Field(
         default=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000"],
         description="Allowed CORS origin domains",
@@ -219,6 +227,18 @@ class Settings(BaseSettings):
             except Exception:
                 continue
         return roots
+
+    def validate_production_settings(self) -> None:
+        """Enforces strict security validation when running in production."""
+        if self.ENVIRONMENT.lower() == "production":
+            if self.DEBUG:
+                raise ValueError("Production configuration error: DEBUG mode must be False in production.")
+            if "change-in-production" in self.SECRET_KEY or len(self.SECRET_KEY) < 32:
+                raise ValueError("Production configuration error: SECRET_KEY must be a unique, cryptographically random secret of at least 32 characters in production.")
+            if self.CI_WEBHOOK_SECRET == "codesentinel-ci-default-secret":
+                raise ValueError("Production configuration error: CI_WEBHOOK_SECRET must be configured with a dedicated random secret in production.")
+            if "localhost" in self.DATABASE_URL or "postgres:postgres" in self.DATABASE_URL or self.DATABASE_URL.startswith("sqlite"):
+                raise ValueError("Production configuration error: DATABASE_URL must point to a hardened production database, not localhost, default credentials, or sqlite.")
 
 
 settings = Settings()
