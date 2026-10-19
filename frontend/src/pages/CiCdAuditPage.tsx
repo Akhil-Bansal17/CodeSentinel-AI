@@ -83,8 +83,8 @@ export const CiCdAuditPage: React.FC<CiCdAuditPageProps> = ({ initialRepoId }) =
       try {
         const resp = await repositoryService.listRepositories(1, 100);
         setRepositories(resp.items || []);
-        if (!selectedRepoId && resp.items?.length > 0) {
-          setSelectedRepoId(resp.items[0].id);
+        if (resp.items && resp.items.length > 0) {
+          setSelectedRepoId((prev) => prev || resp.items[0].id);
         }
       } catch (err) {
         console.error("Failed to load repositories:", err);
