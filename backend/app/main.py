@@ -9,9 +9,10 @@ from fastapi.responses import JSONResponse
 
 from backend.app.api.v1.router import api_router
 from backend.app.core.config import settings
-from backend.app.core.database import check_database_health
+from backend.app.core.database import check_database_health, dispose_engine
 from backend.app.core.exceptions import AppException
 from backend.app.core.logging import logger, setup_logging
+from backend.app.core.tasks import task_manager
 
 
 @asynccontextmanager
@@ -37,6 +38,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Shutdown
     logger.info("Shutting down %s", settings.PROJECT_NAME)
+    task_manager.shutdown(reason="server shutdown")
+    dispose_engine()
 
 
 def create_application() -> FastAPI:
