@@ -6,16 +6,30 @@ from backend.app.schemas.health import HealthResponse, ReadinessResponse
 router = APIRouter()
 
 
-@router.get("/health", response_model=HealthResponse, summary="Service liveness and health check")
-@router.get("/health/live", response_model=HealthResponse, summary="Service liveness probe")
+@router.get("/health", response_model=HealthResponse, summary="Service general health check")
 def get_health() -> HealthResponse:
-    """Returns service process liveness status, service name, version, and database status."""
+    """Returns service process status, service name, version, and database connection status."""
     db_status = check_database_health()
     return HealthResponse(
         status="ok",
         service=settings.SERVICE_NAME,
         version=settings.VERSION,
         database=db_status,
+        environment=settings.ENVIRONMENT,
+    )
+
+
+@router.get("/health/live", response_model=HealthResponse, summary="Service process liveness probe")
+def get_liveness() -> HealthResponse:
+    """Verifies worker process responsiveness independently of external dependencies.
+
+    Prevents cascading container restart loops during database reconnects or migrations.
+    """
+    return HealthResponse(
+        status="ok",
+        service=settings.SERVICE_NAME,
+        version=settings.VERSION,
+        database=None,
         environment=settings.ENVIRONMENT,
     )
 
