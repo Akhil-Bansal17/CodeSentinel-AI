@@ -40,18 +40,21 @@ RUN groupadd --gid 10001 codesentinel \
 # Copy installed Python packages from builder
 COPY --from=builder --chown=codesentinel:codesentinel /root/.local /home/codesentinel/.local
 
-# Copy application source code
-COPY --chown=codesentinel:codesentinel . .
+# Copy application source code into /app/backend for package module resolution
+COPY --chown=codesentinel:codesentinel . /app/backend
 
 # Switch to non-root user
 USER codesentinel
 
+# Set working directory to backend application
+WORKDIR /app/backend
+
 # Expose API port
 EXPOSE 8000
 
-# Container healthcheck
+# Container healthcheck targeting liveness probe
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/api/health || exit 1
+    CMD curl -f http://localhost:8000/api/health/live || exit 1
 
 # Run uvicorn server
 CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
