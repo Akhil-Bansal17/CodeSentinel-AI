@@ -195,6 +195,24 @@ class TaskLifecycleManager:
             results.sort(key=lambda r: r.created_at, reverse=True)
             return results[:limit]
 
+    def shutdown(self, reason: str = "Application shutdown") -> int:
+        """Cancel all pending or running tasks during application shutdown.
+
+        Guarantees that no in-flight or queued task is falsely reported as complete.
+        Returns the number of cancelled tasks.
+        """
+        cancelled_count = 0
+        with self._lock:
+            for task in self._tasks.values():
+                if task.status in (TaskStatus.PENDING, TaskStatus.RUNNING):
+                    task.status = TaskStatus.CANCELLED
+                    task.completed_at = datetime.now(timezone.utc)
+                    task.status_message = f"Cancelled due to {reason}"
+                    cancelled_count += 1
+        if cancelled_count > 0:
+            logger.info("Task lifecycle manager shutdown: cancelled %d active tasks", cancelled_count)
+        return cancelled_count
+
 
 # Global singleton lifecycle manager
 task_manager = TaskLifecycleManager()
