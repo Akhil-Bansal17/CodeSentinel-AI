@@ -65,3 +65,15 @@ def check_database_health() -> str:
     except Exception as e:
         logger.debug("Database health check ping failed: %s", str(e))
         return "disconnected"
+
+
+def dispose_engine() -> None:
+    """Closes all checked-in connections in the connection pool cleanly during application shutdown."""
+    global engine
+    if engine is not None:
+        try:
+            engine.dispose()
+            logger.info("Database engine connection pool disposed successfully.")
+        except Exception as e:
+            logger.warning("Error disposing database engine connection pool: %s", str(e))
+
