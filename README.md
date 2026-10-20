@@ -51,6 +51,7 @@ CodeSentinel AI is a local-first software engineering intelligence and automated
 | **Secure CI Result Webhook Ingestion** | Ingests external CI pipeline payloads with HMAC-SHA256 signature verification, 5MB payload ceilings, and replay protection via idempotency keys. |
 | **Safe PR Synthesis & Patch Bundle Export** | Detects line-span overlaps and conflicts across approved proposals, refuses unsafe combinations deterministically, and exports unified Git `.patch` bundles with evidence-grounded PR descriptions. |
 | **Production Readiness & Observability** | Decoupled Kubernetes-ready liveness (`/api/health/live`) and readiness (`/api/health/ready`) probes, `X-Request-ID` correlation logging with sensitive data masking, `TaskLifecycleManager` async state engine, hardened connection pooling, and fail-fast startup configuration validation. |
+| **Release Candidate Validation & Deployment Readiness** | Reproducible multi-gate validation scripts, Docker container package structure fix, probe decoupling, graceful shutdown task cancellation, and verified security gates. |
 | **Modern Developer Dashboard** | Responsive React 19 + Vite 8 + Tailwind CSS dark-mode dashboard with CI/CD & Audits console, PR synthesis, Code Search, AI Assistant, Remediation Console, and live telemetry. |
 
 ---
@@ -1216,13 +1217,28 @@ CodeSentinel AI implements centralized, typed exception handling. Errors never l
 
 The codebase maintains automated test coverage across both backend deterministic engines and frontend interactive components.
 
+### Automated Release Candidate Validation
+
+A single reproducible release-validation script executes all backend tests, frontend tests, type checking, build, linting, Alembic migration verification, and Docker/PostgreSQL environment checks:
+
+```powershell
+# Windows (PowerShell):
+.\scripts\validate_release.ps1
+
+# Linux / macOS (Bash):
+./scripts/validate_release.sh
+```
+
 ### Backend Test Suite (Pytest)
 
-The backend test suite includes **216 automated tests** (with 3 skipped tests reserved for standalone PostgreSQL instances):
+The backend test suite includes **272 automated passing tests** (with 3 tests reserved for standalone PostgreSQL instances):
 
 ```bash
 # Run complete backend test suite
 pytest -q backend/tests
+
+# Run Phase 10 release candidate validation tests
+pytest -v backend/tests/test_phase10_release_validation.py
 
 # Run Phase 7 automated remediation and patch engine tests specifically
 pytest -v backend/tests/test_remediation_rules.py \
@@ -1250,7 +1266,7 @@ pytest -v backend/tests/test_security_regressions.py
 
 ### Frontend Test Suite (Vitest)
 
-The frontend test suite includes **53 automated unit and integration tests** across 15 test suites written in Vitest and React Testing Library:
+The frontend test suite includes **57 automated unit and integration tests** across 16 test suites written in Vitest and React Testing Library:
 
 ```bash
 cd frontend
@@ -1336,6 +1352,14 @@ npm run lint
   - Fail-fast production configuration security validation (rejects debug mode and default secrets in production)
   - Hardened PostgreSQL connection pooling (`pool_pre_ping=True`, `pool_recycle=3600`) and linear Alembic migration chain
   - Comprehensive end-to-end integration test suite verifying Workflows A, B, C, and D across all 8 prior phases
+- [x] **Phase 10: Release Candidate Validation & Deployment Readiness (Complete)**
+  - Unified reproducible release validation script (`validate_release.ps1` and `validate_release.sh`)
+  - Full regression execution: 272 backend tests (3 skipped for live PostgreSQL) and 57 frontend tests passing with zero failures
+  - Docker container packaging fix (`COPY . /app/backend` for top-level `backend.app.main` import resolution) and healthcheck liveness probe alignment
+  - Decoupled liveness probe `/api/health/live` to guarantee container restart independence from external database availability
+  - Lifespan graceful shutdown: database connection pool disposal (`engine.dispose()`) and active task cancellation (`task_manager.shutdown()`)
+  - Live API smoke journeys (Journeys A, B, C, D) executed and verified against active server
+  - Transparent release-gate evidence checklist distinguishing verified gates from environment-restricted checks
 
 ---
 
