@@ -19,6 +19,9 @@ from backend.app.schemas.search import (
     SearchCapabilitiesResponse,
     SearchResultItem,
     StartIndexPayload,
+    TopLevelIndexPayload,
+    TopLevelQAPayload,
+    TopLevelSearchQueryPayload,
 )
 from backend.app.services.search.indexing_service import CodeIndexingService
 from backend.app.services.search.qa.qa_service import RepositoryQAService
@@ -26,6 +29,49 @@ from backend.app.services.search.search_service import CodeSearchService
 
 repo_search_router = APIRouter(prefix="/repositories", tags=["Code Search & Q&A"])
 search_router = APIRouter(prefix="/search", tags=["Code Search & Q&A"])
+
+
+def _resolve_snapshot(
+    db: Session,
+    repository_id: str,
+    snapshot_id: Optional[str] = None,
+) -> RepositorySnapshot:
+    """Validate repository existence and resolve target snapshot (or latest completed/available)."""
+    repo = db.execute(
+        select(Repository).where(Repository.id == repository_id)
+    ).scalar_one_or_none()
+    if not repo:
+        raise NotFoundError("Repository", repository_id)
+
+    if snapshot_id:
+        snap = db.execute(
+            select(RepositorySnapshot).where(
+                RepositorySnapshot.id == snapshot_id,
+                RepositorySnapshot.repository_id == repository_id,
+            )
+        ).scalar_one_or_none()
+        if not snap:
+            raise NotFoundError("RepositorySnapshot", snapshot_id)
+        return snap
+
+    snap = db.execute(
+        select(RepositorySnapshot).where(
+            RepositorySnapshot.repository_id == repository_id,
+            RepositorySnapshot.status == "completed",
+        ).order_by(desc(RepositorySnapshot.created_at))
+    ).scalars().first()
+
+    if not snap:
+        snap = db.execute(
+            select(RepositorySnapshot).where(
+                RepositorySnapshot.repository_id == repository_id,
+            ).order_by(desc(RepositorySnapshot.created_at))
+        ).scalars().first()
+
+    if not snap:
+        raise NotFoundError("RepositorySnapshot", f"No snapshot found for repository {repository_id}")
+
+    return snap
 
 
 def _serialize_index_run(run: CodeIndexRun) -> CodeIndexRunResponse:
@@ -210,3 +256,131 @@ async def ask_question(
         prefer_llm=payload.prefer_llm,
     )
     return QAResponse(**res)
+
+
+# ==============================================================================
+# Top-Level Search & Q&A Endpoints (Mounted at /api/v1/search and /api/search)
+# ==============================================================================
+
+@search_router.get(
+    "/capabilities",
+    response_model=SearchCapabilitiesResponse,
+    summary="Get search capabilities and model readiness for repository/snapshot",
+)
+def get_top_level_capabilities(
+    repository_id: str = Query(..., description="Target repository ID"),
+    snapshot_id: Optional[str] = Query(None, description="Optional snapshot ID (defaults to latest)"),
+    db: Session = Depends(get_db),
+):
+    """Check search modes and embedding readiness via top-level search endpoint."""
+    snap = _resolve_snapshot(db, repository_id=repository_id, snapshot_id=snapshot_id)
+    service = CodeSearchService(db=db)
+    caps = service.get_capabilities(repository_id, snap.id)
+    return SearchCapabilitiesResponse(**caps.to_dict())
+
+
+@search_router.get(
+    "",
+    response_model=CodeSearchResponse,
+    summary="Search code across repository snapshot via query parameters",
+)
+async def query_search_code(
+    repository_id: str = Query(..., description="Target repository ID"),
+    query: str = Query(..., min_length=1, max_length=500, description="Search query or symbol name"),
+    snapshot_id: Optional[str] = Query(None, description="Optional snapshot ID (defaults to latest)"),
+    mode: str = Query("lexical", description="Search mode: lexical, semantic, or hybrid"),
+    language: Optional[str] = Query(None, description="Filter by language"),
+    file_path: Optional[str] = Query(None, description="Filter by path substring or pattern"),
+    symbol_type: Optional[str] = Query(None, description="Filter by symbol type"),
+    limit: int = Query(20, ge=1, le=100, description="Maximum number of chunks to return"),
+    db: Session = Depends(get_db),
+):
+    """Retrieve code chunks via GET query parameters."""
+    snap = _resolve_snapshot(db, repository_id=repository_id, snapshot_id=snapshot_id)
+    service = CodeSearchService(db=db)
+    res = await service.search(
+        repository_id=repository_id,
+        snapshot_id=snap.id,
+        query=query,
+        mode=mode,
+        language=language,
+        file_path=file_path,
+        symbol_type=symbol_type,
+        limit=limit,
+    )
+    return CodeSearchResponse(**res)
+
+
+@search_router.post(
+    "",
+    response_model=CodeSearchResponse,
+    summary="Search code across repository snapshot (POST payload)",
+)
+@search_router.post(
+    "/search",
+    response_model=CodeSearchResponse,
+    summary="Search code across repository snapshot (POST /search)",
+)
+async def top_level_search_code(
+    payload: TopLevelSearchQueryPayload,
+    db: Session = Depends(get_db),
+):
+    """Retrieve code chunks via top-level POST payload."""
+    snap = _resolve_snapshot(db, repository_id=payload.repository_id, snapshot_id=payload.snapshot_id)
+    service = CodeSearchService(db=db)
+    res = await service.search(
+        repository_id=payload.repository_id,
+        snapshot_id=snap.id,
+        query=payload.query,
+        mode=payload.mode,
+        language=payload.language,
+        file_path=payload.file_path,
+        symbol_type=payload.symbol_type,
+        limit=payload.limit,
+    )
+    return CodeSearchResponse(**res)
+
+
+@search_router.post(
+    "/index",
+    response_model=CodeIndexRunResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Start or verify indexing of repository via top-level search endpoint",
+)
+async def top_level_start_indexing(
+    payload: TopLevelIndexPayload,
+    db: Session = Depends(get_db),
+):
+    """Trigger or retrieve an idempotent index run for repository snapshot."""
+    snap = _resolve_snapshot(db, repository_id=payload.repository_id, snapshot_id=payload.snapshot_id)
+    service = CodeIndexingService(db=db)
+    run = await service.get_or_create_index(
+        repository_id=payload.repository_id,
+        snapshot_id=snap.id,
+        force_reindex=payload.force_reindex,
+        local_path_override=payload.local_path_override,
+    )
+    return _serialize_index_run(run)
+
+
+@search_router.post(
+    "/qa",
+    response_model=QAResponse,
+    summary="Ask an evidence-backed repository question via top-level search endpoint",
+)
+async def top_level_ask_question(
+    payload: TopLevelQAPayload,
+    db: Session = Depends(get_db),
+):
+    """Execute grounded Q&A with strict evidence validation and prompt-injection resistance."""
+    snap = _resolve_snapshot(db, repository_id=payload.repository_id, snapshot_id=payload.snapshot_id)
+    service = RepositoryQAService(db=db)
+    res = await service.answer_question(
+        repository_id=payload.repository_id,
+        snapshot_id=snap.id,
+        question=payload.question,
+        retrieval_mode=payload.retrieval_mode,
+        prefer_llm=payload.prefer_llm,
+    )
+    return QAResponse(**res)
+
