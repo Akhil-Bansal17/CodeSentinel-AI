@@ -156,3 +156,90 @@ def test_qa_endpoint_api(test_client_with_db, populated_search_db):
     assert "authenticate_user" in data["answer"]
     assert len(data["evidence"]) >= 1
     assert len(data["citations"]) >= 1
+
+
+# ==============================================================================
+# Phase 11 Regression Tests: Top-Level Search & Q&A Endpoints
+# ==============================================================================
+
+def test_top_level_capabilities_api(test_client_with_db, populated_search_db):
+    """Verify GET /api/v1/search/capabilities with repository_id resolves latest snapshot."""
+    repo_id = populated_search_db["repo_id"]
+
+    resp = test_client_with_db.get(f"/api/v1/search/capabilities?repository_id={repo_id}")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["lexical_available"] is True
+    assert data["index_status"] == "completed"
+    assert data["chunk_count"] == 2
+
+
+def test_top_level_get_search_api(test_client_with_db, populated_search_db):
+    """Verify GET /api/v1/search?query=...&repository_id=... returns results."""
+    repo_id = populated_search_db["repo_id"]
+
+    resp = test_client_with_db.get(f"/api/v1/search?query=authenticate_user&repository_id={repo_id}")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["query"] == "authenticate_user"
+    assert len(data["results"]) >= 1
+    assert data["results"][0]["symbol_name"] == "authenticate_user"
+    assert "backend/app/services/auth.py" in data["results"][0]["citation"]
+
+
+def test_top_level_post_search_api(test_client_with_db, populated_search_db):
+    """Verify POST /api/v1/search/search and POST /api/v1/search return matching results."""
+    repo_id = populated_search_db["repo_id"]
+    payload = {
+        "repository_id": repo_id,
+        "query": "HeaderComponent",
+        "mode": "lexical",
+        "limit": 5,
+    }
+
+    # Test POST /api/v1/search/search
+    resp1 = test_client_with_db.post("/api/v1/search/search", json=payload)
+    assert resp1.status_code == 200
+    data1 = resp1.json()
+    assert len(data1["results"]) >= 1
+    assert data1["results"][0]["symbol_name"] == "HeaderComponent"
+
+    # Test POST /api/v1/search
+    resp2 = test_client_with_db.post("/api/v1/search", json=payload)
+    assert resp2.status_code == 200
+    data2 = resp2.json()
+    assert len(data2["results"]) >= 1
+
+
+def test_top_level_qa_api(test_client_with_db, populated_search_db):
+    """Verify POST /api/v1/search/qa performs evidence-backed question answering."""
+    repo_id = populated_search_db["repo_id"]
+    payload = {
+        "repository_id": repo_id,
+        "question": "Where is authentication handled?",
+        "retrieval_mode": "lexical",
+    }
+
+    resp = test_client_with_db.post("/api/v1/search/qa", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "authenticate_user" in data["answer"]
+    assert len(data["evidence"]) >= 1
+    assert "backend/app/services/auth.py" in data["evidence"][0]["citation"]
+
+
+def test_top_level_search_invalid_repo_returns_404(test_client_with_db):
+    """Verify non-existent repository returns 404 and does not leak data."""
+    resp = test_client_with_db.get("/api/v1/search/capabilities?repository_id=non-existent-repo-id")
+    assert resp.status_code == 404
+
+    resp_search = test_client_with_db.get("/api/v1/search?query=test&repository_id=non-existent-repo-id")
+    assert resp_search.status_code == 404
+
+
+def test_top_level_search_invalid_query_returns_422(test_client_with_db, populated_search_db):
+    """Verify empty query returns 422 Unprocessable Entity."""
+    repo_id = populated_search_db["repo_id"]
+    resp = test_client_with_db.get(f"/api/v1/search?query=&repository_id={repo_id}")
+    assert resp.status_code == 422
+
