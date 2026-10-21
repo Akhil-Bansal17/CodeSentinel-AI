@@ -165,3 +165,36 @@ class QAResponse(BaseModel):
     evidence: List[EvidenceItemResponse]
     citations: List[str]
     warnings: List[str] = Field(default_factory=list)
+
+
+class TopLevelSearchQueryPayload(BaseModel):
+    """Payload to perform code retrieval via top-level search endpoints."""
+
+    repository_id: str = Field(..., description="Target repository ID")
+    snapshot_id: Optional[str] = Field(default=None, description="Target snapshot ID (defaults to latest)")
+    query: str = Field(..., min_length=1, max_length=500, description="Search query or symbol name")
+    mode: str = Field(default="lexical", description="Search mode: lexical, semantic, or hybrid")
+    language: Optional[str] = Field(default=None, description="Filter by language (e.g. Python, TypeScript)")
+    file_path: Optional[str] = Field(default=None, description="Filter by path substring or pattern")
+    symbol_type: Optional[str] = Field(default=None, description="Filter by symbol type (e.g. function, class, doc)")
+    limit: int = Field(default=20, ge=1, le=100, description="Maximum number of chunks to return")
+
+
+class TopLevelIndexPayload(BaseModel):
+    """Payload to trigger indexing via top-level search endpoints."""
+
+    repository_id: str = Field(..., description="Target repository ID")
+    snapshot_id: Optional[str] = Field(default=None, description="Target snapshot ID (defaults to latest)")
+    force_reindex: bool = Field(default=False, description="Whether to drop old chunks and reindex")
+    local_path_override: Optional[str] = Field(default=None, description="Local path override if applicable")
+
+
+class TopLevelQAPayload(BaseModel):
+    """Payload to ask a repository question via top-level search endpoints."""
+
+    repository_id: str = Field(..., description="Target repository ID")
+    snapshot_id: Optional[str] = Field(default=None, description="Target snapshot ID (defaults to latest)")
+    question: str = Field(..., min_length=2, max_length=1000, description="Natural language question about repository")
+    retrieval_mode: str = Field(default="hybrid", description="Retrieval mode: lexical, semantic, hybrid")
+    prefer_llm: bool = Field(default=False, description="Attempt LLM answer generation if provider is configured")
+
