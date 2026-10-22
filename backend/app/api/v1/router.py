@@ -7,6 +7,7 @@ from backend.app.api.v1.endpoints import (
     codebase_health,
     dependencies,
     health,
+    metrics,
     remediation,
     repositories,
     search,
@@ -17,7 +18,12 @@ api_router = APIRouter()
 # Register health check endpoint under /api/health
 api_router.include_router(health.router, tags=["Health"])
 
+# Register operational metrics endpoints under /api/v1/metrics and /api/metrics
+api_router.include_router(metrics.router, prefix="/v1", tags=["Metrics"])
+api_router.include_router(metrics.router, tags=["Metrics"])
+
 # Register repository endpoints under /api/v1/repositories and /api/repositories
+
 api_router.include_router(repositories.router, prefix="/v1")
 api_router.include_router(repositories.router)
 
