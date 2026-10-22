@@ -5,28 +5,39 @@ import sys
 from datetime import datetime, timezone
 from typing import Any, Dict
 
-# Regex to detect and mask common secret patterns in logs
+# Regex patterns to detect and mask common secret patterns in logs
 SENSITIVE_PATTERNS = [
-    re.compile(r"(password|token|secret|key|authorization|bearer)\s*[:=]\s*['\"]?([^'\",\s]+)['\"]?", re.IGNORECASE),
+    (re.compile(r"(password|token|secret|api_key|apikey|private_key|authorization)\s*[:=]\s*['\"]?([^'\",\s]+)['\"]?", re.IGNORECASE), r"\1=******"),
+    (re.compile(r"(://[^:\s/]+):([^@\s/]+)@", re.IGNORECASE), r"\1:******@"),
+    (re.compile(r"(Bearer\s+)([A-Za-z0-9_\-\.]+)", re.IGNORECASE), r"\1******"),
 ]
 
 
+def sanitize_log_text(text: str) -> str:
+    """Sanitize sensitive credentials, passwords, tokens, and URIs from text."""
+    if not isinstance(text, str):
+        return text
+    result = text
+    for pattern, replacement in SENSITIVE_PATTERNS:
+        result = pattern.sub(replacement, result)
+    return result
+
+
 class SensitiveDataFilter(logging.Filter):
-    """Filter that masks passwords, tokens, and authorization headers from log records."""
+    """Filter that masks passwords, tokens, connection secrets, and authorization headers from log records."""
 
     def filter(self, record: logging.LogRecord) -> bool:
         if isinstance(record.msg, str):
-            for pattern in SENSITIVE_PATTERNS:
-                record.msg = pattern.sub(r"\1=******", record.msg)
+            record.msg = sanitize_log_text(record.msg)
         if record.args:
             cleaned_args = []
             for arg in record.args if isinstance(record.args, tuple) else [record.args]:
                 if isinstance(arg, str):
-                    for pattern in SENSITIVE_PATTERNS:
-                        arg = pattern.sub(r"\1=******", arg)
+                    arg = sanitize_log_text(arg)
                 cleaned_args.append(arg)
             record.args = tuple(cleaned_args)
         return True
+
 
 
 class JSONFormatter(logging.Formatter):
