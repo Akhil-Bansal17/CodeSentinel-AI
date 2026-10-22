@@ -12,7 +12,9 @@ from backend.app.core.config import settings
 from backend.app.core.database import check_database_health, dispose_engine
 from backend.app.core.exceptions import AppException
 from backend.app.core.logging import logger, setup_logging
+from backend.app.core.metrics import metrics_collector
 from backend.app.core.tasks import task_manager
+
 
 
 @asynccontextmanager
@@ -88,7 +90,17 @@ def create_application() -> FastAPI:
             request_id,
             extra={"request_id": request_id},
         )
+
+        # Record operational metrics telemetry (low-cardinality aggregation)
+        metrics_collector.record_request(
+            method=request.method,
+            status_code=response.status_code,
+            duration_ms=process_time_ms,
+        )
+
         return response
+
+
 
     # Centralized Exception Handlers
 
