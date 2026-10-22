@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# CodeSentinel AI - Phase 11 Staging Certification & Deployment Verification Script (POSIX)
+# CodeSentinel AI - Phase 12 Deployment Automation & Production Operations Release Script (POSIX)
+
 set -eo pipefail
 
 PY_BIN="./backend/.venv/bin/python"
