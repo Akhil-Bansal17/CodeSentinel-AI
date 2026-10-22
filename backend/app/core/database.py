@@ -29,11 +29,17 @@ try:
     )
 except Exception as e:
     logger.warning("Failed to initialize primary database engine: %s", str(e))
-    # Fallback in-memory engine to guarantee app startup even if misconfigured
+    if settings.ENVIRONMENT.lower() in ("production", "staging"):
+        raise RuntimeError(
+            f"Database engine initialization failed in {settings.ENVIRONMENT} mode: {e}. "
+            f"Silent fallback to in-memory database is prohibited in production/staging environments."
+        ) from e
+    # Fallback in-memory engine to guarantee app startup in development/test environments
     engine = create_engine(
         "sqlite:///:memory:",
         connect_args={"check_same_thread": False},
     )
+
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
