@@ -237,8 +237,10 @@ def run_smoke_journeys() -> int:
         "Journey B (Search & Citations)": "PENDING",
         "Journey C (Remediation Proposals)": "PENDING",
         "Journey D (Hardened CI/CD)": "PENDING",
+        "Journey E (Operational Telemetry)": "PENDING",
     }
     failures: List[str] = []
+
 
     def record_step_result(
         journey: str,
@@ -428,6 +430,37 @@ def run_smoke_journeys() -> int:
 
         if journey_statuses[j_d] == "PENDING":
             journey_statuses[j_d] = "PASSED"
+
+        # ======================================================================
+        # 6. Journey E: Operational Telemetry & Lightweight Metrics
+        # ======================================================================
+        j_e = "Journey E (Operational Telemetry)"
+        print("\n[6/6] Journey E: Operational Telemetry & Metrics Services...")
+
+        code, metrics_v1 = make_request("/v1/metrics", method="GET")
+        e_valid_v1 = (
+            isinstance(metrics_v1, dict)
+            and "uptime_seconds" in metrics_v1
+            and "http" in metrics_v1
+            and "background_tasks" in metrics_v1
+            and metrics_v1.get("service") == "codesentinel-api"
+        )
+        record_step_result(j_e, "GET /api/v1/metrics", code, 200, metrics_v1, e_valid_v1, "invalid metrics structure")
+        if code == 200 and e_valid_v1:
+            total_reqs = metrics_v1.get("http", {}).get("requests_total", 0)
+            avg_lat = metrics_v1.get("http", {}).get("avg_duration_ms", 0.0)
+            print(f"  -> GET /api/v1/metrics: HTTP 200 (requests_tracked={total_reqs}, avg_lat={avg_lat}ms)")
+
+        # Verify alias route /api/metrics
+        code_alias, metrics_alias = make_request("/metrics", method="GET")
+        e_valid_alias = isinstance(metrics_alias, dict) and "uptime_seconds" in metrics_alias
+        record_step_result(j_e, "GET /api/metrics (alias)", code_alias, 200, metrics_alias, e_valid_alias, "metrics alias failed")
+        if code_alias == 200:
+            print(f"  -> GET /api/metrics: HTTP 200 (alias route verified)")
+
+        if journey_statuses[j_e] == "PENDING":
+            journey_statuses[j_e] = "PASSED"
+
 
     except Exception as exc:
         print(f"\n[FATAL ERROR] Unexpected exception during smoke test run: {exc}")
