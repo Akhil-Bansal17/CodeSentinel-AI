@@ -3,18 +3,22 @@ services:
     image: postgres:16-alpine
     container_name: codesentinel-db
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgrespassword
-      POSTGRES_DB: codesentinel
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgrespassword}
+      POSTGRES_DB: ${POSTGRES_DB:-codesentinel}
+    # PostgreSQL is not exposed publicly on host by default to ensure network isolation
+    expose:
+      - "5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - codesentinel-internal
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d codesentinel"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-codesentinel}"]
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   backend:
     build:
@@ -22,17 +26,29 @@ services:
       dockerfile: Dockerfile
     container_name: codesentinel-backend
     environment:
-      - ENVIRONMENT=development
-      - DEBUG=true
-      - DATABASE_URL=postgresql+psycopg://postgres:postgrespassword@db:5432/codesentinel
-      - CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000
-      - LOG_LEVEL=INFO
-      - LOG_FORMAT=json
+      - ENVIRONMENT=${ENVIRONMENT:-staging}
+      - DEBUG=${DEBUG:-false}
+      - SECRET_KEY=${SECRET_KEY:-staging-secret-key-codesentinel-min32chars}
+      - CI_WEBHOOK_SECRET=${CI_WEBHOOK_SECRET:-staging-ci-secret-codesentinel}
+      - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgrespassword}@db:5432/${POSTGRES_DB:-codesentinel}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
     ports:
       - "8000:8000"
+    networks:
+      - codesentinel-internal
+      - codesentinel-public
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/health/live || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    stop_grace_period: 15s
     restart: unless-stopped
 
   frontend:
@@ -42,9 +58,19 @@ services:
     container_name: codesentinel-frontend
     ports:
       - "3000:80"
+    networks:
+      - codesentinel-public
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
+
+networks:
+  codesentinel-internal:
+    driver: bridge
+  codesentinel-public:
+    driver: bridge
 
 volumes:
   postgres_data:
+
