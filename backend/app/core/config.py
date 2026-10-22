@@ -204,6 +204,15 @@ class Settings(BaseSettings):
             return v
         return [str(v)]
 
+    @field_validator("ENVIRONMENT")
+    @classmethod
+    def validate_environment(cls, v: str) -> str:
+        valid_envs = {"development", "test", "staging", "production"}
+        lower_v = v.strip().lower()
+        if lower_v not in valid_envs:
+            raise ValueError(f"Invalid ENVIRONMENT '{v}'. Must be one of {sorted(valid_envs)}")
+        return lower_v
+
     @field_validator("LOG_LEVEL")
     @classmethod
     def validate_log_level(cls, v: str) -> str:
@@ -229,17 +238,53 @@ class Settings(BaseSettings):
         return roots
 
     def validate_production_settings(self) -> None:
-        """Enforces strict security validation when running in production."""
-        if self.ENVIRONMENT.lower() == "production":
+        """Enforces strict security validation when running in production or staging."""
+        env = self.ENVIRONMENT.lower()
+
+        # External provider URL requirements
+        if self.EMBEDDING_PROVIDER in ("openai_compatible", "ollama"):
+            if not self.EMBEDDING_API_URL or not self.EMBEDDING_API_URL.startswith(("http://", "https://")):
+                raise ValueError(
+                    f"Configuration error: EMBEDDING_API_URL (http/https) is required when EMBEDDING_PROVIDER is '{self.EMBEDDING_PROVIDER}'."
+                )
+
+        if self.LLM_PROVIDER in ("openai_compatible", "ollama"):
+            if not self.LLM_API_URL or not self.LLM_API_URL.startswith(("http://", "https://")):
+                raise ValueError(
+                    f"Configuration error: LLM_API_URL (http/https) is required when LLM_PROVIDER is '{self.LLM_PROVIDER}'."
+                )
+
+        if env == "staging":
+            if self.DEBUG:
+                raise ValueError("Staging configuration error: DEBUG mode must be False in staging.")
+            if "change-in-production" in self.SECRET_KEY or "codesentinel-dev-secret" in self.SECRET_KEY or len(self.SECRET_KEY) < 32:
+                raise ValueError(
+                    "Staging configuration error: SECRET_KEY must be a dedicated random secret of at least 32 characters in staging."
+                )
+            if self.DATABASE_URL.startswith("sqlite"):
+                raise ValueError("Staging configuration error: DATABASE_URL must point to PostgreSQL, not SQLite in staging.")
+
+        elif env == "production":
             if self.DEBUG:
                 raise ValueError("Production configuration error: DEBUG mode must be False in production.")
-            if "change-in-production" in self.SECRET_KEY or len(self.SECRET_KEY) < 32:
-                raise ValueError("Production configuration error: SECRET_KEY must be a unique, cryptographically random secret of at least 32 characters in production.")
-            if self.CI_WEBHOOK_SECRET == "codesentinel-ci-default-secret":
-                raise ValueError("Production configuration error: CI_WEBHOOK_SECRET must be configured with a dedicated random secret in production.")
-            if "localhost" in self.DATABASE_URL or "postgres:postgres" in self.DATABASE_URL or self.DATABASE_URL.startswith("sqlite"):
-                raise ValueError("Production configuration error: DATABASE_URL must point to a hardened production database, not localhost, default credentials, or sqlite.")
+            if "change-in-production" in self.SECRET_KEY or "codesentinel-dev-secret" in self.SECRET_KEY or len(self.SECRET_KEY) < 32:
+                raise ValueError(
+                    "Production configuration error: SECRET_KEY must be a unique, cryptographically random secret of at least 32 characters in production."
+                )
+            if self.CI_WEBHOOK_SECRET == "codesentinel-ci-default-secret" or len(self.CI_WEBHOOK_SECRET) < 16:
+                raise ValueError(
+                    "Production configuration error: CI_WEBHOOK_SECRET must be configured with a dedicated random secret of at least 16 characters in production."
+                )
+            if "localhost" in self.DATABASE_URL or "127.0.0.1" in self.DATABASE_URL or "postgres:postgres" in self.DATABASE_URL or self.DATABASE_URL.startswith("sqlite"):
+                raise ValueError(
+                    "Production configuration error: DATABASE_URL must point to a hardened production database, not localhost, default credentials, or sqlite."
+                )
+            # Ensure CORS does not allow wildcard in production
+            cors = self.CORS_ORIGINS if isinstance(self.CORS_ORIGINS, list) else [self.CORS_ORIGINS]
+            if "*" in cors:
+                raise ValueError("Production configuration error: CORS_ORIGINS cannot contain wildcard '*' in production.")
 
 
 settings = Settings()
+
 
