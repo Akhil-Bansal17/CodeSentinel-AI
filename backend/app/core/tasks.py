@@ -74,6 +74,8 @@ class TaskLifecycleManager:
     def __init__(self) -> None:
         self._tasks: Dict[str, TaskRecord] = {}
         self._lock = threading.Lock()
+        self._is_shutdown = False
+
 
     def create_task(
         self,
@@ -102,6 +104,9 @@ class TaskLifecycleManager:
             record = self._tasks.get(task_id)
             if not record:
                 raise KeyError(f"Task not found: {task_id}")
+            if record.status in (TaskStatus.CANCELLED, TaskStatus.FAILED, TaskStatus.COMPLETED):
+                logger.warning("Cannot start task [%s] already in terminal state %s", task_id, record.status.value)
+                return record
             record.status = TaskStatus.RUNNING
             record.started_at = datetime.now(timezone.utc)
             record.status_message = message or "Task execution in progress"
@@ -114,6 +119,8 @@ class TaskLifecycleManager:
             record = self._tasks.get(task_id)
             if not record:
                 raise KeyError(f"Task not found: {task_id}")
+            if record.status in (TaskStatus.CANCELLED, TaskStatus.FAILED, TaskStatus.COMPLETED):
+                return record
             record.progress_percent = min(max(percent, 0.0), 100.0)
             if message:
                 record.status_message = message
@@ -125,11 +132,20 @@ class TaskLifecycleManager:
         result_summary: Optional[Dict[str, Any]] = None,
         message: str = "Task completed successfully",
     ) -> TaskRecord:
-        """Mark task as successfully completed."""
+        """Mark task as successfully completed.
+
+        Guarantees that a task which failed or was cancelled cannot be marked completed.
+        """
         with self._lock:
             record = self._tasks.get(task_id)
             if not record:
                 raise KeyError(f"Task not found: {task_id}")
+            if record.status == TaskStatus.CANCELLED:
+                logger.warning("Ignoring completion attempt for cancelled task [%s]", task_id)
+                return record
+            if record.status == TaskStatus.FAILED:
+                logger.warning("Ignoring completion attempt for failed task [%s]", task_id)
+                return record
             record.status = TaskStatus.COMPLETED
             record.progress_percent = 100.0
             record.completed_at = datetime.now(timezone.utc)
@@ -147,12 +163,18 @@ class TaskLifecycleManager:
     ) -> TaskRecord:
         """Mark task as failed with sanitized error summary."""
         raw_msg = str(error)
-        # Sanitize error message to prevent leaking paths or passwords
         clean_msg = raw_msg[:300] if len(raw_msg) > 300 else raw_msg
+        # Sanitize error message to prevent leaking passwords, tokens or credentials
+        from backend.app.core.logging import sanitize_log_text
+        clean_msg = sanitize_log_text(clean_msg)
+
         with self._lock:
             record = self._tasks.get(task_id)
             if not record:
                 raise KeyError(f"Task not found: {task_id}")
+            if record.status == TaskStatus.CANCELLED:
+                logger.info("Ignoring failure report for already cancelled task [%s]", task_id)
+                return record
             record.status = TaskStatus.FAILED
             record.completed_at = datetime.now(timezone.utc)
             record.failure_code = failure_code
@@ -162,11 +184,14 @@ class TaskLifecycleManager:
             return record
 
     def cancel_task(self, task_id: str, reason: str = "Task cancelled by user") -> TaskRecord:
-        """Mark task as cancelled."""
+        """Mark task as cancelled if not already completed or failed."""
         with self._lock:
             record = self._tasks.get(task_id)
             if not record:
                 raise KeyError(f"Task not found: {task_id}")
+            if record.status in (TaskStatus.COMPLETED, TaskStatus.FAILED):
+                logger.info("Ignoring cancellation for task [%s] already in terminal state %s", task_id, record.status.value)
+                return record
             record.status = TaskStatus.CANCELLED
             record.completed_at = datetime.now(timezone.utc)
             record.status_message = reason
@@ -195,23 +220,54 @@ class TaskLifecycleManager:
             results.sort(key=lambda r: r.created_at, reverse=True)
             return results[:limit]
 
+    def get_summary(self) -> Dict[str, int]:
+        """Return aggregate count of tasks by lifecycle state for observability metrics."""
+        summary = {
+            "pending": 0,
+            "running": 0,
+            "completed": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "total_tracked": 0,
+        }
+        with self._lock:
+            for task in self._tasks.values():
+                summary["total_tracked"] += 1
+                if task.status == TaskStatus.PENDING:
+                    summary["pending"] += 1
+                elif task.status == TaskStatus.RUNNING:
+                    summary["running"] += 1
+                elif task.status == TaskStatus.COMPLETED:
+                    summary["completed"] += 1
+                elif task.status == TaskStatus.FAILED:
+                    summary["failed"] += 1
+                elif task.status == TaskStatus.CANCELLED:
+                    summary["cancelled"] += 1
+        return summary
+
     def shutdown(self, reason: str = "Application shutdown") -> int:
         """Cancel all pending or running tasks during application shutdown.
 
         Guarantees that no in-flight or queued task is falsely reported as complete.
+        Is safe against repeated invocations (idempotent).
         Returns the number of cancelled tasks.
         """
-        cancelled_count = 0
         with self._lock:
+            if self._is_shutdown:
+                return 0
+            cancelled_count = 0
             for task in self._tasks.values():
                 if task.status in (TaskStatus.PENDING, TaskStatus.RUNNING):
                     task.status = TaskStatus.CANCELLED
                     task.completed_at = datetime.now(timezone.utc)
                     task.status_message = f"Cancelled due to {reason}"
                     cancelled_count += 1
+            self._is_shutdown = True
+
         if cancelled_count > 0:
             logger.info("Task lifecycle manager shutdown: cancelled %d active tasks", cancelled_count)
         return cancelled_count
+
 
 
 # Global singleton lifecycle manager
