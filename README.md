@@ -1,6 +1,6 @@
 # CodeSentinel AI
 
-> **Deterministic Software Engineering Intelligence & Automated Codebase Governance**
+> **Deterministic Software Engineering Intelligence, Local-First Codebase Governance & Safe Automated Remediation**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-0.1.0-emerald.svg)](https://github.com/Akhil-Bansal17/CodeSentinel-AI/releases)
@@ -19,7 +19,7 @@
 
 ## Overview
 
-CodeSentinel AI is a local-first software engineering intelligence and automated codebase governance platform engineered for engineering leads, security teams, and platform architects who need transparent, verifiable repository diagnostics without relying on hallucinating LLMs. Unlike generic "AI coding wrappers" that blindly pipe unvetted source files into language models and fabricate non-existent CVEs or synthetic quality scores, CodeSentinel AI strictly decouples **deterministic static inspection** from **high-level reasoning**. Grounded in AST parsing, McCabe cyclomatic complexity calculation, multi-manifest Software Composition Analysis (SCA), specification-compliant version matching (PEP 440 and Semver 2.0.0), Martin's architectural coupling metrics, Tarjan's cycle detection, syntax-aware chunking, and Reciprocal Rank Fusion code retrieval, every finding emitted by CodeSentinel AI is cryptographically fingerprinted, isolated to exact source line/column coordinates, and backed by verifiable evidence with zero untrusted code execution.
+CodeSentinel AI is a local-first software engineering intelligence and automated codebase governance platform engineered for engineering leads, security teams, and platform architects who demand transparent, verifiable repository diagnostics without relying on hallucinating LLMs. Unlike generic "AI coding wrappers" that blindly pipe raw source files into external language models and fabricate non-existent CVEs or synthetic quality scores, CodeSentinel AI strictly decouples **deterministic static inspection** from **high-level reasoning**. Grounded in formal AST parsing, McCabe cyclomatic complexity calculation, multi-manifest Software Composition Analysis (SCA), specification-compliant version matching (PEP 440 and Semver 2.0.0), Robert C. Martin's architectural coupling metrics, Tarjan's Strongly Connected Components (SCC) cycle detection, syntax-aware chunking, Reciprocal Rank Fusion code retrieval, and 5-stage in-memory patch validation, every finding emitted by CodeSentinel AI is cryptographically fingerprinted, isolated to exact source line/column coordinates, and backed by verifiable evidence with zero untrusted code execution.
 
 ---
 
@@ -28,7 +28,7 @@ CodeSentinel AI is a local-first software engineering intelligence and automated
 | Feature | Description |
 | :--- | :--- |
 | **Multi-Source Ingestion** | Ingests public GitHub repositories via streaming HTTP archive extraction or discovers approved local filesystem repositories in-place. |
-| **Multi-Vector Security Sandbox** | Defends against SSRF, TarSlip, ZipSlip, symlink traversal escapes, and decompression bombs (expansion ratio &gt; 10.0 or extraction &gt; 150 MB). |
+| **Multi-Vector Security Sandbox** | Defends against SSRF, TarSlip, ZipSlip, symlink traversal escapes, and decompression bombs (expansion ratio &gt; 10.0x or extraction &gt; 150 MB). |
 | **Deterministic Codebase Telemetry** | Classifies files into source, config, data, and docs; computes physical LOC, byte footprints, and language distributions with zero synthetic vanity scores. |
 | **Immutable Snapshotting** | Generates atomic, point-in-time repository snapshots with SHA-256 file hashing; preserves historical healthy states if a re-scan encounters errors. |
 | **AST-Based Static Code Analysis** | Inspects Python ASTs (`ast.parse`) and JavaScript/TypeScript syntax trees via the official TypeScript compiler API (`ts.createSourceFile`). |
@@ -51,8 +51,10 @@ CodeSentinel AI is a local-first software engineering intelligence and automated
 | **Secure CI Result Webhook Ingestion** | Ingests external CI pipeline payloads with HMAC-SHA256 signature verification, 5MB payload ceilings, and replay protection via idempotency keys. |
 | **Safe PR Synthesis & Patch Bundle Export** | Detects line-span overlaps and conflicts across approved proposals, refuses unsafe combinations deterministically, and exports unified Git `.patch` bundles with evidence-grounded PR descriptions. |
 | **Production Readiness & Observability** | Decoupled Kubernetes-ready liveness (`/api/health/live`) and readiness (`/api/health/ready`) probes, `X-Request-ID` correlation logging with sensitive data masking, `TaskLifecycleManager` async state engine, hardened connection pooling, and fail-fast startup configuration validation. |
-| **Release Candidate Validation & Deployment Readiness** | Reproducible multi-gate validation scripts, Docker container package structure fix, probe decoupling, graceful shutdown task cancellation, and verified security gates. |
-| **Modern Developer Dashboard** | Responsive React 19 + Vite 8 + Tailwind CSS dark-mode dashboard with CI/CD & Audits console, PR synthesis, Code Search, AI Assistant, Remediation Console, and live telemetry. |
+| **Staging Certification & Release Validation** | Automated cross-platform certification runners (`validate_release.py`, `validate_release.ps1`, `validate_release.sh`) executing 302 backend tests, 57 frontend tests, migration parity, and strict 6-journey smoke tests across 10 gates. |
+| **Deployment Automation & Observability** | Pre-deployment migration safety tooling, low-cardinality operational telemetry (`/api/v1/metrics`), isolated multi-container staging (`docker-compose.yml`), SPA Nginx reverse proxy, and hardened background task lifecycle. |
+| **Modern Developer Dashboard** | Responsive React 19 + Vite 8 + Tailwind CSS dark-mode dashboard with CI/CD & Audits console, PR synthesis studio, Code Search, AI Assistant, Remediation Console, and live telemetry. |
+
 
 ---
 
@@ -60,51 +62,52 @@ CodeSentinel AI is a local-first software engineering intelligence and automated
 
 - **Ingests public GitHub repositories safely**: Downloads archives via streaming HTTP, validates redirect chains against SSRF filters, strips root wrappers, and auto-detects default branches.
 - **Audits local workspaces securely**: Resolves and scans local filesystem trees strictly bounded within explicitly whitelisted `LOCAL_REPOSITORY_ROOTS`.
-- **Enforces military-grade sandboxing**: Rejects uncompressed archives exceeding 150 MB, expansion ratios exceeding 10.0x, path traversals (`../`), UNC paths, and symlink loops.
+- **Enforces multi-layer sandboxing**: Rejects uncompressed archives exceeding 150 MB, expansion ratios exceeding 10.0x, path traversals (`../`), UNC paths, and symlink loops.
 - **Protects codebase secrets**: Automatically excludes credential patterns (`.env`, `*.pem`, `id_rsa`) from file inspections and line counters; never executes analyzed code.
 - **Calculates physical lines of code (LOC)**: Categorizes code deterministically into source, configuration, documentation, data, and binary files.
 - **Parses Python and TypeScript ASTs**: Uses stdlib `ast` for Python and an isolated Node.js child process with TypeScript's compiler API for JS/TS/TSX.
 - **Measures McCabe cyclomatic complexity**: Traverses AST branch decision nodes (`if`, `elif`, `for`, `while`, `and`, `or`, `except`, comprehensions) and flags functions exceeding threshold 10.
 - **Flags oversized functions & duplicate imports**: Detects functions spanning over 50 lines and flags duplicate module imports within the same lexical scope.
-- **Identifies Security-Sensitive Patterns (Phase 4)**: Executes 10 deterministic security rules (PYSEC001-PYSEC006, JSSEC001-JSSEC004) covering eval/exec, pickle/shelve deserialization, shell commands, MD5/SHA1, verify=False TLS bypass, innerHTML sinks, and SQL string interpolation.
+- **Identifies Security-Sensitive Patterns**: Executes 10 deterministic security rules (PYSEC001-PYSEC006, JSSEC001-JSSEC004) covering eval/exec, pickle/shelve deserialization, shell commands, MD5/SHA1, verify=False TLS bypass, innerHTML sinks, and SQL string interpolation.
 - **Decouples Severity from Confidence**: Distinctly tracks impact severity (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, `INFO`) and detection confidence (`HIGH`, `MEDIUM`, `LOW`) with actionable remediation guidance and known limitations.
 - **Inventories direct & transitive dependencies**: Differentiates declared package constraints (e.g. `requests>=2.25.0`) from pinned resolved versions (e.g. `2.31.0`).
 - **Executes offline vulnerability correlation**: Evaluates packages against pre-loaded OSV/CVE advisory records using PEP 440 and Semver 2.0.0 spec-compliant evaluators.
-- **Extracts module dependency graphs (Phase 5)**: Resolves static imports across Python and JS/TS, isolating internal module edges from standard library and 3rd-party dependencies.
+- **Extracts module dependency graphs**: Resolves static imports across Python and JS/TS, isolating internal module edges from standard library and 3rd-party dependencies.
 - **Measures Martin's package coupling metrics**: Calculates $Ca$, $Ce$, Instability ($I = \frac{Ce}{Ca+Ce}$), Abstractness ($A = \frac{N_a}{N_c}$), and Main Sequence Distance ($D = |A+I-1|$).
 - **Isolates circular dependency clusters**: Traverses import graphs with Tarjan's SCC algorithm to flag circular components and identify cycles.
 - **Enforces architectural governance policies**: Evaluates layer boundaries and forbidden dependencies declared in `codesentinel.architecture.json` with exact source line coordinates and remediation guidance.
 - **Calculates a 5-pillar codebase health score**: Deterministically assesses Maintainability (25%), Security (25%), Architecture (20%), Dependency Risk (15%), and Coverage (15%) with dynamic weight renormalization for missing inputs.
-- **Indexes Codebases Incrementally (Phase 6)**: Extracts syntax-aware chunks (functions, classes, methods, imports, doc sections) from immutable snapshot source files with SHA-256 content fingerprints and line/column coordinates.
+- **Indexes Codebases Incrementally**: Extracts syntax-aware chunks (functions, classes, methods, imports, doc sections) from immutable snapshot source files with SHA-256 content fingerprints and line/column coordinates.
 - **Performs Lexical, Semantic & Hybrid Code Search**: BM25Okapi lexical retrieval with snake_case/camelCase sub-tokenization and symbol boosting; dense vector cosine similarity; and Reciprocal Rank Fusion ($k=60$) hybrid ranking.
 - **Answers Repository Inquiries Grounded in Evidence**: Evaluates evidence sufficiency, answers questions with verifiable line-coordinate citations, detects insufficient evidence honestly, and sandboxes retrieved code against prompt injection.
 - **Provides Zero-Key Operation with Optional Pluggable LLM/Embeddings**: Works out of the box with zero external API keys via deterministic grounded synthesis; optionally connects to configured local or external embedding and LLM providers.
-- **Synthesizes Validated Code Patches (Phase 7)**: Transforms verified security and dependency findings into line-accurate unified diffs using deterministic AST transformations (`FIX-PYSEC001`, `FIX-PYSEC005`, `FIX-PYSEC004`, `FIX-PYSEC003`, `FIX-DEP-UPGRADE-VERSION`).
+- **Synthesizes Validated Code Patches**: Transforms verified security and dependency findings into line-accurate unified diffs using deterministic AST transformations (`FIX-PYSEC001`, `FIX-PYSEC005`, `FIX-PYSEC004`, `FIX-PYSEC003`, `FIX-DEP-UPGRADE-VERSION`).
 - **Enforces 5-Stage In-Memory Patch Validation**: Validates source integrity, patch structure, AST syntax parsing (`ast.parse`), deterministic static security rule elimination, and regression risk disclosure before human review without executing target repository code.
 - **Requires Explicit Human Approval for Patch Application**: Enforces strict lifecycle decoupling (`PROPOSED` → `VALIDATING` → `VALIDATED` → `APPROVED` → `APPLIED`), preventing unauthorized or automatic filesystem modifications.
 - **Guarantees Anti-Drift & Path Traversal Confinement**: Enforces pre-write and post-write SHA-256 hash checks, atomic temporary file replacement, protected path blocking (`.env`, `.git`), and read-only archive fallback to diff exports.
-- **Generates Secure CI/CD Workflows (Phase 8)**: Emits hardened GitHub Actions pipelines with immutable commit-pinned action SHAs, least-privilege `contents: read`, timeout/concurrency controls, and shell injection guards.
+- **Generates Secure CI/CD Workflows**: Emits hardened GitHub Actions pipelines with immutable commit-pinned action SHAs, least-privilege `contents: read`, timeout/concurrency controls, and shell injection guards.
 - **Executes 6-Pillar Codebase Audits**: Orchestrates comprehensive, read-only multi-pillar assessments across Ingestion, Static AST, Dependency SCA, AppSec, Architecture, and Remediation Feasibility.
 - **Exports RFC-Standard SARIF 2.1.0 & Markdown Reports**: Normalizes multi-pillar audit findings into standardized OASIS SARIF JSON with rule driver dictionaries and file coordinates.
 - **Protects CI Webhook Ingestion**: Enforces HMAC-SHA256 signature verification, a 5MB payload size ceiling, and replay protection with idempotency keys.
 - **Safely Composes Multi-Proposal PRs**: Detects overlapping edits across proposals, prevents patch collisions, and synthesizes clean Git `.patch` bundles with evidence-backed PR markdown descriptions.
 - **Issues stable SHA-256 finding fingerprints**: Guarantees idempotent issue tracking: `sha256(rule_id:file_path:start_line:evidence_summary)`.
-- **Delivers a production REST API & React UI**: Features 42+ OpenAPI endpoints, structured JSON logging, and a low-latency React 19 dashboard with dedicated CI/CD & Audits, Code Search, AI Assistant, and Remediation Review consoles.
+- **Delivers a production REST API & React UI**: Features 45+ OpenAPI endpoints, structured JSON logging, and a low-latency React 19 dashboard with dedicated CI/CD & Audits, Code Search, AI Assistant, and Remediation Review consoles.
 
 ---
 
 ## The Problem
 
-Engineering leaders and platform teams struggle to maintain codebase health, track security posture, and govern technical debt. Current market approaches fail across multiple operational dimensions:
+Engineering leaders, security teams, and platform architects struggle to maintain codebase health, enforce architectural boundaries, and remediate vulnerabilities safely. Current market alternatives fail across multiple operational dimensions:
 
-| Dimension | "AI Wrapper" Coding Assistants | Monolithic Legacy SAST/SCA | Ad-Hoc Scripts & Linters | CodeSentinel AI |
+| Dimension | CodeSentinel AI | "AI Wrapper" Coding Assistants | Monolithic Legacy SAST/SCA | Ad-Hoc Scripts & Linters |
 | :--- | :--- | :--- | :--- | :--- |
-| **Truth Grounding** | **Poor**: Hallucinates non-existent CVEs, deprecated APIs, and synthetic scores. | **Fair**: Rule-based, but generates high false-positive volumes with opaque heuristics. | **Good**: Deterministic, but output is fragmented across disparate tool formats. | **Absolute**: Deterministic AST/SCA baseline; zero synthetic scores; verifiable evidence coordinates. |
-| **Execution Safety** | **Risky**: Cloud-dependent; source code leaves security perimeters to third-party APIs. | **Moderate**: Requires proprietary agents or heavyweight server compute. | **High Risk**: Many tools run build hooks (`setup.py`, `npm postinstall`) during scan. | **Zero Execution**: Code is parsed statically; never built, executed, or exported off-host. |
-| **Air-Gap Capability** | **None**: Requires active internet connectivity to external LLM providers. | **Complex**: Expensive on-premise appliances with heavy license servers. | **Manual**: Requires configuring multiple disconnected offline package mirrors. | **Native**: Fully autonomous; runs locally with bundled, version-controlled advisory catalogs. |
-| **Dependency Precision** | **Hallucinated**: Guesses transitive dependencies based on prompt tokens. | **Variable**: Often assumes top-level constraint equals installed version. | **Brittle**: Inconsistent between npm audit, pip-audit, and manual regex checks. | **Rigorous**: PEP 440 and Semver 2.0.0 specs; clearly separates declared vs. resolved versions. |
-| **Architectural Governance** | **Surface-level**: Summarizes files textually without graph-theoretical rigor. | **Opaque**: Complex enterprise setups requiring deep configuration. | **Fragmented**: Separate import-linter configs with no unified health score. | **Formal**: Martin's coupling metrics, Tarjan's SCC cycle clusters, and JSON declarative boundary policies. |
-| **Operational Cost** | **High**: Escalating per-token billing and cloud inference subscriptions. | **Very High**: Six-figure enterprise contracts with restrictive seat quotas. | **Low**: Open-source, but requires hundreds of engineering hours to integrate. | **Zero Per-Seat Cost**: Self-hosted, lightweight Docker stack running on commodity hardware. |
+| **Truth Grounding** | **Absolute**: Deterministic AST/SCA baseline; zero synthetic scores; verifiable evidence coordinates. | **Poor**: Hallucinates non-existent CVEs, deprecated APIs, and synthetic scores. | **Fair**: Rule-based, but generates high false-positive volumes with opaque heuristics. | **Good**: Deterministic, but output is fragmented across disparate tool formats. |
+| **Execution Safety** | **Zero Execution**: Code is parsed statically; never built, executed, or exported off-host. | **Risky**: Cloud-dependent; source code leaves security perimeters to third-party APIs. | **Moderate**: Requires proprietary agents or heavyweight server compute. | **High Risk**: Many tools run build hooks (`setup.py`, `npm postinstall`) during scan. |
+| **Air-Gap Capability** | **Native**: Fully autonomous; runs locally with bundled, version-controlled advisory catalogs. | **None**: Requires active internet connectivity to external LLM providers. | **Complex**: Expensive on-premise appliances with heavy license servers. | **Manual**: Requires configuring multiple disconnected offline package mirrors. |
+| **Dependency Precision** | **Rigorous**: PEP 440 and Semver 2.0.0 specs; clearly separates declared vs. resolved versions. | **Hallucinated**: Guesses transitive dependencies based on prompt tokens. | **Variable**: Often assumes top-level constraint equals installed version. | **Brittle**: Inconsistent between npm audit, pip-audit, and manual regex checks. |
+| **Architectural Rigor** | **Formal**: Martin's coupling metrics, Tarjan's SCC cycle clusters, and JSON boundary policies. | **Surface-level**: Summarizes files textually without graph-theoretical rigor. | **Opaque**: Complex enterprise setups requiring deep configuration. | **Fragmented**: Separate import-linter configs with no unified health score. |
+| **Remediation Safety** | **Deterministic**: 5-stage in-memory AST validation, anti-drift hashes, and human approval gate. | **Blind**: Emits diffs that may introduce syntax errors or regressions without verification. | **Static**: Flags issues but rarely provides safe, syntax-checked patch synthesis. | **Manual**: Leaves code remediation entirely to manual developer intervention. |
+| **Operational Cost** | **Zero Per-Seat Cost**: Self-hosted, lightweight Docker stack running on commodity hardware. | **High**: Escalating per-token billing and cloud inference subscriptions. | **Very High**: Six-figure enterprise contracts with restrictive seat quotas. | **Low**: Open-source, but requires hundreds of engineering hours to integrate. |
 
 ---
 
@@ -114,7 +117,7 @@ Engineering leaders and platform teams struggle to maintain codebase health, tra
 
 - **Python**: 3.12 or newer (tested on Python 3.12 and 3.14)
 - **Node.js**: v20+ and **npm** v10+
-- **PostgreSQL**: 16+ (or use SQLite / Docker Compose)
+- **PostgreSQL**: 16+ (or use SQLite / Docker Compose for development)
 
 ### 1. Backend Setup
 
@@ -143,7 +146,7 @@ uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 The API server will listen on `http://127.0.0.1:8000`:
-- **Health Check**: `http://127.0.0.1:8000/api/health`
+- **Health Probes**: `http://127.0.0.1:8000/api/health/live` and `http://127.0.0.1:8000/api/health/ready`
 - **Interactive OpenAPI Documentation**: `http://127.0.0.1:8000/api/docs`
 
 ### 2. Frontend Setup
@@ -167,11 +170,12 @@ The UI dashboard will be accessible at `http://localhost:5173`. In development m
 CodeSentinel AI provides a production-ready, multi-container orchestration setup with PostgreSQL 16, FastAPI, and an Nginx-backed React frontend.
 
 ```bash
-# 1. Build and boot all containers
+# 1. Build and boot all containers in detached mode
 docker compose up --build -d
 
-# 2. Check cluster health
-curl -s http://localhost:8000/api/health | jq .
+# 2. Check cluster liveness and readiness
+curl -s http://localhost:8000/api/health/live | jq .
+curl -s http://localhost:8000/api/health/ready | jq .
 
 # 3. Access the web dashboard
 open http://localhost:3000
@@ -180,6 +184,11 @@ open http://localhost:3000
 To tail logs across all services:
 ```bash
 docker compose logs -f backend
+```
+
+To shut down the cluster cleanly:
+```bash
+docker compose down
 ```
 
 ---
@@ -208,7 +217,7 @@ curl -X POST http://127.0.0.1:8000/api/v1/repositories \
   "source_identifier": "https://github.com/pallets/click",
   "status": "ready",
   "default_branch": "main",
-  "last_ingested_at": "2026-10-13T16:30:00Z",
+  "last_ingested_at": "2026-10-21T16:30:00Z",
   "latest_snapshot": {
     "id": "a4d3e8e1-5e72-4d51-87c2-9e9f1a0e3b62",
     "status": "completed",
@@ -237,10 +246,12 @@ curl -X POST http://127.0.0.1:8000/api/v1/repositories/7f920be3-c21e-4509-9ec4-f
   "rule_name": "High Cyclomatic Complexity",
   "category": "COMPLEXITY",
   "severity": "MEDIUM",
+  "confidence": "HIGH",
   "file_path": "src/click/core.py",
   "start_line": 1420,
   "start_column": 5,
   "end_line": 1512,
+  "end_column": 28,
   "evidence_summary": "Function 'make_context' has cyclomatic complexity of 18 (threshold: 10)",
   "fingerprint": "8f48039a044d01b4c3e8083818e6a17b075e81d7648f5729177a641a94161962",
   "metadata_json": {
@@ -275,7 +286,7 @@ curl -X POST http://127.0.0.1:8000/api/v1/search/qa \
   "confidence": 0.94,
   "citations": [
     {
-      "chunk_id": "9d41b6...f3",
+      "chunk_id": "9d41b63e-7a12-4d89-9821-bc31e7f098f3",
       "file_path": "backend/app/services/auth/service.py",
       "start_line": 45,
       "end_line": 82,
@@ -410,12 +421,12 @@ curl -X POST "http://127.0.0.1:8000/api/v1/remediation/proposals/3c847d01-e28a-4
 
 ## Configuration Reference
 
-CodeSentinel AI is configured via environment variables or a `.env` file loaded at application boot:
+CodeSentinel AI is configured via environment variables or a `.env` file loaded at application startup:
 
 | Variable | Default Value | Description |
 | :--- | :--- | :--- |
 | `PROJECT_NAME` | `CodeSentinel AI` | Application name displayed across logs and OpenAPI documentation |
-| `SERVICE_NAME` | `codesentinel-api` | Microservice identifier returned by `/api/health` |
+| `SERVICE_NAME` | `codesentinel-api` | Microservice identifier returned by `/api/health` probes |
 | `VERSION` | `0.1.0` | Application release version |
 | `ENVIRONMENT` | `development` | Runtime environment (`development`, `test`, `staging`, `production`) |
 | `DEBUG` | `false` | Enables verbose debug logging and traceback outputs |
@@ -451,7 +462,7 @@ CodeSentinel AI is configured via environment variables or a `.env` file loaded 
 
 ## System Architecture Diagram
 
-*Figure 1: Multi-tiered system topology illustrating decoupled ingestion, static analysis, architectural governance, search, and persistence pipelines.*
+Complete multi-tiered system topology illustrating decoupled ingestion, static analysis, architectural governance, search, remediation, and persistence pipelines.
 
 ```mermaid
 flowchart TD
@@ -462,7 +473,7 @@ flowchart TD
 
     subgraph GatewayTier["FastAPI Application Gateway"]
         APIRouter["API Router Layer (/api/v1)"]
-        Middleware["Security Middleware<br/>(CORS, Audit Logger, Error Trap)"]
+        Middleware["Security Middleware<br/>(CORS, Audit Logger, Correlation ID)"]
     end
 
     subgraph IngestionTier["Sandbox & Ingestion Engine"]
@@ -506,12 +517,20 @@ flowchart TD
         QASynthesizer["Evidence-Backed Grounded Q&A<br/>(Deterministic Zero-Key / Optional LLM)"]
     end
 
+    subgraph RemediationTier["Automated Remediation & Patch Engine"]
+        RemediationCatalog["Remediation Rule Catalog<br/>(FIX-PYSEC001-005, FIX-DEP-UPGRADE)"]
+        PatchSynth["Exact-Line Patch Synthesizer<br/>(Unified Diff Generator)"]
+        PatchValidator["5-Stage In-Memory Validator<br/>(AST Syntax + Rule Re-Check)"]
+        ApprovalGate["Human Approval & Anti-Drift Engine<br/>(Pre/Post Write SHA-256 Verification)"]
+    end
+
     subgraph StorageTier["Persistence & Telemetry Layer"]
         Postgres[("PostgreSQL 16 Engine<br/>(SQLAlchemy 2.0 + Alembic)")]
         Snapshots[("Snapshot & File Metadata")]
         FindingsDB[("Findings & Vulnerabilities")]
         ArchDB[("Architecture Runs & Violations")]
         ChunkDB[("Code Chunks & Embeddings")]
+        RemediationDB[("Proposals, Validations & Audits")]
     end
 
     UI --> APIClient
@@ -563,22 +582,29 @@ flowchart TD
     PromptGuard --> QASynthesizer
     QASynthesizer --> APIClient
 
+    FindingsDB --> RemediationCatalog
+    RemediationCatalog --> PatchSynth
+    PatchSynth --> PatchValidator
+    PatchValidator --> RemediationDB
+    RemediationDB --> ApprovalGate
+    ApprovalGate --> Postgres
+
     classDef critical fill:#1e3a8a,stroke:#3b82f6,stroke-width:2px,color:#ffffff;
     classDef security fill:#831843,stroke:#ec4899,stroke-width:2px,color:#ffffff;
     classDef engine fill:#14532d,stroke:#22c55e,stroke-width:2px,color:#ffffff;
     classDef ai fill:#581c87,stroke:#a855f7,stroke-width:2px,color:#ffffff;
 
     class SafeExtract,Validator,PromptGuard security;
-    class RuleRegistry,PEP440Engine,SemverEngine,PolicyEngine critical;
-    class Metrics,Discovery,ManifestParser,CouplingCalc,TarjanSCC,HealthIndex engine;
-    class Chunker,RRF,QASynthesizer ai;
+    class RuleRegistry,PEP440Engine,SemverEngine,PolicyEngine,PatchValidator critical;
+    class Metrics,Discovery,ManifestParser,CouplingCalc,TarjanSCC,HealthIndex,ApprovalGate engine;
+    class Chunker,RRF,QASynthesizer,PatchSynth ai;
 ```
 
 ---
 
 ## Core Workflow Sequence Diagram
 
-*Figure 2: End-to-end repository audit lifecycle across ingestion, AST evaluation, SCA correlation, architectural analysis, indexing, and grounded retrieval.*
+End-to-end repository audit lifecycle across ingestion, AST evaluation, SCA correlation, architectural analysis, indexing, grounded retrieval, and safe remediation.
 
 ```mermaid
 sequenceDiagram
@@ -593,6 +619,7 @@ sequenceDiagram
     participant SCASvc as Dependency SCA Engine
     participant ArchSvc as Architecture Governance Engine
     participant SearchSvc as Search & Q&A Engine
+    participant RemSvc as Remediation & Patch Engine
 
     Dev->>UI: Connect Repository (URL or Path)
     UI->>API: POST /api/v1/repositories
@@ -665,13 +692,34 @@ sequenceDiagram
         SearchSvc-->>API: QAResponse (Answer + Line Citations + Confidence)
         API-->>UI: Render Answer with Verifiable Inline Citations
     end
+
+    opt Propose, Validate & Apply Remediation Patch
+        Dev->>UI: Click "Propose Fix" on Finding
+        UI->>API: POST /api/v1/remediation/proposals
+        API->>RemSvc: synthesize_and_validate_proposal(finding_id)
+        RemSvc->>RemSvc: Slices exact line & generates unified diff
+        RemSvc->>RemSvc: 5-Stage In-Memory Validation (AST Syntax + Rule Re-Check)
+        RemSvc->>DB: Persist RemediationProposal & Validation Checks
+        RemSvc-->>API: ProposalResponse (Status: VALIDATED)
+        API-->>UI: Render Side-by-Side Diff & Approval Action
+
+        Dev->>UI: Click "Approve & Apply Patch"
+        UI->>API: POST /api/v1/remediation/proposals/{id}/approve
+        UI->>API: POST /api/v1/remediation/proposals/{id}/apply
+        API->>RemSvc: apply_proposal(proposal_id)
+        RemSvc->>RemSvc: Check Pre-Write Anti-Drift SHA-256 Hash
+        RemSvc->>RemSvc: Atomic File Replacement via temporary file
+        RemSvc->>RemSvc: Check Post-Write Hash & Record Audit Log
+        RemSvc-->>API: ApplicationResult (Status: APPLIED)
+        API-->>UI: Display Applied Confirmation Banner
+    end
 ```
 
 ---
 
-## Key Decision & Logic Flow: Ingestion Sandbox
+## Key Decision & Logic Flow: Ingestion Sandbox & Safety Gate
 
-*Figure 3: Multi-stage security validation, path traversal guard, and decompression bomb mitigation pipeline.*
+Multi-stage security validation, path traversal guard, and decompression bomb mitigation pipeline.
 
 ```mermaid
 flowchart TD
@@ -727,7 +775,7 @@ flowchart TD
 
 ## Database / Entity Relationship Diagram
 
-*Figure 4: Complete PostgreSQL relational schema illustrating domain entities, snapshot relationships, findings, architectural graphs, and code chunk indexes.*
+Complete PostgreSQL relational schema illustrating domain entities, snapshot relationships, findings, architectural graphs, code chunks, and remediation audit trails.
 
 ```mermaid
 erDiagram
@@ -737,6 +785,7 @@ erDiagram
     REPOSITORIES ||--o{ ARCHITECTURE_RUNS : "governs"
     REPOSITORIES ||--o{ CODEBASE_HEALTH_ASSESSMENTS : "assesses"
     REPOSITORIES ||--o{ CODE_INDEX_RUNS : "indexes"
+    REPOSITORIES ||--o{ REMEDIATION_PROPOSALS : "owns"
 
     REPOSITORY_SNAPSHOTS ||--o{ REPOSITORY_FILES : "contains"
     REPOSITORY_SNAPSHOTS ||--o{ ANALYSIS_RUNS : "benchmarks"
@@ -745,10 +794,10 @@ erDiagram
     REPOSITORY_SNAPSHOTS ||--o{ CODEBASE_HEALTH_ASSESSMENTS : "grades"
     REPOSITORY_SNAPSHOTS ||--o{ CODE_INDEX_RUNS : "targets"
     REPOSITORY_SNAPSHOTS ||--o{ CODE_CHUNKS : "chunks"
+    REPOSITORY_SNAPSHOTS ||--o{ REMEDIATION_PROPOSALS : "targets"
 
     ANALYSIS_RUNS ||--o{ ANALYSIS_FINDINGS : "emits"
-    ARCHITECTURE_RUNS ||--o{ ARCHITECTURE_VIOLATIONS : "detects"
-    CODE_INDEX_RUNS ||--o{ CODE_CHUNKS : "produces"
+    ANALYSIS_FINDINGS ||--o{ REMEDIATION_PROPOSALS : "generates"
 
     ADVISORY_DATASETS ||--o{ VULNERABILITY_ADVISORIES : "catalogs"
 
@@ -756,9 +805,10 @@ erDiagram
     DEPENDENCY_RUNS ||--o{ DEPENDENCY_VULNERABILITIES : "matches"
     REPOSITORY_DEPENDENCIES ||--o{ DEPENDENCY_VULNERABILITIES : "flags"
 
-    REPOSITORIES ||--o{ REMEDIATION_PROPOSALS : "owns"
-    REPOSITORY_SNAPSHOTS ||--o{ REMEDIATION_PROPOSALS : "targets"
-    ANALYSIS_FINDINGS ||--o{ REMEDIATION_PROPOSALS : "generates"
+    ARCHITECTURE_RUNS ||--o{ ARCHITECTURE_VIOLATIONS : "detects"
+
+    CODE_INDEX_RUNS ||--o{ CODE_CHUNKS : "produces"
+
     REMEDIATION_PROPOSALS ||--o{ REMEDIATION_VALIDATIONS : "validates"
     REMEDIATION_PROPOSALS ||--o{ REMEDIATION_AUDITS : "audits"
 
@@ -1034,11 +1084,11 @@ erDiagram
 
 ## Core Algorithm & Logic Explanation
 
-CodeSentinel AI guarantees reproducible codebase intelligence by relying on seven deterministic algorithms:
+CodeSentinel AI guarantees reproducible codebase intelligence by relying on seven deterministic engineering algorithms:
 
 ### 1. McCabe Cyclomatic Complexity Calculation
 
-Instead of counting raw regex patterns, the engine parses code into an Abstract Syntax Tree (AST) and calculates cyclomatic complexity ($M$) strictly according to graph theory:
+Instead of counting raw regex patterns or text lines, the engine parses code into an Abstract Syntax Tree (AST) and calculates cyclomatic complexity ($M$) strictly according to graph theory:
 
 $$M = E - N + 2P$$
 
@@ -1098,100 +1148,69 @@ The repository Q&A pipeline enforces strict grounding and sandbox guarantees:
 5. **Prompt-Injection Defense**: All retrieved code, documentation, and user input are treated as untrusted text. System prompts encapsulate evidence inside `<untrusted_repository_evidence>` blocks and sanitize prompt-hijacking strings (`"ignore previous instructions"`, `"system:"`, etc.).
 6. **Citation Validation**: Returned citations are verified against actual chunks in the database. Citations pointing to non-existent files or mismatched line ranges are pruned.
 
-*Figure 5: Hybrid multi-strategy code retrieval and grounded evidence synthesis flow.*
+### 7. 5-Stage In-Memory Patch Validation & Anti-Drift Engine
+
+Patch proposals are never applied blindly. They undergo a five-stage in-memory validation gauntlet:
+1. **Source & Drift Integrity**: Compares current file SHA-256 against the snapshot hash to verify the file hasn't drifted.
+2. **Patch Structure & Reconstitution**: Ensures unified diff applies cleanly in-memory without line offset corruption.
+3. **AST Syntax Parsing**: Runs `ast.parse` (for Python) on reconstituted content to ensure zero syntax breakage.
+4. **Static Security Rule Elimination**: Re-evaluates static analysis rules on modified code to verify the targeted vulnerability is completely eliminated and no new violations are introduced.
+5. **Semantic Regression Risk Disclosure**: Evaluates downstream caller impact and flags regression warnings for human review.
+
+Multi-engine codebase governance and remediation decision flow: inputs converge into verified patch proposals and architectural health verdicts.
 
 ```mermaid
 flowchart TD
-    UserQuery["User Natural Language Query"] --> Chunker["Tokenize Query (CamelCase, Snake_case, Morphological)"]
-
-    subgraph RetrievalEngines["Multi-Strategy Retrieval Engines"]
-        Chunker --> BM25["BM25Okapi Lexical Search<br/>(Symbol & Path Match Boosts)"]
-        Chunker --> Embeddings["Dense Vector Embedding<br/>(Optional Local SentenceTransformer)"]
-        Embeddings --> Cosine["Cosine Vector Similarity"]
+    subgraph Inputs["Multi-Modal Codebase Inputs"]
+        ASTNodes["AST Syntax Nodes<br/>(ast.parse & ts.createSourceFile)"]
+        ManifestDeps["Dependency Manifests<br/>(requirements.txt, package.json)"]
+        ModuleImports["Module Import Statements<br/>(Internal & External Edges)"]
+        UserQuery["Natural Language Query / Issue"]
     end
 
-    BM25 --> RRFCombiner["Reciprocal Rank Fusion<br/>RRF(d) = Σ w / (60 + r(d))"]
-    Cosine --> RRFCombiner
-
-    RRFCombiner --> Deduplication["Deduplicate Spans & Apply File Filters"]
-    Deduplication --> SufficiencyCheck{"Evidence Sufficiency Check<br/>(Top Relevance Score >= 0.05?)"}
-
-    SufficiencyCheck -->|"No (Insufficient Evidence)"| UncertaintyResponse["Return Honest Uncertainty Status<br/>('Cannot answer confidently from available code')"]
-    SufficiencyCheck -->|"Yes (Sufficient Ground Truth)"| SandboxWrap["Enclose Chunks in Sandbox:<br/>&lt;untrusted_repository_evidence&gt;"]
-
-    SandboxWrap --> AnsweringEngine{"LLM Mode Configured?"}
-    AnsweringEngine -->|"No (Default Zero-Key)"| DeterministicSynth["Deterministic Grounded Synthesizer<br/>(Summarize symbols, locations, coordinates)"]
-    AnsweringEngine -->|"Yes (Optional HTTP Provider)"| BoundedLLM["Bounded LLM Answer Generation<br/>(Strict evidence constraint & prompt guard)"]
-
-    DeterministicSynth --> CitationValidator["Citation Coordinate Validator<br/>(Verify against actual snapshot chunk spans)"]
-    BoundedLLM --> CitationValidator
-
-    CitationValidator --> FinalOutput(["Verified Grounded Answer with File/Line Citations"])
-
-    classDef secure fill:#14532d,stroke:#22c55e,stroke-width:2px,color:#ffffff;
-    classDef check fill:#1e293b,stroke:#94a3b8,stroke-width:1px,color:#ffffff;
-    classDef caution fill:#7f1d1d,stroke:#ef4444,stroke-width:2px,color:#ffffff;
-    classDef smart fill:#581c87,stroke:#a855f7,stroke-width:2px,color:#ffffff;
-
-    class FinalOutput,DeterministicSynth secure;
-    class UncertaintyResponse caution;
-    class SufficiencyCheck,AnsweringEngine check;
-    class RRFCombiner,CitationValidator smart;
-```
-
-### 7. Automated Remediation & Safe Patch Application Workflow
-
-CodeSentinel AI implements a strict, multi-stage remediation workflow that transforms supported static security and dependency findings into verified, reviewable patch proposals:
-
-```mermaid
-flowchart TD
-    Finding["Static / Dependency Finding<br/>(PYSEC001-005, JSSEC001-002, VULN)"] --> AvailCheck{"Remediation Available?<br/>(Rule Registry Match & Preconditions)"}
-    AvailCheck -->|"No"| ManualReq["Emit MANUAL_REMEDIATION_REQUIRED<br/>(Rationale & Contextual Guidance)"]
-    AvailCheck -->|"Yes"| ProposalSynth["Patch Proposal Engine<br/>(Exact-Match Line Slicing & Unified Diff)"]
-
-    subgraph InMemoryValidation["In-Memory Validation Pipeline (Zero Untrusted Execution)"]
-        ProposalSynth --> V1["Check 1: Source & Drift Integrity (SHA-256)"]
-        V1 --> V2["Check 2: Patch Structure & Reconstitution"]
-        V2 --> V3["Check 3: AST Syntax Parsing (ast.parse)"]
-        V3 --> V4["Check 4: Static Rule Re-Check (Verify Vulnerability Eliminated)"]
-        V4 --> V5["Check 5: Semantic Regression Risk Disclosure"]
+    subgraph DeterministicEngines["Deterministic Governance Engines"]
+        ComplexityCalc["McCabe Complexity & AppSec Rules<br/>M = E - N + 2P"]
+        VersionMatcher["PEP 440 & Semver 2.0.0 Evaluators<br/>(packaging & NpmRangeEvaluator)"]
+        GraphMetrics["Martin's Coupling & Tarjan's SCC<br/>Ca, Ce, Instability, Cycles"]
+        RRFEngine["Reciprocal Rank Fusion<br/>BM25Okapi + Cosine Embeddings"]
     end
 
-    V5 --> ValidationPass{"All Required Checks Passed?"}
-    ValidationPass -->|"No"| ValFail["Status: VALIDATION_FAILED<br/>(Application Strictly Disabled)"]
-    ValidationPass -->|"Yes"| ValPass["Status: VALIDATED<br/>(Ready for Human Review)"]
+    subgraph Convergence["Decision & Health Synthesis Layer"]
+        HealthAggregator["5-Pillar Health Score Calculator<br/>(Maintainability, AppSec, Arch, Deps, Cov)"]
+        PatchSynthesis["Patch Proposal Generator<br/>(Exact-Line Slicing & Unified Diff)"]
+    end
 
-    ValPass --> HumanReview["Developer Review Console<br/>(Side-by-Side & Unified Diffs, Risk, Audit)"]
-    HumanReview --> HumanDecision{"Human Decision"}
-    HumanDecision -->|"Reject"| Rejected["Status: REJECTED<br/>(No Disk Files Altered)"]
-    HumanDecision -->|"Approve"| Approved["Status: APPROVED<br/>(Application Permission Granted)"]
+    subgraph Outcomes["Verified System Outcomes"]
+        HealthReport(["Explainable Codebase Health Report<br/>(0-100 Score + Ranked Actions)"])
+        GroundedQA(["Evidence-Backed Answer<br/>(Verified Inline Citations)"])
+        VerifiedPatch(["Validated Patch Proposal<br/>(5-Stage AST Validated & Ready for Review)"])
+    end
 
-    Approved --> ApplyTrigger["Trigger Patch Application<br/>(Explicit Separate User Action)"]
-    ApplyTrigger --> PreWriteCheck{"Pre-Write Anti-Drift Check<br/>(Disk SHA-256 == Original Hash?)"}
-    PreWriteCheck -->|"No (File Modified)"| StaleAbort["Status: STALE<br/>(Write Aborted to Prevent Overwrite)"]
-    PreWriteCheck -->|"Yes"| AtomicWrite["Atomic Write (.tmp file -> os.replace)"]
+    ASTNodes --> ComplexityCalc
+    ManifestDeps --> VersionMatcher
+    ModuleImports --> GraphMetrics
+    UserQuery --> RRFEngine
 
-    AtomicWrite --> PostWriteCheck{"Post-Write Verification<br/>(Disk SHA-256 == Target Hash?)"}
-    PostWriteCheck -->|"No"| Rollback["Safe Rollback & Report Failure"]
-    PostWriteCheck -->|"Yes"| AppliedDone(["Status: APPLIED<br/>(Audit Log Recorded)"])
+    ComplexityCalc --> HealthAggregator
+    ComplexityCalc --> PatchSynthesis
+    VersionMatcher --> HealthAggregator
+    VersionMatcher --> PatchSynthesis
+    GraphMetrics --> HealthAggregator
+    RRFEngine --> GroundedQA
 
-    classDef success fill:#14532d,stroke:#22c55e,stroke-width:2px,color:#ffffff;
-    classDef warning fill:#78350f,stroke:#f59e0b,stroke-width:2px,color:#ffffff;
-    classDef danger fill:#7f1d1d,stroke:#ef4444,stroke-width:2px,color:#ffffff;
-    classDef neutral fill:#1e293b,stroke:#94a3b8,stroke-width:1px,color:#ffffff;
+    HealthAggregator --> HealthReport
+    PatchSynthesis --> VerifiedPatch
 
-    class AppliedDone,ValPass success;
-    class Approved,HumanReview,ProposalSynth warning;
-    class ValFail,Rejected,StaleAbort,Rollback danger;
-    class AvailCheck,ValidationPass,HumanDecision,PreWriteCheck,PostWriteCheck neutral;
+    classDef input fill:#1e293b,stroke:#94a3b8,stroke-width:1px,color:#ffffff;
+    classDef engine fill:#14532d,stroke:#22c55e,stroke-width:2px,color:#ffffff;
+    classDef decision fill:#1e3a8a,stroke:#3b82f6,stroke-width:2px,color:#ffffff;
+    classDef outcome fill:#581c87,stroke:#a855f7,stroke-width:2px,color:#ffffff;
+
+    class ASTNodes,ManifestDeps,ModuleImports,UserQuery input;
+    class ComplexityCalc,VersionMatcher,GraphMetrics,RRFEngine engine;
+    class HealthAggregator,PatchSynthesis decision;
+    class HealthReport,GroundedQA,VerifiedPatch outcome;
 ```
-
-Key Safety Guarantees:
-1. **Decoupled Approval and Application**: Generating a proposal or passing validation NEVER writes to disk. Application requires an explicit separate approval and confirmation.
-2. **Zero Untrusted Execution**: Source code from the target repository is never executed or imported. Validation uses Python's standard `ast.parse` and static rule AST re-checking.
-3. **Anti-Drift Protection**: If a file changes on disk after proposal synthesis, the pre-write SHA-256 check fails, marking the proposal `STALE` and refusing the write.
-4. **Protected Paths Confinement**: Writes targeting `.env`, `.git`, `.ssh`, `id_rsa`, or path traversals (`../`) are rejected unconditionally.
-5. **Read-Only Archive Preservation**: Historical snapshots are immutable. If no local writable workspace is configured, the engine falls back to exporting unified diffs.
 
 ---
 
@@ -1215,7 +1234,7 @@ CodeSentinel AI implements centralized, typed exception handling. Errors never l
 
 ## Testing
 
-The codebase maintains automated test coverage across both backend deterministic engines and frontend interactive components.
+The codebase maintains comprehensive automated test coverage across backend deterministic engines, security sandboxes, and frontend interactive components.
 
 ### Automated Release Candidate Validation
 
@@ -1227,20 +1246,23 @@ A single reproducible release-validation script executes all backend tests, fron
 
 # Linux / macOS (Bash):
 ./scripts/validate_release.sh
+
+# Cross-Platform Python Runner:
+python scripts/validate_release.py
 ```
 
 ### Backend Test Suite (Pytest)
 
-The backend test suite includes **272 automated passing tests** (with 3 tests reserved for standalone PostgreSQL instances):
+The backend test suite includes **302 automated passing tests** (with 3 tests safely skipped for standalone live PostgreSQL instances):
 
 ```bash
 # Run complete backend test suite
 pytest -q backend/tests
 
-# Run Phase 10 release candidate validation tests
-pytest -v backend/tests/test_phase10_release_validation.py
+# Run top-level Search & Q&A API regression tests
+pytest -v backend/tests/test_search_api.py
 
-# Run Phase 7 automated remediation and patch engine tests specifically
+# Run Phase 7 automated remediation and patch engine tests
 pytest -v backend/tests/test_remediation_rules.py \
           backend/tests/test_patch_engine.py \
           backend/tests/test_remediation_validator.py \
@@ -1251,7 +1273,6 @@ pytest -v backend/tests/test_remediation_rules.py \
 pytest -v backend/tests/test_search_chunker.py \
           backend/tests/test_search_retrieval.py \
           backend/tests/test_qa_service.py \
-          backend/tests/test_search_api.py \
           backend/tests/test_search_database.py
 
 # Run Phase 5 architecture & health tests
@@ -1262,6 +1283,21 @@ pytest -v backend/tests/test_dependency_graph.py \
 
 # Run security regression tests
 pytest -v backend/tests/test_security_regressions.py
+
+# Run Phase 12 deployment, metrics & task lifecycle tests
+pytest -v backend/tests/test_config.py \
+          backend/tests/test_metrics.py \
+          backend/tests/test_tasks.py \
+          backend/tests/test_migration_safety.py
+```
+
+### Live Smoke Test Journeys
+
+Execute strict, deterministic end-to-end smoke tests against a live backend server across six operational journeys (Probes, Ingestion, Search, Remediation, CI/CD, and Operational Telemetry):
+
+```bash
+# Start background server, execute all 6 journeys, and cleanly teardown:
+python scripts/run_smoke_tests.py
 ```
 
 ### Frontend Test Suite (Vitest)
@@ -1280,6 +1316,55 @@ npm run build
 # Run Oxlint validation
 npm run lint
 ```
+
+---
+
+## Deployment & Staging Operations
+
+### Local Development Setup
+
+1. **Backend**:
+   ```bash
+   cd backend
+   python -m venv .venv
+   .\.venv\Scripts\activate   # Linux/macOS: source .venv/bin/activate
+   pip install -r requirements.txt
+   uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000
+   ```
+
+2. **Frontend**:
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+### Staging Deployment via Docker Compose
+
+CodeSentinel AI provides an isolated, multi-container staging environment featuring PostgreSQL 16, FastAPI backend, and Nginx reverse proxy:
+
+```bash
+# 1. Prepare environment variables from template
+cp .env.example .env
+
+# 2. Launch staging environment in background
+docker compose up -d --build
+
+# 3. Verify health and operational telemetry
+curl http://localhost:8000/api/health
+curl http://localhost:8000/api/v1/metrics
+
+# 4. Open developer dashboard at http://localhost:3000
+```
+
+### Pre-Deployment Migration Safety Check
+
+Before applying schema upgrades, run the pre-deployment migration verification tool:
+
+```bash
+python -c "from backend.app.core.migration_safety import run_migration_safety_check; r = run_migration_safety_check(); print(f'Safety check passed: {r.passed}')"
+```
+
 
 ---
 
@@ -1353,13 +1438,32 @@ npm run lint
   - Hardened PostgreSQL connection pooling (`pool_pre_ping=True`, `pool_recycle=3600`) and linear Alembic migration chain
   - Comprehensive end-to-end integration test suite verifying Workflows A, B, C, and D across all 8 prior phases
 - [x] **Phase 10: Release Candidate Validation & Deployment Readiness (Complete)**
-  - Unified reproducible release validation script (`validate_release.ps1` and `validate_release.sh`)
-  - Full regression execution: 272 backend tests (3 skipped for live PostgreSQL) and 57 frontend tests passing with zero failures
+  - Unified reproducible release validation scripts (`validate_release.ps1` and `validate_release.sh`)
+  - Full regression execution: 272 backend tests and 57 frontend tests passing with zero failures
   - Docker container packaging fix (`COPY . /app/backend` for top-level `backend.app.main` import resolution) and healthcheck liveness probe alignment
   - Decoupled liveness probe `/api/health/live` to guarantee container restart independence from external database availability
   - Lifespan graceful shutdown: database connection pool disposal (`engine.dispose()`) and active task cancellation (`task_manager.shutdown()`)
   - Live API smoke journeys (Journeys A, B, C, D) executed and verified against active server
-  - Transparent release-gate evidence checklist distinguishing verified gates from environment-restricted checks
+- [x] **Phase 11: Staging Certification, Blocker Resolution & Deployment Verification (Complete)**
+  - Resolved top-level search router mounting discrepancy: added `/api/v1/search/capabilities`, `/api/v1/search`, `/api/v1/search/search`, `/api/v1/search/index`, `/api/v1/search/qa`
+  - Overhauled live smoke test journeys (`scripts/smoke_test_journeys.py`) with strict status code assertions (200, 404, 422), schema checks, and deterministic teardown
+  - Built automated smoke test runner (`scripts/run_smoke_tests.py`) managing local backend server lifecycles
+  - Implemented cross-platform release validation runner (`scripts/validate_release.py`) called by `.ps1` and `.sh`
+  - Produced comprehensive Staging Certification audit report (`docs/architecture/15-phase11-staging-certification.md`)
+- [x] **Phase 12: Deployment Automation, Production Operations & Observability (Complete)**
+  - Hardened staging & production configuration validation with fail-fast startup checks and safe defaults
+  - Pre-deployment database migration safety tooling (`migration_safety.py`) verifying single Alembic head and offline SQL generation
+  - Operational observability and lightweight telemetry endpoint (`/api/v1/metrics` and `/api/metrics`) tracking low-cardinality request counts, status class distributions, latencies, error rates, and task metrics
+  - Hardened asynchronous background task lifecycle (`TaskLifecycleManager`) preventing cancelled or failed tasks from false completion, with idempotent shutdown
+  - Isolated multi-stage container configuration (`docker-compose.yml`) with internal network isolation, named persistent volumes, health-based dependencies, and unexposed PostgreSQL ports
+  - Production frontend Nginx reverse proxy with SPA fallback routing and security headers
+  - Strict 10-gate release certification runner (`validate_release.py`, `validate_release.ps1`, `validate_release.sh`) with explicit `PASS`, `FAIL`, `BLOCKED`, and `NOT VERIFIED` statuses
+- [ ] **Phase 13: Production Cluster Telemetry & Distributed Multi-Node Worker Pools (Upcoming)**
+  - Distributed Celery / Redis task queue workers for high-throughput enterprise repository analysis
+  - Multi-tenant workspace RBAC and organization permission boundaries
+  - Real-time WebSocket streaming telemetry for running analyses and indexing jobs
+  - Advanced dependency graph diffing between arbitrary Git branches and release tags
+
 
 ---
 
