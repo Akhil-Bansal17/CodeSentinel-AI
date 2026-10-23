@@ -23,3 +23,10 @@ htmlcov
 .idea
 .vscode
 *.log
+backups/
+*.dump
+*.sql
+*.sql.gz
+*.bak
+*.db
+*.sqlite*
