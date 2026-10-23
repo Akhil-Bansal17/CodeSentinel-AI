@@ -53,6 +53,7 @@ CodeSentinel AI is a local-first software engineering intelligence and automated
 | **Production Readiness & Observability** | Decoupled Kubernetes-ready liveness (`/api/health/live`) and readiness (`/api/health/ready`) probes, `X-Request-ID` correlation logging with sensitive data masking, `TaskLifecycleManager` async state engine, hardened connection pooling, and fail-fast startup configuration validation. |
 | **Staging Certification & Release Validation** | Automated cross-platform certification runners (`validate_release.py`, `validate_release.ps1`, `validate_release.sh`) executing 302 backend tests, 57 frontend tests, migration parity, and strict 6-journey smoke tests across 10 gates. |
 | **Deployment Automation & Observability** | Pre-deployment migration safety tooling, low-cardinality operational telemetry (`/api/v1/metrics`), isolated multi-container staging (`docker-compose.yml`), SPA Nginx reverse proxy, and hardened background task lifecycle. |
+| **Production Certification & Disaster Recovery** | Reproducible 12-gate release certification (`validate_release.py`), disaster recovery & safe backup verification (`backup_recovery.py`), 14 operational failure injection scenarios, and disposable target isolation. |
 | **Modern Developer Dashboard** | Responsive React 19 + Vite 8 + Tailwind CSS dark-mode dashboard with CI/CD & Audits console, PR synthesis studio, Code Search, AI Assistant, Remediation Console, and live telemetry. |
 
 
@@ -1458,7 +1459,15 @@ python -c "from backend.app.core.migration_safety import run_migration_safety_ch
   - Isolated multi-stage container configuration (`docker-compose.yml`) with internal network isolation, named persistent volumes, health-based dependencies, and unexposed PostgreSQL ports
   - Production frontend Nginx reverse proxy with SPA fallback routing and security headers
   - Strict 10-gate release certification runner (`validate_release.py`, `validate_release.ps1`, `validate_release.sh`) with explicit `PASS`, `FAIL`, `BLOCKED`, and `NOT VERIFIED` statuses
-- [ ] **Phase 13: Production Cluster Telemetry & Distributed Multi-Node Worker Pools (Upcoming)**
+- [x] **Phase 13: Production Deployment Certification, Disaster Recovery & Operational Resilience (Complete)**
+  - Automated disaster recovery and backup verification (`backend/app/core/backup_recovery.py`) with SHA-256 integrity checks
+  - Strict safety guards prohibiting automated restore operations into production/staging databases
+  - Post-restore schema verification and record count validation into isolated disposable databases
+  - Comprehensive operational failure injection test suite (`test_failure_injection.py`) covering 14 failure scenarios
+  - Expanded 12-gate release certification runner (`validate_release.py`, `validate_release.ps1`, `validate_release.sh`)
+  - Operational recovery targets documented: RPO target 15 minutes, RTO target 30 minutes
+  - Full regression execution: 326 backend tests and 57 frontend tests passing with zero failures
+- [ ] **Phase 14: Production Cluster Telemetry & Distributed Multi-Node Worker Pools (Upcoming)**
   - Distributed Celery / Redis task queue workers for high-throughput enterprise repository analysis
   - Multi-tenant workspace RBAC and organization permission boundaries
   - Real-time WebSocket streaming telemetry for running analyses and indexing jobs
