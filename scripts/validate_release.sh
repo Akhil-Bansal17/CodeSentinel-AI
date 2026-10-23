@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CodeSentinel AI - Phase 12 Deployment Automation & Production Operations Release Script (POSIX)
+# CodeSentinel AI - Phase 13 Production Certification & Disaster Recovery Release Script (POSIX)
 
 set -eo pipefail
 
