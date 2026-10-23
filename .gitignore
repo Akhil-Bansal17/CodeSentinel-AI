@@ -57,10 +57,16 @@ frontend/.env.local
 .DS_Store
 Thumbs.db
 
-# Database files
+# Database files & backups
 *.sqlite
 *.sqlite3
 *.db
+*.dump
+*.sql
+*.sql.gz
+*.bak
+*.meta.json
+backups/
 
 # Vercel
 .vercel
