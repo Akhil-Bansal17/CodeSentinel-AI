@@ -1,13 +1,17 @@
 import React from "react";
 import { FolderGit2 } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { Button } from "./Button";
 
-interface EmptyStateProps {
+export interface EmptyStateProps {
   icon?: React.ReactNode;
   title: string;
   description: string;
   actionLabel?: string;
   onAction?: () => void;
+  secondaryActionLabel?: string;
+  onSecondaryAction?: () => void;
+  size?: "sm" | "md";
   className?: string;
 }
 
@@ -17,28 +21,46 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   description,
   actionLabel,
   onAction,
+  secondaryActionLabel,
+  onSecondaryAction,
+  size = "md",
   className,
 }) => {
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center p-8 sm:p-12 text-center rounded-lg border border-[#21262d] bg-[#161b22]/50",
+        "flex flex-col items-center justify-center text-center rounded-lg border border-border-default bg-surface-card",
+        size === "sm" ? "p-6 sm:p-8" : "p-8 sm:p-12",
         className
       )}
     >
-      <div className="w-12 h-12 rounded-full bg-[#21262d] flex items-center justify-center text-slate-400 mb-4 border border-[#30363d]">
-        {icon || <FolderGit2 className="w-6 h-6 text-slate-400" />}
+      <div className="w-12 h-12 rounded-full bg-surface-elevated flex items-center justify-center text-text-muted mb-4 border border-border-default">
+        {icon || <FolderGit2 className="w-6 h-6 text-text-secondary" aria-hidden="true" />}
       </div>
-      <h3 className="text-base font-semibold text-slate-200 mb-1">{title}</h3>
-      <p className="text-sm text-slate-400 max-w-md mb-6 leading-relaxed">{description}</p>
-      {actionLabel && onAction && (
-        <button
-          type="button"
-          onClick={onAction}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-[#238636] hover:bg-[#2ea043] text-white text-sm font-medium rounded-md transition-colors shadow-sm cursor-pointer"
-        >
-          {actionLabel}
-        </button>
+      <h3 className="text-base font-semibold text-text-primary mb-1 tracking-tight">{title}</h3>
+      <p className="text-sm text-text-secondary max-w-md mb-6 leading-relaxed">{description}</p>
+      
+      {(actionLabel || secondaryActionLabel) && (
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          {actionLabel && onAction && (
+            <Button
+              variant="primary"
+              size="md"
+              onClick={onAction}
+            >
+              {actionLabel}
+            </Button>
+          )}
+          {secondaryActionLabel && onSecondaryAction && (
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={onSecondaryAction}
+            >
+              {secondaryActionLabel}
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );
