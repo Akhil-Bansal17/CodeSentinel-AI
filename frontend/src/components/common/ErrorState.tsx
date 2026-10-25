@@ -1,8 +1,9 @@
 import React from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { Button } from "./Button";
 
-interface ErrorStateProps {
+export interface ErrorStateProps {
   title?: string;
   message: string;
   code?: string;
@@ -19,34 +20,35 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
 }) => {
   return (
     <div
+      role="alert"
       className={cn(
-        "p-6 rounded-lg border border-rose-900/40 bg-rose-950/20 text-slate-200",
+        "p-6 rounded-lg border border-status-danger-border bg-status-danger-bg text-text-primary",
         className
       )}
     >
       <div className="flex items-start gap-4">
-        <div className="p-2 rounded bg-rose-950/60 border border-rose-800 text-rose-400 shrink-0">
-          <AlertTriangle className="w-5 h-5" />
+        <div className="p-2 rounded-md bg-status-danger-bg border border-status-danger-border text-status-danger-text shrink-0">
+          <AlertTriangle className="w-5 h-5" aria-hidden="true" />
         </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <h4 className="text-sm font-semibold text-rose-300">{title}</h4>
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2 mb-1">
+            <h4 className="text-sm font-semibold text-status-danger-text tracking-tight">{title}</h4>
             {code && (
-              <span className="text-xs font-mono px-2 py-0.5 rounded bg-rose-950 border border-rose-800 text-rose-400">
+              <span className="text-xs font-mono px-2 py-0.5 rounded bg-surface-elevated border border-status-danger-border text-status-danger-text">
                 {code}
               </span>
             )}
           </div>
-          <p className="text-sm text-slate-400 mb-4">{message}</p>
+          <p className="text-sm text-text-secondary mb-4 leading-relaxed">{message}</p>
           {onRetry && (
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={onRetry}
-              className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded border border-[#30363d] bg-[#21262d] hover:bg-[#30363d] text-slate-200 transition-colors cursor-pointer"
+              leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
             >
-              <RefreshCw className="w-3.5 h-3.5" />
               Retry Request
-            </button>
+            </Button>
           )}
         </div>
       </div>
