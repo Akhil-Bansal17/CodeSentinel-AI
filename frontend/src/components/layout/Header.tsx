@@ -1,14 +1,17 @@
 import React from "react";
-import { Menu, Plus, RefreshCw } from "lucide-react";
+import { Menu, Plus, RefreshCw, GitFork, FolderGit2 } from "lucide-react";
 import { NavigationTab } from "../../types/navigation";
 import { HealthState } from "../../hooks/useHealth";
-import { StatusBadge } from "../common/StatusBadge";
+import { Badge } from "../common/Badge";
+import { Button } from "../common/Button";
+import { useRepositoryContext } from "../../context/RepositoryContext";
 
-interface HeaderProps {
+export interface HeaderProps {
   currentTab: NavigationTab;
   onOpenMobileMenu: () => void;
   onAnalyzeClick: () => void;
   healthState: HealthState;
+  onViewRepositoryDetail?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -16,7 +19,16 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenMobileMenu,
   onAnalyzeClick,
   healthState,
+  onViewRepositoryDetail,
 }) => {
+  let repoContext: ReturnType<typeof useRepositoryContext> | null = null;
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    repoContext = useRepositoryContext();
+  } catch {
+    repoContext = null;
+  }
+
   const getTabTitle = (tab: NavigationTab): string => {
     switch (tab) {
       case "overview":
@@ -40,60 +52,107 @@ export const Header: React.FC<HeaderProps> = ({
     }
   };
 
+  const repositories = repoContext?.repositories || [];
+  const selectedRepoId = repoContext?.selectedRepoId;
+  const setSelectedRepoId = repoContext?.setSelectedRepoId;
+
   return (
-    <header className="h-16 px-4 sm:px-6 border-b border-[#21262d] bg-[#161b22] flex items-center justify-between shrink-0">
+    <header className="h-16 px-4 sm:px-6 border-b border-border-default bg-surface-card/90 backdrop-blur-md flex items-center justify-between shrink-0 z-20">
       {/* Left: Mobile Toggle & Page Title */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 min-w-0">
         <button
           type="button"
           onClick={onOpenMobileMenu}
-          className="md:hidden p-2 rounded-md text-slate-400 hover:text-slate-200 hover:bg-[#21262d] transition-colors"
+          className="md:hidden p-2 rounded-md text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors cursor-pointer shrink-0"
           aria-label="Toggle navigation menu"
         >
-          <Menu className="w-5 h-5" />
+          <Menu className="w-5 h-5" aria-hidden="true" />
         </button>
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-mono text-slate-400 hidden sm:inline">CodeSentinel /</span>
-          <h1 className="text-sm font-semibold text-slate-100">{getTabTitle(currentTab)}</h1>
+        <div className="flex items-center gap-2 truncate">
+          <span className="text-xs font-mono text-text-muted hidden sm:inline select-none shrink-0">
+            CodeSentinel /
+          </span>
+          <h1 className="text-sm font-semibold text-text-primary truncate">
+            {getTabTitle(currentTab)}
+          </h1>
         </div>
       </div>
 
-      {/* Right: Health indicator & Primary CTA */}
+      {/* Center/Right: Global Repository Context & Actions */}
       <div className="flex items-center gap-3">
-        {/* API Health Pill */}
-        <div className="hidden sm:flex items-center gap-2">
+        {/* Global Repository Context Picker (Desktop & Tablet) */}
+        {repositories.length > 0 && (
+          <div className="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-md border border-border-default bg-surface-elevated text-xs">
+            <FolderGit2 className="w-3.5 h-3.5 text-accent shrink-0" aria-hidden="true" />
+            <label htmlFor="global-repo-selector" className="text-text-muted font-mono sr-only">
+              Active Repository Context
+            </label>
+            <select
+              id="global-repo-selector"
+              value={selectedRepoId || ""}
+              onChange={(e) => setSelectedRepoId?.(e.target.value || null)}
+              aria-label="Active Repository Context"
+              className="bg-transparent text-text-primary font-mono text-xs focus:outline-hidden cursor-pointer max-w-[180px] truncate"
+            >
+              {repositories.map((repo) => (
+                <option key={repo.id} value={repo.id} className="bg-surface-card text-text-primary">
+                  {repo.name}
+                </option>
+              ))}
+            </select>
+            {onViewRepositoryDetail && selectedRepoId && (
+              <button
+                type="button"
+                onClick={onViewRepositoryDetail}
+                title="View active repository details"
+                className="p-1 rounded text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+                aria-label="View repository details"
+              >
+                <GitFork className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* API Health Status Pill */}
+        <div className="hidden sm:flex items-center gap-1.5">
           {healthState.isLoading ? (
-            <StatusBadge label="Connecting API..." variant="neutral" dot />
+            <Badge label="Connecting API..." variant="neutral" dot size="sm" />
           ) : healthState.isAvailable ? (
-            <StatusBadge
+            <Badge
               label={`API: ${healthState.data?.service || "online"}`}
               variant="success"
               dot
+              size="sm"
             />
           ) : (
-            <StatusBadge label="API: Offline" variant="danger" dot />
+            <Badge label="API: Offline" variant="danger" dot size="sm" />
           )}
 
           <button
             type="button"
             onClick={() => healthState.refetch()}
             title="Refresh backend status"
-            className="p-1.5 rounded text-slate-400 hover:text-slate-200 hover:bg-[#21262d] transition-colors cursor-pointer"
+            aria-label="Refresh backend status"
+            className="p-1.5 rounded-md text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors cursor-pointer"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${healthState.isLoading ? "animate-spin" : ""}`} />
+            <RefreshCw
+              className={`w-3.5 h-3.5 ${healthState.isLoading ? "animate-spin" : ""}`}
+              aria-hidden="true"
+            />
           </button>
         </div>
 
         {/* Primary CTA: Analyze Repository */}
-        <button
-          type="button"
+        <Button
+          variant="primary"
+          size="sm"
           onClick={onAnalyzeClick}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-[#238636] hover:bg-[#2ea043] text-white text-xs font-medium transition-colors shadow-sm cursor-pointer"
+          leftIcon={<Plus className="w-3.5 h-3.5" />}
         >
-          <Plus className="w-3.5 h-3.5" />
-          <span>Analyze Repository</span>
-        </button>
+          Analyze Repository
+        </Button>
       </div>
     </header>
   );
