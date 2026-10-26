@@ -10,9 +10,13 @@ import { ErrorState } from "../components/common/ErrorState";
 import { AnalysisSummaryCards } from "../components/analysis/AnalysisSummaryCards";
 import { FindingsTable } from "../components/analysis/FindingsTable";
 
-export const AnalysisPage: React.FC = () => {
+export interface AnalysisPageProps {
+  initialRepoId?: string | null;
+}
+
+export const AnalysisPage: React.FC<AnalysisPageProps> = ({ initialRepoId }) => {
   const [repositories, setRepositories] = useState<Repository[]>([]);
-  const [selectedRepoId, setSelectedRepoId] = useState<string>("");
+  const [selectedRepoId, setSelectedRepoId] = useState<string>(initialRepoId || "");
   const [loadingRepos, setLoadingRepos] = useState(true);
   const [repoError, setRepoError] = useState<string | null>(null);
 
@@ -23,6 +27,13 @@ export const AnalysisPage: React.FC = () => {
   const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Sync with initialRepoId changes
+  useEffect(() => {
+    if (initialRepoId) {
+      setSelectedRepoId(initialRepoId);
+    }
+  }, [initialRepoId]);
 
   // 1. Fetch repositories on mount or reload
   useEffect(() => {
@@ -35,7 +46,10 @@ export const AnalysisPage: React.FC = () => {
         if (isCancelled) return;
         setRepositories(res.items);
         if (res.items.length > 0) {
-          setSelectedRepoId((curr) => curr || res.items[0].id);
+          const target = initialRepoId && res.items.some((r) => r.id === initialRepoId)
+            ? initialRepoId
+            : res.items[0].id;
+          setSelectedRepoId((curr) => curr || target);
         }
       } catch (err: unknown) {
         if (isCancelled) return;
@@ -48,7 +62,7 @@ export const AnalysisPage: React.FC = () => {
     return () => {
       isCancelled = true;
     };
-  }, [refreshKey]);
+  }, [refreshKey, initialRepoId]);
 
   // 2. Fetch analyses when selected repository changes
   useEffect(() => {
