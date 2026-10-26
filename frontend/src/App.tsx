@@ -12,16 +12,19 @@ import { AddRepositoryModal } from "./components/repository/AddRepositoryModal";
 import { useHealth } from "./hooks/useHealth";
 import { NavigationTab } from "./types/navigation";
 import { Repository } from "./types/api";
+import { RepositoryProvider, useRepositoryContext } from "./context/RepositoryContext";
 
-export const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<NavigationTab>("overview");
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
-  const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null);
   const [selectedProposalId, setSelectedProposalId] = useState<string | null>(null);
   const healthState = useHealth(20000);
 
+  const { selectedRepoId, setSelectedRepoId, refetchRepositories } = useRepositoryContext();
+
   const handleRepositoryCreated = (newRepo: Repository) => {
     setSelectedRepoId(newRepo.id);
+    refetchRepositories();
     setCurrentTab("repositories");
   };
 
@@ -49,7 +52,7 @@ export const App: React.FC = () => {
           />
         );
       case "analysis":
-        return <AnalysisPage />;
+        return <AnalysisPage initialRepoId={selectedRepoId} />;
       case "remediation":
         return (
           <RemediationPage
@@ -81,11 +84,11 @@ export const App: React.FC = () => {
       <AppShell
         currentTab={currentTab}
         onSelectTab={(tab) => {
-          setSelectedRepoId(null);
           setCurrentTab(tab);
         }}
         onAnalyzeClick={() => setIsAddModalOpen(true)}
         healthState={healthState}
+        onViewRepositoryDetail={() => setCurrentTab("repositories")}
       >
         {renderActivePage()}
       </AppShell>
@@ -97,6 +100,14 @@ export const App: React.FC = () => {
         onSuccess={handleRepositoryCreated}
       />
     </>
+  );
+};
+
+export const App: React.FC = () => {
+  return (
+    <RepositoryProvider>
+      <AppContent />
+    </RepositoryProvider>
   );
 };
 
