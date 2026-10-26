@@ -8,14 +8,19 @@ import {
   Bot,
   Settings,
   ShieldCheck,
-  Circle,
   Workflow,
+  Circle,
 } from "lucide-react";
 import { NavigationItem, NavigationTab } from "../../types/navigation";
 import { HealthState } from "../../hooks/useHealth";
 import { cn } from "../../lib/utils";
 
-interface SidebarProps {
+export interface NavSection {
+  title: string;
+  items: NavigationItem[];
+}
+
+export interface SidebarProps {
   currentTab: NavigationTab;
   onSelectTab: (tab: NavigationTab) => void;
   healthState: HealthState;
@@ -23,15 +28,33 @@ interface SidebarProps {
   onCloseMobile?: () => void;
 }
 
-const NAV_ITEMS: NavigationItem[] = [
-  { id: "overview", label: "Overview" },
-  { id: "repositories", label: "Repositories" },
-  { id: "analysis", label: "Analysis" },
-  { id: "remediation", label: "Remediation", badge: "Phase 7" },
-  { id: "cicd-audit", label: "CI/CD & Audits", badge: "Phase 8" },
-  { id: "code-search", label: "Code Search" },
-  { id: "ai-assistant", label: "AI Assistant" },
-  { id: "settings", label: "Settings" },
+const NAV_SECTIONS: NavSection[] = [
+  {
+    title: "Platform",
+    items: [
+      { id: "overview", label: "Overview" },
+      { id: "repositories", label: "Repositories" },
+    ],
+  },
+  {
+    title: "Code Intelligence",
+    items: [
+      { id: "analysis", label: "Analysis" },
+      { id: "code-search", label: "Code Search" },
+      { id: "ai-assistant", label: "AI Assistant" },
+    ],
+  },
+  {
+    title: "Operations & Security",
+    items: [
+      { id: "remediation", label: "Remediation" },
+      { id: "cicd-audit", label: "CI/CD & Audits" },
+    ],
+  },
+  {
+    title: "System",
+    items: [{ id: "settings", label: "Settings" }],
+  },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -44,127 +67,123 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const getIcon = (id: NavigationTab) => {
     switch (id) {
       case "overview":
-        return <LayoutDashboard className="w-4 h-4" />;
+        return <LayoutDashboard className="w-4 h-4" aria-hidden="true" />;
       case "repositories":
-        return <FolderGit2 className="w-4 h-4" />;
+        return <FolderGit2 className="w-4 h-4" aria-hidden="true" />;
       case "analysis":
-        return <FileCode2 className="w-4 h-4" />;
+        return <FileCode2 className="w-4 h-4" aria-hidden="true" />;
       case "remediation":
-        return <Wrench className="w-4 h-4" />;
+        return <Wrench className="w-4 h-4" aria-hidden="true" />;
       case "cicd-audit":
-        return <Workflow className="w-4 h-4" />;
+        return <Workflow className="w-4 h-4" aria-hidden="true" />;
       case "code-search":
-        return <Search className="w-4 h-4" />;
+        return <Search className="w-4 h-4" aria-hidden="true" />;
       case "ai-assistant":
-        return <Bot className="w-4 h-4" />;
+        return <Bot className="w-4 h-4" aria-hidden="true" />;
       case "settings":
-        return <Settings className="w-4 h-4" />;
+        return <Settings className="w-4 h-4" aria-hidden="true" />;
     }
   };
 
   return (
     <aside
+      aria-label="Primary Navigation"
       className={cn(
-        "flex flex-col w-64 h-full bg-[#161b22] border-r border-[#21262d] select-none",
+        "flex flex-col w-64 h-full bg-surface-card border-r border-border-default select-none shadow-xs",
         className
       )}
     >
       {/* Brand Header */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-[#21262d]">
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-950/70 border border-emerald-700/60 text-emerald-400">
-          <ShieldCheck className="w-5 h-5" />
+      <div className="flex items-center gap-3 px-5 py-4.5 border-b border-border-default shrink-0">
+        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent/15 border border-accent-border text-accent shadow-xs">
+          <ShieldCheck className="w-5 h-5" aria-hidden="true" />
         </div>
-        <div>
-          <div className="text-sm font-semibold tracking-tight text-slate-100 flex items-center gap-1.5">
-            CodeSentinel AI
-            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#21262d] border border-[#30363d] text-slate-400">
-              v0.1.0
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold tracking-tight text-text-primary flex items-center gap-1.5 truncate">
+            <span>CodeSentinel AI</span>
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-xs bg-surface-elevated border border-border-default text-text-muted">
+              v{healthState.data?.version || "0.1.0"}
             </span>
           </div>
-          <div className="text-[11px] text-slate-400 truncate max-w-[150px]">
-            Engineering Intelligence
-          </div>
+          <div className="text-[11px] text-text-muted truncate">Codebase Intelligence Console</div>
         </div>
       </div>
 
-      {/* Navigation Links */}
-      <div className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        <div className="px-3 pb-2 text-[11px] font-mono uppercase tracking-wider text-slate-400">
-          Platform
-        </div>
-        {NAV_ITEMS.map((item) => {
-          const isActive = currentTab === item.id;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => {
-                onSelectTab(item.id);
-                if (onCloseMobile) onCloseMobile();
-              }}
-              className={cn(
-                "w-full flex items-center justify-between px-3 py-2 rounded-md text-xs font-medium transition-colors cursor-pointer",
-                isActive
-                  ? "bg-[#21262d] text-slate-100 font-semibold border border-[#30363d]"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-[#21262d]/50"
-              )}
-            >
-              <div className="flex items-center gap-2.5">
-                <span className={isActive ? "text-emerald-400" : "text-slate-400"}>
-                  {getIcon(item.id)}
-                </span>
-                <span>{item.label}</span>
-              </div>
-              {item.badge && (
-                <span
+      {/* Navigation Sections */}
+      <div className="flex-1 px-3 py-4 space-y-6 overflow-y-auto">
+        {NAV_SECTIONS.map((section) => (
+          <div key={section.title} className="space-y-1">
+            <div className="px-3 pb-1 text-[10px] font-mono uppercase tracking-wider text-text-muted">
+              {section.title}
+            </div>
+            {section.items.map((item) => {
+              const isActive = currentTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-current={isActive ? "page" : undefined}
+                  onClick={() => {
+                    onSelectTab(item.id);
+                    if (onCloseMobile) onCloseMobile();
+                  }}
                   className={cn(
-                    "text-[10px] font-mono px-1.5 py-0.2 rounded border",
-                    item.isComingSoon
-                      ? "bg-[#0d1117] text-slate-400 border-[#30363d]"
-                      : "bg-emerald-950/40 text-emerald-400 border-emerald-800"
+                    "w-full flex items-center justify-between px-3 py-2 rounded-md text-xs font-medium transition-colors cursor-pointer",
+                    "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent",
+                    isActive
+                      ? "bg-surface-elevated text-text-primary font-semibold border border-border-default shadow-xs"
+                      : "text-text-secondary hover:text-text-primary hover:bg-surface-hover/70 border border-transparent"
                   )}
                 >
-                  {item.badge}
-                </span>
-              )}
-            </button>
-          );
-        })}
+                  <div className="flex items-center gap-2.5 truncate">
+                    <span className={isActive ? "text-accent" : "text-text-muted"} aria-hidden="true">
+                      {getIcon(item.id)}
+                    </span>
+                    <span className="truncate">{item.label}</span>
+                  </div>
+                  {item.badge && (
+                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full border border-border-default bg-surface-elevated text-text-secondary">
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </div>
 
-      {/* Phase 0 Status & System Health */}
-      <div className="p-4 border-t border-[#21262d] bg-[#0d1117]/60 space-y-3">
+      {/* Live System Health Footer */}
+      <div className="p-4 border-t border-border-default bg-surface-elevated/50 space-y-2 shrink-0">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-slate-400 font-mono text-[11px]">Milestone</span>
-          <span className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/40 border border-emerald-800 text-emerald-300">
-            Phase 0 • Foundation
-          </span>
-        </div>
-
-        {/* Backend Connectivity Status */}
-        <div className="flex items-center justify-between pt-2 border-t border-[#21262d] text-xs">
-          <span className="text-slate-400 text-[11px] flex items-center gap-1.5">
+          <span className="text-text-muted text-[11px] flex items-center gap-1.5">
             <Circle
               className={cn(
-                "w-2 h-2 fill-current",
-                healthState.isAvailable ? "text-emerald-400" : "text-rose-400"
+                "w-2 h-2 fill-current shrink-0",
+                healthState.isAvailable ? "text-status-success animate-pulse" : "text-status-danger"
               )}
+              aria-hidden="true"
             />
-            Backend API
+            <span>Backend API</span>
           </span>
           <span
             className={cn(
-              "text-[11px] font-mono",
-              healthState.isAvailable ? "text-emerald-400" : "text-rose-400"
+              "text-[11px] font-mono font-medium",
+              healthState.isAvailable ? "text-status-success" : "text-status-danger"
             )}
           >
-            {healthState.isLoading
-              ? "Checking..."
-              : healthState.isAvailable
-              ? `Connected`
-              : "Offline"}
+            {healthState.isLoading ? "Checking..." : healthState.isAvailable ? "Connected" : "Offline"}
           </span>
         </div>
+
+        {healthState.data?.database && (
+          <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-border-subtle/50 font-mono">
+            <span className="text-text-muted">Database</span>
+            <span className={healthState.data.database === "connected" ? "text-text-secondary" : "text-status-warning"}>
+              {healthState.data.database}
+            </span>
+          </div>
+        )}
       </div>
     </aside>
   );
