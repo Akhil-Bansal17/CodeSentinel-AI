@@ -64,7 +64,7 @@ describe("App Root Component", () => {
       fireEvent.click(ctaButton);
     });
 
-    expect(screen.getByText("Analyze Repository — Phase 1 Roadmap")).toBeInTheDocument();
+    expect(screen.getByText("Connect Repository")).toBeInTheDocument();
     expect(screen.getByText(/Foundational Architecture In Place/i)).toBeInTheDocument();
 
     // Close dialog
@@ -72,6 +72,6 @@ describe("App Root Component", () => {
     await act(async () => {
       fireEvent.click(closeBtn);
     });
-    expect(screen.queryByText("Analyze Repository — Phase 1 Roadmap")).not.toBeInTheDocument();
+    expect(screen.queryByText("Connect Repository")).not.toBeInTheDocument();
   });
 });
