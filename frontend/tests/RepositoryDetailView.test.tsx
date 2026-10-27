@@ -6,6 +6,7 @@ import { Repository, RepositoryFile } from "../src/types/api";
 
 vi.mock("../src/services/repositoryService", () => ({
   repositoryService: {
+    listRepositories: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, page_size: 50 }),
     listSnapshotFiles: vi.fn(),
     reingestRepository: vi.fn(),
     deleteRepository: vi.fn(),
@@ -226,4 +227,31 @@ describe("RepositoryDetailView Component", () => {
       expect(screen.getByText(/Codebase Health Index/i)).toBeInTheDocument();
     });
   });
+
+  it("switches to Static Analysis, Dependencies, and CI/CD tabs", async () => {
+    render(
+      <RepositoryDetailView
+        repository={mockRepository}
+        onBack={vi.fn()}
+        onRepositoryUpdated={vi.fn()}
+        onRepositoryDeleted={vi.fn()}
+      />
+    );
+
+    // Static Analysis tab
+    const analysisTab = screen.getByRole("button", { name: /Static Analysis/i });
+    fireEvent.click(analysisTab);
+    expect(screen.getByRole("heading", { name: /Deterministic Static Analysis/i })).toBeInTheDocument();
+
+    // Dependencies tab
+    const depsTab = screen.getByRole("button", { name: /Dependencies & SCA/i });
+    fireEvent.click(depsTab);
+    expect(screen.getAllByText(/Dependency Intelligence/i).length).toBeGreaterThan(0);
+
+    // CI/CD & Audits tab
+    const cicdTab = screen.getByRole("button", { name: /CI\/CD & Audits/i });
+    fireEvent.click(cicdTab);
+    expect(screen.getByText(/CI\/CD Automation/i)).toBeInTheDocument();
+  });
 });
+
