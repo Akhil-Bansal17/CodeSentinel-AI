@@ -2,20 +2,22 @@ import React, { useState } from "react";
 import { Folder, AlertCircle, Loader2 } from "lucide-react";
 import { GithubIcon } from "../common/GithubIcon";
 import { Modal } from "../common/Modal";
-
+import { Button } from "../common/Button";
 import { repositoryService } from "../../services/repositoryService";
 import { Repository, RepositorySourceType } from "../../types/api";
 
-interface AddRepositoryModalProps {
+export interface AddRepositoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (repository: Repository) => void;
+  title?: string;
 }
 
 export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
+  title = "Connect Repository",
 }) => {
   const [sourceType, setSourceType] = useState<RepositorySourceType>("github");
   const [githubUrl, setGithubUrl] = useState("");
@@ -46,7 +48,7 @@ export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
     e.preventDefault();
     setErrorMessage(null);
 
-    // Validation
+    // Form input validation
     if (sourceType === "github") {
       const trimmed = githubUrl.trim();
       if (!trimmed) {
@@ -99,20 +101,21 @@ export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Analyze Repository — Phase 1 Roadmap"
+      title={title}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Architecture Notice */}
-        <div className="p-3 rounded-md bg-sky-950/30 border border-sky-800/50 flex items-start gap-2.5">
-          <div className="text-xs text-sky-200 leading-relaxed">
-            <span className="font-semibold block mb-0.5">Foundational Architecture In Place</span>
-            Deterministic repository ingestion, safe file discovery, and snapshots are active in Phase 1.
+        <div className="p-3 rounded-md bg-accent-subtle border border-accent-border flex items-start gap-2.5">
+          <div className="text-xs text-text-secondary leading-relaxed">
+            <span className="font-semibold text-text-primary block mb-0.5">
+              Foundational Architecture In Place
+            </span>
+            Deterministic repository ingestion, safe file discovery, and snapshots are active in the console.
           </div>
         </div>
 
         {/* Source Type Selector */}
-
-        <div className="grid grid-cols-2 gap-2 p-1 bg-[#0d1117] rounded-lg border border-[#30363d]">
+        <div className="grid grid-cols-2 gap-2 p-1 bg-surface-base rounded-lg border border-border-default">
           <button
             type="button"
             onClick={() => {
@@ -122,14 +125,13 @@ export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
             disabled={loading}
             className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-medium transition-all ${
               sourceType === "github"
-                ? "bg-[#21262d] text-white shadow-sm border border-[#30363d]"
-                : "text-slate-400 hover:text-slate-200"
+                ? "bg-surface-elevated text-text-primary shadow-xs border border-border-strong font-semibold"
+                : "text-text-muted hover:text-text-secondary"
             }`}
           >
             <GithubIcon className="w-3.5 h-3.5" />
             <span>Public GitHub</span>
           </button>
-
 
           <button
             type="button"
@@ -140,8 +142,8 @@ export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
             disabled={loading}
             className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-medium transition-all ${
               sourceType === "local"
-                ? "bg-[#21262d] text-white shadow-sm border border-[#30363d]"
-                : "text-slate-400 hover:text-slate-200"
+                ? "bg-surface-elevated text-text-primary shadow-xs border border-border-strong font-semibold"
+                : "text-text-muted hover:text-text-secondary"
             }`}
           >
             <Folder className="w-3.5 h-3.5" />
@@ -151,9 +153,9 @@ export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
 
         {/* Error notification */}
         {errorMessage && (
-          <div className="p-3 rounded-md bg-rose-950/40 border border-rose-800/60 flex items-start gap-2.5">
-            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-            <div className="text-xs text-rose-200 leading-relaxed break-words">{errorMessage}</div>
+          <div className="p-3 rounded-md bg-danger-bg border border-danger-border flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
+            <div className="text-xs text-danger-text leading-relaxed break-words">{errorMessage}</div>
           </div>
         )}
 
@@ -161,8 +163,8 @@ export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
         {sourceType === "github" ? (
           <div className="space-y-3">
             <div>
-              <label htmlFor="github-url-input" className="block text-xs font-medium text-slate-300 mb-1">
-                Repository URL <span className="text-rose-400">*</span>
+              <label htmlFor="github-url-input" className="block text-xs font-medium text-text-secondary mb-1">
+                Repository URL <span className="text-danger">*</span>
               </label>
               <input
                 id="github-url-input"
@@ -172,16 +174,16 @@ export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
                 disabled={loading}
                 placeholder="https://github.com/owner/repository"
                 required
-                className="w-full px-3 py-2 rounded-md bg-[#0d1117] border border-[#30363d] text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 disabled:opacity-50"
+                className="w-full px-3 py-2 rounded-md bg-surface-base border border-border-default text-xs font-mono text-text-primary placeholder-text-muted focus:outline-none focus:border-accent disabled:opacity-50"
               />
-              <p className="text-[11px] text-slate-400 mt-1">
+              <p className="text-[11px] text-text-muted mt-1">
                 Accepts public repositories only. No passwords, SSH keys, or personal access tokens required.
               </p>
             </div>
 
             <div>
-              <label htmlFor="github-branch-input" className="block text-xs font-medium text-slate-300 mb-1">
-                Branch <span className="text-slate-500 font-normal">(Optional)</span>
+              <label htmlFor="github-branch-input" className="block text-xs font-medium text-text-secondary mb-1">
+                Branch <span className="text-text-muted font-normal">(Optional)</span>
               </label>
               <input
                 id="github-branch-input"
@@ -190,7 +192,7 @@ export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
                 onChange={(e) => setBranch(e.target.value)}
                 disabled={loading}
                 placeholder="main (auto-detected)"
-                className="w-full px-3 py-2 rounded-md bg-[#0d1117] border border-[#30363d] text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 disabled:opacity-50"
+                className="w-full px-3 py-2 rounded-md bg-surface-base border border-border-default text-xs font-mono text-text-primary placeholder-text-muted focus:outline-none focus:border-accent disabled:opacity-50"
               />
             </div>
           </div>
@@ -198,8 +200,8 @@ export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
           /* Local Path Form Fields */
           <div className="space-y-3">
             <div>
-              <label htmlFor="local-path-input" className="block text-xs font-medium text-slate-300 mb-1">
-                Local Directory Path <span className="text-rose-400">*</span>
+              <label htmlFor="local-path-input" className="block text-xs font-medium text-text-secondary mb-1">
+                Local Directory Path <span className="text-danger">*</span>
               </label>
               <input
                 id="local-path-input"
@@ -209,16 +211,16 @@ export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
                 disabled={loading}
                 placeholder="e.g. C:/Users/name/Projects/my-app or /workspace/my-app"
                 required
-                className="w-full px-3 py-2 rounded-md bg-[#0d1117] border border-[#30363d] text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 disabled:opacity-50"
+                className="w-full px-3 py-2 rounded-md bg-surface-base border border-border-default text-xs font-mono text-text-primary placeholder-text-muted focus:outline-none focus:border-accent disabled:opacity-50"
               />
-              <p className="text-[11px] text-slate-400 mt-1">
-                Must be an absolute path inside the backend server's configured <code className="text-slate-300">LOCAL_REPOSITORY_ROOTS</code>.
+              <p className="text-[11px] text-text-muted mt-1">
+                Must be an absolute path inside the backend server's configured <code className="text-text-secondary bg-surface-base px-1 py-0.5 rounded border border-border-subtle">LOCAL_REPOSITORY_ROOTS</code>.
               </p>
             </div>
 
             <div>
-              <label htmlFor="local-name-input" className="block text-xs font-medium text-slate-300 mb-1">
-                Display Name Override <span className="text-slate-500 font-normal">(Optional)</span>
+              <label htmlFor="local-name-input" className="block text-xs font-medium text-text-secondary mb-1">
+                Display Name Override <span className="text-text-muted font-normal">(Optional)</span>
               </label>
               <input
                 id="local-name-input"
@@ -227,38 +229,33 @@ export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
                 onChange={(e) => setCustomName(e.target.value)}
                 disabled={loading}
                 placeholder="Defaults to directory name"
-                className="w-full px-3 py-2 rounded-md bg-[#0d1117] border border-[#30363d] text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 disabled:opacity-50"
+                className="w-full px-3 py-2 rounded-md bg-surface-base border border-border-default text-xs font-mono text-text-primary placeholder-text-muted focus:outline-none focus:border-accent disabled:opacity-50"
               />
             </div>
           </div>
         )}
 
         {/* Modal Actions */}
-        <div className="pt-4 border-t border-[#21262d] flex items-center justify-end gap-2.5">
-          <button
+        <div className="pt-4 border-t border-border-default flex items-center justify-end gap-2.5">
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
             onClick={handleClose}
             disabled={loading}
-            className="px-3.5 py-1.5 rounded-md bg-[#21262d] hover:bg-[#30363d] text-slate-300 text-xs font-medium border border-[#30363d] transition-colors cursor-pointer disabled:opacity-50"
           >
             Understood
-          </button>
+          </Button>
 
-          <button
-
+          <Button
             type="submit"
+            variant="primary"
+            size="sm"
             disabled={loading}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-md bg-[#238636] hover:bg-[#2ea043] text-white text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            leftIcon={loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : undefined}
           >
-            {loading ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>Ingesting Repository...</span>
-              </>
-            ) : (
-              <span>Start Ingestion</span>
-            )}
-          </button>
+            {loading ? "Ingesting Repository..." : "Start Ingestion"}
+          </Button>
         </div>
       </form>
     </Modal>
