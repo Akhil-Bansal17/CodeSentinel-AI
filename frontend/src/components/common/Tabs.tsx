@@ -20,6 +20,7 @@ export interface TabsProps {
   size?: TabsSize;
   ariaLabel?: string;
   className?: string;
+  buttonRole?: "tab" | "button";
 }
 
 export const Tabs: React.FC<TabsProps> = ({
@@ -30,6 +31,7 @@ export const Tabs: React.FC<TabsProps> = ({
   size = "md",
   ariaLabel = "Tab Navigation",
   className,
+  buttonRole = "tab",
 }) => {
   const tabListRef = useRef<HTMLDivElement>(null);
 
@@ -69,7 +71,7 @@ export const Tabs: React.FC<TabsProps> = ({
   return (
     <div
       ref={tabListRef}
-      role="tablist"
+      role={buttonRole === "button" ? "navigation" : "tablist"}
       aria-label={ariaLabel}
       className={cn(
         "flex items-center overflow-x-auto scrollbar-none",
@@ -100,7 +102,7 @@ export const Tabs: React.FC<TabsProps> = ({
         return (
           <button
             key={tab.id}
-            role="tab"
+            role={buttonRole}
             type="button"
             id={`tab-${tab.id}`}
             aria-controls={`panel-${tab.id}`}
