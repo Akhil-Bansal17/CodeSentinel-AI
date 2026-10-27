@@ -112,4 +112,72 @@ describe("RepositoriesPage Component", () => {
     expect(await screen.findByText("Back to Repositories")).toBeInTheDocument();
     expect(screen.getByText("File Explorer")).toBeInTheDocument();
   });
+
+  it("filters repositories by search query and clears filters", async () => {
+    vi.mocked(repositoryService.listRepositories).mockResolvedValueOnce({
+      items: [mockRepo],
+      total: 1,
+      page: 1,
+      page_size: 50,
+    });
+
+    render(<RepositoriesPage onAnalyzeClick={vi.fn()} />);
+
+    expect(await screen.findByText("codesentinel-core")).toBeInTheDocument();
+
+    const searchInput = screen.getByPlaceholderText(/Search repositories/i);
+    fireEvent.change(searchInput, { target: { value: "non-existent-query" } });
+
+    expect(screen.getByText("No Matching Repositories")).toBeInTheDocument();
+
+    // Clear filters
+    const clearBtn = screen.getByRole("button", { name: /Clear Filters/i });
+    fireEvent.click(clearBtn);
+
+    expect(screen.getByText("codesentinel-core")).toBeInTheDocument();
+  });
+
+  it("filters repositories by source type", async () => {
+    vi.mocked(repositoryService.listRepositories).mockResolvedValueOnce({
+      items: [mockRepo],
+      total: 1,
+      page: 1,
+      page_size: 50,
+    });
+
+    render(<RepositoriesPage onAnalyzeClick={vi.fn()} />);
+
+    expect(await screen.findByText("codesentinel-core")).toBeInTheDocument();
+
+    const sourceSelect = screen.getByDisplayValue("All Sources");
+    fireEvent.change(sourceSelect, { target: { value: "local" } });
+
+    // mockRepo is a github repo, so local filter shows no matches
+    expect(screen.getByText("No Matching Repositories")).toBeInTheDocument();
+
+    fireEvent.change(sourceSelect, { target: { value: "github" } });
+    expect(screen.getByText("codesentinel-core")).toBeInTheDocument();
+  });
+
+  it("renders error state when API fails and retries on action", async () => {
+    vi.mocked(repositoryService.listRepositories)
+      .mockRejectedValueOnce(new Error("Database connection timed out"))
+      .mockResolvedValueOnce({
+        items: [mockRepo],
+        total: 1,
+        page: 1,
+        page_size: 50,
+      });
+
+    render(<RepositoriesPage onAnalyzeClick={vi.fn()} />);
+
+    expect(await screen.findByText("Error Loading Repositories")).toBeInTheDocument();
+    expect(screen.getByText("Database connection timed out")).toBeInTheDocument();
+
+    const retryBtn = screen.getByRole("button", { name: /Retry/i });
+    fireEvent.click(retryBtn);
+
+    expect(await screen.findByText("codesentinel-core")).toBeInTheDocument();
+  });
 });
+
