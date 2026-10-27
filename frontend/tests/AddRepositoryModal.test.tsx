@@ -23,7 +23,7 @@ describe("AddRepositoryModal Component", () => {
       />
     );
 
-    expect(screen.getByText("Analyze Repository — Phase 1 Roadmap")).toBeInTheDocument();
+    expect(screen.getByText("Connect Repository")).toBeInTheDocument();
     expect(screen.getByText("Public GitHub")).toBeInTheDocument();
     expect(screen.getByText("Local Directory")).toBeInTheDocument();
   });
