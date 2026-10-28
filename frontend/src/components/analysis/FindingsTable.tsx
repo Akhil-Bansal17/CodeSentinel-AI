@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Search, Filter, ShieldCheck, ChevronRight, FileCode, Shield } from "lucide-react";
+import { Search, Filter, ShieldCheck, ChevronRight, FileCode, Shield, RotateCcw } from "lucide-react";
 import { AnalysisFinding, FindingSeverity, FindingConfidence } from "../../types/analysis";
 import { analysisService } from "../../services/analysisService";
 import { LoadingSpinner } from "../common/LoadingSpinner";
@@ -11,17 +11,17 @@ interface FindingsTableProps {
 }
 
 const SEVERITY_BADGES: Record<FindingSeverity, { bg: string; text: string; border: string }> = {
-  CRITICAL: { bg: "bg-rose-950/60", text: "text-rose-300", border: "border-rose-800" },
-  HIGH: { bg: "bg-orange-950/60", text: "text-orange-300", border: "border-orange-800" },
-  MEDIUM: { bg: "bg-amber-950/60", text: "text-amber-300", border: "border-amber-800" },
-  LOW: { bg: "bg-sky-950/60", text: "text-sky-300", border: "border-sky-800" },
-  INFO: { bg: "bg-slate-800", text: "text-slate-300", border: "border-slate-700" },
+  CRITICAL: { bg: "bg-danger-bg", text: "text-danger-text", border: "border-danger-border" },
+  HIGH: { bg: "bg-warning-bg", text: "text-warning-text", border: "border-warning-border" },
+  MEDIUM: { bg: "bg-amber-500/10", text: "text-amber-300", border: "border-amber-500/30" },
+  LOW: { bg: "bg-info-bg", text: "text-info-text", border: "border-info-border" },
+  INFO: { bg: "bg-surface-hover", text: "text-text-muted", border: "border-border-default" },
 };
 
 const CONFIDENCE_BADGES: Record<FindingConfidence, { bg: string; text: string; border: string }> = {
-  HIGH: { bg: "bg-emerald-950/60", text: "text-emerald-300", border: "border-emerald-800" },
-  MEDIUM: { bg: "bg-amber-950/60", text: "text-amber-300", border: "border-amber-800" },
-  LOW: { bg: "bg-slate-800", text: "text-slate-400", border: "border-slate-700" },
+  HIGH: { bg: "bg-success-bg", text: "text-success-text", border: "border-success-border" },
+  MEDIUM: { bg: "bg-warning-bg", text: "text-warning-text", border: "border-warning-border" },
+  LOW: { bg: "bg-surface-hover", text: "text-text-muted", border: "border-border-default" },
 };
 
 export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
@@ -95,17 +95,26 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
   }, [analysisId, page, pageSize, searchPath, selectedSeverity, selectedConfidence, selectedCategory]);
 
   const totalPages = Math.ceil(totalFindings / pageSize) || 1;
+  const hasActiveFilters = Boolean(searchPath || selectedSeverity || selectedConfidence || selectedCategory);
+
+  const handleResetFilters = () => {
+    setSearchPath("");
+    setSelectedSeverity("");
+    setSelectedConfidence("");
+    setSelectedCategory("");
+    setPage(1);
+  };
 
   return (
     <div className="space-y-4">
       {/* Header & Filter Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg bg-[#161b22] border border-[#30363d]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg bg-surface-card border border-border-default shadow-xs">
         <div>
-          <h3 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
-            <Filter className="w-4 h-4 text-sky-400" />
+          <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
+            <Filter className="w-4 h-4 text-accent" />
             Static Analysis & Security Findings
           </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-text-muted mt-0.5">
             Showing {totalFindings} deterministic findings matching current filters
           </p>
         </div>
@@ -113,7 +122,7 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
         <div className="flex items-center gap-2 flex-wrap">
           {/* File path filter */}
           <div className="relative">
-            <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-2.5" />
+            <Search className="w-3.5 h-3.5 text-text-disabled absolute left-2.5 top-2.5" />
             <input
               type="text"
               value={searchPath}
@@ -122,7 +131,7 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
                 setPage(1);
               }}
               placeholder="Filter file path..."
-              className="pl-8 pr-3 py-1.5 rounded-md bg-[#0d1117] border border-[#30363d] text-xs font-mono text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500"
+              className="pl-8 pr-3 py-1.5 rounded-md bg-surface-base border border-border-default text-xs font-mono text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-accent transition-colors"
             />
           </div>
 
@@ -133,7 +142,7 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
               setSelectedSeverity(e.target.value);
               setPage(1);
             }}
-            className="px-2.5 py-1.5 rounded-md bg-[#0d1117] border border-[#30363d] text-xs text-slate-200 focus:outline-none focus:border-sky-500"
+            className="px-2.5 py-1.5 rounded-md bg-surface-base border border-border-default text-xs text-text-primary focus:outline-none focus:border-accent transition-colors"
           >
             <option value="">All Severities</option>
             <option value="CRITICAL">Critical</option>
@@ -150,7 +159,7 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
               setSelectedConfidence(e.target.value);
               setPage(1);
             }}
-            className="px-2.5 py-1.5 rounded-md bg-[#0d1117] border border-[#30363d] text-xs text-slate-200 focus:outline-none focus:border-sky-500"
+            className="px-2.5 py-1.5 rounded-md bg-surface-base border border-border-default text-xs text-text-primary focus:outline-none focus:border-accent transition-colors"
           >
             <option value="">All Confidences</option>
             <option value="HIGH">High Confidence</option>
@@ -165,7 +174,7 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
               setSelectedCategory(e.target.value);
               setPage(1);
             }}
-            className="px-2.5 py-1.5 rounded-md bg-[#0d1117] border border-[#30363d] text-xs text-slate-200 focus:outline-none focus:border-sky-500"
+            className="px-2.5 py-1.5 rounded-md bg-surface-base border border-border-default text-xs text-text-primary focus:outline-none focus:border-accent transition-colors"
           >
             <option value="">All Categories</option>
             <option value="SECURITY">Security</option>
@@ -174,11 +183,24 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
             <option value="CODE_SMELL">Code Smell</option>
             <option value="SYNTAX">Syntax</option>
           </select>
+
+          {/* Reset Filters CTA */}
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-surface-hover hover:bg-surface-active text-text-secondary text-xs font-medium border border-border-default transition-colors cursor-pointer"
+              title="Reset all active filters"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Reset</span>
+            </button>
+          )}
         </div>
       </div>
 
       {/* Table Section */}
-      <div className="rounded-lg bg-[#161b22] border border-[#30363d] overflow-hidden">
+      <div className="rounded-lg bg-surface-card border border-border-default overflow-hidden shadow-xs">
         {loading ? (
           <div className="p-8">
             <LoadingSpinner message="Loading findings..." />
@@ -189,9 +211,9 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
           </div>
         ) : findings.length === 0 ? (
           <div className="p-12 text-center space-y-2">
-            <ShieldCheck className="w-8 h-8 text-emerald-400 mx-auto" />
-            <h4 className="text-sm font-semibold text-slate-200">No Findings Detected</h4>
-            <p className="text-xs text-slate-400 max-w-md mx-auto">
+            <ShieldCheck className="w-8 h-8 text-success mx-auto" />
+            <h4 className="text-sm font-semibold text-text-primary">No Findings Detected</h4>
+            <p className="text-xs text-text-muted max-w-md mx-auto">
               No issues matched the active filters. Note: Zero findings does not imply the codebase is fully secure; the analysis covers documented deterministic rules only.
             </p>
           </div>
@@ -199,7 +221,7 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-[#21262d] text-slate-400 bg-[#0d1117]">
+                <tr className="border-b border-border-default text-text-muted bg-surface-base font-mono uppercase text-[11px]">
                   <th className="py-2.5 px-4 font-medium">Severity</th>
                   <th className="py-2.5 px-4 font-medium">Confidence</th>
                   <th className="py-2.5 px-4 font-medium">Rule</th>
@@ -208,7 +230,7 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
                   <th className="py-2.5 px-4 font-medium text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#21262d]">
+              <tbody className="divide-y divide-border-subtle">
                 {findings.map((f) => {
                   const sevStyle = SEVERITY_BADGES[f.severity] || SEVERITY_BADGES.INFO;
                   const conf = f.confidence || "MEDIUM";
@@ -217,7 +239,7 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
                     <tr
                       key={f.id}
                       onClick={() => setSelectedFinding(f)}
-                      className="hover:bg-[#1f242c] transition-colors cursor-pointer group"
+                      className="hover:bg-surface-hover/70 transition-colors cursor-pointer group"
                     >
                       {/* Severity */}
                       <td className="py-2.5 px-4 whitespace-nowrap">
@@ -239,21 +261,21 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
 
                       {/* Rule ID */}
                       <td className="py-2.5 px-4 whitespace-nowrap">
-                        <code className="text-[11px] font-mono text-sky-300 bg-sky-950/40 px-1.5 py-0.5 rounded border border-sky-800/60">
+                        <code className="text-[11px] font-mono text-accent bg-accent-subtle px-1.5 py-0.5 rounded border border-accent-border">
                           {f.rule_id}
                         </code>
                       </td>
 
                       {/* Title & Location */}
                       <td className="py-2.5 px-4 space-y-0.5 max-w-md">
-                        <div className="font-semibold text-slate-200 group-hover:text-sky-300 transition-colors truncate flex items-center gap-1.5">
+                        <div className="font-semibold text-text-primary group-hover:text-accent transition-colors truncate flex items-center gap-1.5">
                           {f.category === "SECURITY" && (
-                            <Shield className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                            <Shield className="w-3.5 h-3.5 text-warning shrink-0" />
                           )}
                           <span className="truncate">{f.title}</span>
                         </div>
-                        <div className="font-mono text-[11px] text-slate-400 flex items-center gap-1 truncate">
-                          <FileCode className="w-3 h-3 text-slate-500 shrink-0" />
+                        <div className="font-mono text-[11px] text-text-muted flex items-center gap-1 truncate">
+                          <FileCode className="w-3 h-3 text-text-disabled shrink-0" />
                           <span>
                             {f.file_path}:{f.start_line}
                           </span>
@@ -265,8 +287,8 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${
                             f.category === "SECURITY"
-                              ? "bg-rose-950/40 border-rose-800/60 text-rose-300"
-                              : "bg-[#0d1117] border-[#30363d] text-slate-300"
+                              ? "bg-danger-bg border-danger-border text-danger-text"
+                              : "bg-surface-base border-border-default text-text-secondary"
                           }`}
                         >
                           {f.category}
@@ -274,14 +296,14 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
                       </td>
 
                       {/* View Detail link */}
-                      <td className="py-2.5 px-4 whitespace-nowrap text-right text-slate-400 group-hover:text-slate-200">
+                      <td className="py-2.5 px-4 whitespace-nowrap text-right text-text-muted group-hover:text-text-primary">
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedFinding(f);
                           }}
-                          className="inline-flex items-center gap-1 text-[11px] text-sky-400 hover:text-sky-300 hover:underline cursor-pointer"
+                          className="inline-flex items-center gap-1 text-[11px] text-accent hover:text-accent-hover hover:underline cursor-pointer font-medium"
                         >
                           Inspect <ChevronRight className="w-3.5 h-3.5" />
                         </button>
@@ -296,7 +318,7 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
 
         {/* Pagination Controls */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between p-3 border-t border-[#21262d] text-xs text-slate-400 bg-[#0d1117]">
+          <div className="flex items-center justify-between p-3 border-t border-border-default text-xs text-text-muted bg-surface-base">
             <div>
               Showing {Math.min((page - 1) * pageSize + 1, totalFindings)} to{" "}
               {Math.min(page * pageSize, totalFindings)} of {totalFindings} findings
@@ -307,18 +329,18 @@ export const FindingsTable: React.FC<FindingsTableProps> = ({ analysisId }) => {
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1 || loading}
-                className="px-2.5 py-1 rounded bg-[#21262d] hover:bg-[#30363d] text-slate-200 border border-[#30363d] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                className="px-2.5 py-1 rounded bg-surface-card hover:bg-surface-hover text-text-primary border border-border-default disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
               >
                 Previous
               </button>
-              <span className="text-slate-300 font-mono">
+              <span className="text-text-primary font-mono">
                 {page} / {totalPages}
               </span>
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages || loading}
-                className="px-2.5 py-1 rounded bg-[#21262d] hover:bg-[#30363d] text-slate-200 border border-[#30363d] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                className="px-2.5 py-1 rounded bg-surface-card hover:bg-surface-hover text-text-primary border border-border-default disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
               >
                 Next
               </button>
