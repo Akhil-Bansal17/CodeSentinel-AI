@@ -5,15 +5,13 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-0.1.0-emerald.svg)](https://github.com/Akhil-Bansal17/CodeSentinel-AI/releases)
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](#testing)
-[![Deployed on Vercel](https://img.shields.io/badge/Vercel-Live_Demo-black.svg?logo=vercel&logoColor=white)](https://codesentinel-ai-six.vercel.app)
+[![Tests](https://img.shields.io/badge/tests-437%20passed-success.svg)](#testing)
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.14-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-19.0-61DAFB.svg)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6.svg)](https://www.typescriptlang.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791.svg)](https://www.postgresql.org/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](docker-compose.yml)
-
-> 🚀 **Live Production Deployment:** [https://codesentinel-ai-six.vercel.app](https://codesentinel-ai-six.vercel.app)
 
 ---
 
@@ -51,11 +49,8 @@ CodeSentinel AI is a local-first software engineering intelligence and automated
 | **Secure CI Result Webhook Ingestion** | Ingests external CI pipeline payloads with HMAC-SHA256 signature verification, 5MB payload ceilings, and replay protection via idempotency keys. |
 | **Safe PR Synthesis & Patch Bundle Export** | Detects line-span overlaps and conflicts across approved proposals, refuses unsafe combinations deterministically, and exports unified Git `.patch` bundles with evidence-grounded PR descriptions. |
 | **Production Readiness & Observability** | Decoupled Kubernetes-ready liveness (`/api/health/live`) and readiness (`/api/health/ready`) probes, `X-Request-ID` correlation logging with sensitive data masking, `TaskLifecycleManager` async state engine, hardened connection pooling, and fail-fast startup configuration validation. |
-| **Staging Certification & Release Validation** | Automated cross-platform certification runners (`validate_release.py`, `validate_release.ps1`, `validate_release.sh`) executing 302 backend tests, 57 frontend tests, migration parity, and strict 6-journey smoke tests across 10 gates. |
-| **Deployment Automation & Observability** | Pre-deployment migration safety tooling, low-cardinality operational telemetry (`/api/v1/metrics`), isolated multi-container staging (`docker-compose.yml`), SPA Nginx reverse proxy, and hardened background task lifecycle. |
-| **Production Certification & Disaster Recovery** | Reproducible 12-gate release certification (`validate_release.py`), disaster recovery & safe backup verification (`backup_recovery.py`), 14 operational failure injection scenarios, and disposable target isolation. |
-| **Modern Developer Dashboard** | Responsive React 19 + Vite 8 + Tailwind CSS dark-mode dashboard with CI/CD & Audits console, PR synthesis studio, Code Search, AI Assistant, Remediation Console, and live telemetry. |
-
+| **Disaster Recovery & Safe Backup Verification** | Automated backup verification tooling (`backup_recovery.py`) with SHA-256 checksums, isolated disposable target databases, and strict production protection guards. |
+| **High-Precision Engineering Console** | Obsidian Sentinel dark-theme developer interface (`#09090b` canvas, `#18181b` card surfaces, `#27272a` micro-borders, `#6366f1` indigo accents) built with React 19, Vite 8, and accessible design system primitives. |
 
 ---
 
@@ -92,7 +87,7 @@ CodeSentinel AI is a local-first software engineering intelligence and automated
 - **Protects CI Webhook Ingestion**: Enforces HMAC-SHA256 signature verification, a 5MB payload size ceiling, and replay protection with idempotency keys.
 - **Safely Composes Multi-Proposal PRs**: Detects overlapping edits across proposals, prevents patch collisions, and synthesizes clean Git `.patch` bundles with evidence-backed PR markdown descriptions.
 - **Issues stable SHA-256 finding fingerprints**: Guarantees idempotent issue tracking: `sha256(rule_id:file_path:start_line:evidence_summary)`.
-- **Delivers a production REST API & React UI**: Features 45+ OpenAPI endpoints, structured JSON logging, and a low-latency React 19 dashboard with dedicated CI/CD & Audits, Code Search, AI Assistant, and Remediation Review consoles.
+- **Delivers a production REST API & Obsidian Sentinel UI**: Features 45+ OpenAPI endpoints, structured JSON logging, and a low-latency React 19 dashboard with repository portfolio management, detail consoles, PR synthesis studio, and live telemetry.
 
 ---
 
@@ -420,7 +415,7 @@ curl -X POST "http://127.0.0.1:8000/api/v1/remediation/proposals/3c847d01-e28a-4
 
 ---
 
-## Configuration Reference
+## Configuration Table
 
 CodeSentinel AI is configured via environment variables or a `.env` file loaded at application startup:
 
@@ -1215,7 +1210,7 @@ flowchart TD
 
 ---
 
-## Error Handling Reference
+## Error Handling Table
 
 CodeSentinel AI implements centralized, typed exception handling. Errors never leak sensitive system traces or host path topologies to the client.
 
@@ -1254,7 +1249,7 @@ python scripts/validate_release.py
 
 ### Backend Test Suite (Pytest)
 
-The backend test suite includes **302 automated passing tests** (with 3 tests safely skipped for standalone live PostgreSQL instances):
+The backend test suite includes **329 automated passing tests**:
 
 ```bash
 # Run complete backend test suite
@@ -1303,7 +1298,7 @@ python scripts/run_smoke_tests.py
 
 ### Frontend Test Suite (Vitest)
 
-The frontend test suite includes **57 automated unit and integration tests** across 16 test suites written in Vitest and React Testing Library:
+The frontend test suite includes **108 automated unit and integration tests** across 29 test suites written in Vitest and React Testing Library:
 
 ```bash
 cd frontend
@@ -1317,55 +1312,6 @@ npm run build
 # Run Oxlint validation
 npm run lint
 ```
-
----
-
-## Deployment & Staging Operations
-
-### Local Development Setup
-
-1. **Backend**:
-   ```bash
-   cd backend
-   python -m venv .venv
-   .\.venv\Scripts\activate   # Linux/macOS: source .venv/bin/activate
-   pip install -r requirements.txt
-   uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000
-   ```
-
-2. **Frontend**:
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-
-### Staging Deployment via Docker Compose
-
-CodeSentinel AI provides an isolated, multi-container staging environment featuring PostgreSQL 16, FastAPI backend, and Nginx reverse proxy:
-
-```bash
-# 1. Prepare environment variables from template
-cp .env.example .env
-
-# 2. Launch staging environment in background
-docker compose up -d --build
-
-# 3. Verify health and operational telemetry
-curl http://localhost:8000/api/health
-curl http://localhost:8000/api/v1/metrics
-
-# 4. Open developer dashboard at http://localhost:3000
-```
-
-### Pre-Deployment Migration Safety Check
-
-Before applying schema upgrades, run the pre-deployment migration verification tool:
-
-```bash
-python -c "from backend.app.core.migration_safety import run_migration_safety_check; r = run_migration_safety_check(); print(f'Safety check passed: {r.passed}')"
-```
-
 
 ---
 
@@ -1440,7 +1386,7 @@ python -c "from backend.app.core.migration_safety import run_migration_safety_ch
   - Comprehensive end-to-end integration test suite verifying Workflows A, B, C, and D across all 8 prior phases
 - [x] **Phase 10: Release Candidate Validation & Deployment Readiness (Complete)**
   - Unified reproducible release validation scripts (`validate_release.ps1` and `validate_release.sh`)
-  - Full regression execution: 272 backend tests and 57 frontend tests passing with zero failures
+  - Full regression execution across backend and frontend test suites
   - Docker container packaging fix (`COPY . /app/backend` for top-level `backend.app.main` import resolution) and healthcheck liveness probe alignment
   - Decoupled liveness probe `/api/health/live` to guarantee container restart independence from external database availability
   - Lifespan graceful shutdown: database connection pool disposal (`engine.dispose()`) and active task cancellation (`task_manager.shutdown()`)
@@ -1466,13 +1412,17 @@ python -c "from backend.app.core.migration_safety import run_migration_safety_ch
   - Comprehensive operational failure injection test suite (`test_failure_injection.py`) covering 14 failure scenarios
   - Expanded 12-gate release certification runner (`validate_release.py`, `validate_release.ps1`, `validate_release.sh`)
   - Operational recovery targets documented: RPO target 15 minutes, RTO target 30 minutes
-  - Full regression execution: 326 backend tests and 57 frontend tests passing with zero failures
+- [x] **UI/UX Transformation: Obsidian Sentinel High-Precision Console (Phases 1–4 Complete)**
+  - Core design tokens and 11 shared primitives: Button, Badge, Card, DataTable, Tabs, Modal, EmptyState, SkeletonLoader, CodeBlock, Input, Select, Textarea
+  - Application shell with grouped sidebar, live API health indicator, and global repository selector
+  - System Overview command console with live stat cards, engine status matrix, and active repository inspection
+  - Repositories portfolio with live search, source/status filtering, and real metrics
+  - Decomposed Repository Detail console orchestrating Files & Structure, Static Analysis, Dependencies & SCA, Architecture & Coupling, Codebase Health, and CI/CD subviews
 - [ ] **Phase 14: Production Cluster Telemetry & Distributed Multi-Node Worker Pools (Upcoming)**
   - Distributed Celery / Redis task queue workers for high-throughput enterprise repository analysis
   - Multi-tenant workspace RBAC and organization permission boundaries
   - Real-time WebSocket streaming telemetry for running analyses and indexing jobs
   - Advanced dependency graph diffing between arbitrary Git branches and release tags
-
 
 ---
 
