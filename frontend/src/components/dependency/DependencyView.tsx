@@ -167,14 +167,14 @@ export const DependencyView: React.FC<DependencyViewProps> = ({ repository }) =>
   return (
     <div className="space-y-4">
       {/* Top action toolbar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3.5 rounded-lg bg-[#161b22] border border-[#30363d]">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3.5 rounded-lg bg-surface-card border border-border-default shadow-xs">
         <div className="flex items-center gap-2">
-          <Package className="w-5 h-5 text-sky-400" />
+          <Package className="w-5 h-5 text-accent" />
           <div>
-            <h3 className="text-sm font-semibold text-slate-100">
+            <h3 className="text-sm font-semibold text-text-primary">
               Dependency Intelligence & Software Composition Analysis
             </h3>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] text-text-muted">
               Deterministic manifest discovery, PEP 440 & npm Semver version matching, and security advisory correlation.
             </p>
           </div>
@@ -185,7 +185,7 @@ export const DependencyView: React.FC<DependencyViewProps> = ({ repository }) =>
             <select
               value={selectedRunId || ""}
               onChange={(e) => setSelectedRunId(e.target.value)}
-              className="px-2.5 py-1.5 text-xs bg-[#0d1117] border border-[#30363d] rounded-md text-slate-200 focus:outline-none focus:border-sky-500 font-mono"
+              className="px-2.5 py-1.5 text-xs bg-surface-base border border-border-default rounded-md text-text-primary focus:outline-none focus:border-accent font-mono cursor-pointer"
             >
               {runs.map((r, idx) => (
                 <option key={r.id} value={r.id}>
@@ -198,7 +198,7 @@ export const DependencyView: React.FC<DependencyViewProps> = ({ repository }) =>
           <button
             onClick={handleStartAnalysis}
             disabled={isStartingAnalysis}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-sky-600 text-white hover:bg-sky-500 disabled:opacity-50 transition-colors shadow-sm"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-accent text-white hover:bg-accent/90 disabled:opacity-50 transition-colors shadow-xs cursor-pointer"
           >
             {isStartingAnalysis ? (
               <>
@@ -223,7 +223,7 @@ export const DependencyView: React.FC<DependencyViewProps> = ({ repository }) =>
           <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
           <div className="text-xs">
             <span className="font-semibold text-amber-300">Advisory Dataset Unavailable: </span>
-            <span className="text-slate-300">
+            <span className="text-text-secondary">
               Vulnerability correlation cannot be performed because no active advisory dataset is loaded. Discovered dependencies are still inventoried.
             </span>
           </div>
@@ -232,18 +232,18 @@ export const DependencyView: React.FC<DependencyViewProps> = ({ repository }) =>
 
       {/* When no runs exist yet */}
       {!activeRun ? (
-        <div className="p-12 text-center rounded-lg border border-[#30363d] bg-[#161b22]">
-          <Package className="w-12 h-12 text-slate-500 mx-auto mb-3 opacity-60" />
-          <h4 className="text-base font-semibold text-slate-200 mb-1">
+        <div className="p-12 text-center rounded-lg border border-border-default bg-surface-card">
+          <Package className="w-12 h-12 text-text-muted mx-auto mb-3 opacity-60" />
+          <h4 className="text-base font-semibold text-text-primary mb-1">
             No Dependency Analysis Run Yet
           </h4>
-          <p className="text-xs text-slate-400 max-w-md mx-auto mb-4">
+          <p className="text-xs text-text-muted max-w-md mx-auto mb-4">
             Discover manifests (requirements.txt, pyproject.toml, package.json, lockfiles), resolve direct and transitive packages, and correlate real vulnerability advisories.
           </p>
           <button
             onClick={handleStartAnalysis}
             disabled={isStartingAnalysis}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-md bg-sky-600 text-white hover:bg-sky-500 transition-colors"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-md bg-accent text-white hover:bg-accent/90 transition-colors cursor-pointer"
           >
             <Play className="w-3.5 h-3.5" />
             <span>Start First Dependency Scan</span>
@@ -255,33 +255,33 @@ export const DependencyView: React.FC<DependencyViewProps> = ({ repository }) =>
           <DependencySummaryCards run={activeRun} />
 
           {/* Sub-tab navigation */}
-          <div className="border-b border-[#30363d] flex gap-4 text-xs font-semibold">
+          <div className="border-b border-border-default flex gap-4 text-xs font-semibold">
             <button
               onClick={() => setActiveSubTab("vulnerabilities")}
-              className={`pb-2.5 transition-colors border-b-2 flex items-center gap-1.5 ${
+              className={`pb-2.5 transition-colors border-b-2 flex items-center gap-1.5 cursor-pointer ${
                 activeSubTab === "vulnerabilities"
-                  ? "border-sky-500 text-sky-400"
-                  : "border-transparent text-slate-400 hover:text-slate-200"
+                  ? "border-accent text-accent font-semibold"
+                  : "border-transparent text-text-muted hover:text-text-primary"
               }`}
             >
               <ShieldAlert className="w-3.5 h-3.5" />
               <span>Vulnerabilities</span>
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-slate-800 text-slate-300">
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-surface-subtle text-text-muted border border-border-default">
                 {activeRun.vulnerabilities_count}
               </span>
             </button>
 
             <button
               onClick={() => setActiveSubTab("inventory")}
-              className={`pb-2.5 transition-colors border-b-2 flex items-center gap-1.5 ${
+              className={`pb-2.5 transition-colors border-b-2 flex items-center gap-1.5 cursor-pointer ${
                 activeSubTab === "inventory"
-                  ? "border-sky-500 text-sky-400"
-                  : "border-transparent text-slate-400 hover:text-slate-200"
+                  ? "border-accent text-accent font-semibold"
+                  : "border-transparent text-text-muted hover:text-text-primary"
               }`}
             >
               <Package className="w-3.5 h-3.5" />
               <span>Dependency Inventory</span>
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-slate-800 text-slate-300">
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-surface-subtle text-text-muted border border-border-default">
                 {activeRun.dependencies_discovered}
               </span>
             </button>
