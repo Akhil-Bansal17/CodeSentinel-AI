@@ -1,8 +1,7 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useContext, useEffect, useState } from "react";
 import {
   Wrench,
   CheckCircle2,
-  XCircle,
   AlertTriangle,
   Play,
   RotateCcw,
@@ -13,16 +12,30 @@ import {
   ShieldCheck,
   ArrowLeft,
   Info,
+  FolderGit2,
+  GitBranch,
+  Search,
+  Filter,
 } from "lucide-react";
 import {
   RemediationApplyResponse,
   RemediationAuditItem,
   RemediationProposal,
 } from "../types/remediation";
+import { Repository } from "../types/api";
 import { remediationService } from "../services/remediationService";
+import { repositoryService } from "../services/repositoryService";
+import { RepositoryContext } from "../context/RepositoryContext";
 import { UnifiedDiffViewer } from "../components/remediation/UnifiedDiffViewer";
 import { ValidationChecklist } from "../components/remediation/ValidationChecklist";
 import { AuditTimeline } from "../components/remediation/AuditTimeline";
+import { RemediationSummaryCards } from "../components/remediation/RemediationSummaryCards";
+import { Button } from "../components/common/Button";
+import { Card } from "../components/common/Card";
+import { Modal } from "../components/common/Modal";
+import { StatusBadge } from "../components/common/StatusBadge";
+import { LoadingSpinner } from "../components/common/LoadingSpinner";
+import { cn } from "../lib/utils";
 
 interface RemediationPageProps {
   initialProposalId?: string | null;
@@ -33,6 +46,13 @@ export const RemediationPage: React.FC<RemediationPageProps> = ({
   initialProposalId,
   onClearInitialProposal,
 }) => {
+  const repoContext = useContext(RepositoryContext);
+
+  const [repositories, setRepositories] = useState<Repository[]>([]);
+  const [selectedRepoId, setSelectedRepoId] = useState<string>(
+    repoContext?.selectedRepoId || ""
+  );
+
   const [proposals, setProposals] = useState<RemediationProposal[]>([]);
   const [selectedProposal, setSelectedProposal] = useState<RemediationProposal | null>(null);
   const [audits, setAudits] = useState<RemediationAuditItem[]>([]);
@@ -40,10 +60,39 @@ export const RemediationPage: React.FC<RemediationPageProps> = ({
   const [actionLoading, setActionLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
   const [isApplyModalOpen, setIsApplyModalOpen] = useState<boolean>(false);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState<boolean>(false);
   const [rejectReason, setRejectReason] = useState<string>("");
   const [applyResult, setApplyResult] = useState<RemediationApplyResponse | null>(null);
+
+  // Sync with RepositoryContext
+  useEffect(() => {
+    if (repoContext?.selectedRepoId && repoContext.selectedRepoId !== selectedRepoId) {
+      setSelectedRepoId(repoContext.selectedRepoId);
+    }
+  }, [repoContext?.selectedRepoId, selectedRepoId]);
+
+  // Load repositories if not in context
+  useEffect(() => {
+    if (repoContext?.repositories && repoContext.repositories.length > 0) {
+      setRepositories(repoContext.repositories);
+      if (!selectedRepoId && repoContext.repositories[0]) {
+        setSelectedRepoId(repoContext.repositories[0].id);
+      }
+    } else {
+      repositoryService.listRepositories(1, 50).then((res) => {
+        const items = res.items || [];
+        setRepositories(items);
+        if (!selectedRepoId && items.length > 0) {
+          setSelectedRepoId(items[0].id);
+        }
+      }).catch(() => {});
+    }
+  }, [repoContext?.repositories, selectedRepoId]);
+
+  const activeRepo = repositories.find((r) => r.id === selectedRepoId) || repoContext?.selectedRepo;
 
   const loadAudits = async (propId: string) => {
     try {
@@ -54,12 +103,12 @@ export const RemediationPage: React.FC<RemediationPageProps> = ({
     }
   };
 
-  const selectProposal = async (propId: string) => {
+  const selectProposal = async (propId: string, clearResult = true) => {
     try {
       setActionLoading(true);
       const prop = await remediationService.getProposal(propId);
       setSelectedProposal(prop);
-      setApplyResult(null);
+      if (clearResult) setApplyResult(null);
       await loadAudits(propId);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to fetch proposal details.");
@@ -73,14 +122,17 @@ export const RemediationPage: React.FC<RemediationPageProps> = ({
     try {
       setLoading(true);
       setError(null);
-      const params = statusFilter !== "ALL" ? { status: statusFilter } : undefined;
+      const params: { status?: string; repositoryId?: string } = {};
+      if (statusFilter !== "ALL") params.status = statusFilter;
+      if (selectedRepoId) params.repositoryId = selectedRepoId;
+
       const resp = await remediationService.listProposals(params);
-      setProposals(resp.items);
+      setProposals(resp.items || []);
 
       if (initialProposalId) {
-        const found = resp.items.find((p) => p.id === initialProposalId);
+        const found = resp.items?.find((p) => p.id === initialProposalId);
         if (found) {
-          await selectProposal(found.id);
+          await selectProposal(found.id, false);
         } else {
           try {
             const single = await remediationService.getProposal(initialProposalId);
@@ -96,7 +148,7 @@ export const RemediationPage: React.FC<RemediationPageProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, initialProposalId]);
+  }, [statusFilter, selectedRepoId, initialProposalId]);
 
   useEffect(() => {
     loadProposals();
@@ -110,7 +162,6 @@ export const RemediationPage: React.FC<RemediationPageProps> = ({
       const updated = await remediationService.validateProposal(selectedProposal.id);
       setSelectedProposal(updated);
       await loadAudits(updated.id);
-      // Refresh list
       loadProposals();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Validation failed.");
@@ -161,7 +212,6 @@ export const RemediationPage: React.FC<RemediationPageProps> = ({
       const res = await remediationService.applyProposal(selectedProposal.id);
       setApplyResult(res);
       setIsApplyModalOpen(false);
-      // Reload proposal to reflect APPLIED / STALE status
       const updated = await remediationService.getProposal(selectedProposal.id);
       setSelectedProposal(updated);
       await loadAudits(updated.id);
@@ -173,71 +223,138 @@ export const RemediationPage: React.FC<RemediationPageProps> = ({
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case "VALIDATED":
-        return "bg-indigo-950/60 text-indigo-300 border-indigo-800";
+        return <StatusBadge label={status} variant="info" isMono={true} />;
       case "APPROVED":
-        return "bg-emerald-950/60 text-emerald-300 border-emerald-800";
+        return <StatusBadge label={status} variant="success" isMono={true} />;
       case "APPLIED":
-        return "bg-teal-950/60 text-teal-300 border-teal-800";
+        return <StatusBadge label={status} variant="success" isMono={true} />;
       case "VALIDATION_FAILED":
       case "FAILED":
-        return "bg-rose-950/60 text-rose-300 border-rose-800";
+        return <StatusBadge label={status} variant="danger" isMono={true} />;
       case "REJECTED":
-        return "bg-slate-800 text-slate-400 border-slate-700";
+        return <StatusBadge label={status} variant="neutral" isMono={true} />;
       case "STALE":
-        return "bg-amber-950/60 text-amber-300 border-amber-800";
+        return <StatusBadge label={status} variant="warning" isMono={true} />;
       default:
-        return "bg-sky-950/60 text-sky-300 border-sky-800";
+        return <StatusBadge label={status} variant="neutral" isMono={true} />;
     }
   };
 
+  const filteredProposals = proposals.filter((p) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      p.file_path.toLowerCase().includes(q) ||
+      p.remediation_rule_id.toLowerCase().includes(q) ||
+      p.rationale.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div className="space-y-6">
-      {/* Top Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4 pb-4 border-b border-[#21262d]">
+      {/* Top Header & Repository Context */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border-default">
         <div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-950/70 border border-emerald-700/60 text-emerald-400">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="px-2 py-0.5 text-xs font-semibold bg-accent-subtle text-accent border border-accent-border rounded">
+              Phase 7
+            </span>
+            <span className="text-xs text-text-muted">Automated Code Remediation</span>
+          </div>
+          <h1 className="text-xl font-bold tracking-tight text-text-primary flex items-center gap-2">
+            <div className="flex items-center justify-center w-7 h-7 rounded-md bg-accent-subtle border border-accent-border text-accent">
               <Wrench className="w-4 h-4" />
             </div>
-            <h1 className="text-xl font-bold text-slate-100">
-              Automated Remediation & Safe Patch Synthesis
-            </h1>
-          </div>
-          <p className="text-xs text-slate-400 mt-1">
+            Automated Remediation & Safe Patch Synthesis
+          </h1>
+          <p className="text-xs text-text-muted mt-1 max-w-2xl leading-relaxed">
             Deterministic code patch proposals with in-memory AST validation, anti-drift protection,
             and explicit human approval before atomic application.
           </p>
         </div>
 
-        {selectedProposal && (
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedProposal(null);
-              if (onClearInitialProposal) onClearInitialProposal();
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-[#21262d] hover:bg-[#30363d] text-slate-200 border border-[#30363d] transition-colors"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            Back to Proposals
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {repositories.length > 0 && (
+            <div className="flex items-center gap-2">
+              <label htmlFor="repo-selector" className="text-xs text-text-muted whitespace-nowrap flex items-center gap-1 font-medium">
+                <FolderGit2 className="w-3.5 h-3.5" />
+                Repository:
+              </label>
+              <select
+                id="repo-selector"
+                value={selectedRepoId}
+                onChange={(e) => {
+                  const newId = e.target.value;
+                  setSelectedRepoId(newId);
+                  repoContext?.setSelectedRepoId(newId);
+                }}
+                className="bg-surface-elevated border border-border-default text-text-primary text-xs rounded-md px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-accent"
+              >
+                {repositories.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {selectedProposal && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setSelectedProposal(null);
+                if (onClearInitialProposal) onClearInitialProposal();
+              }}
+              leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}
+              className="text-xs"
+            >
+              Back to Proposals
+            </Button>
+          )}
+        </div>
       </div>
+
+      {/* Active Repository Context Strip */}
+      {activeRepo && (
+        <div className="flex items-center gap-4 px-3.5 py-2 rounded-lg bg-surface-card border border-border-default text-xs text-text-secondary flex-wrap">
+          <div className="flex items-center gap-1.5 text-text-primary font-medium">
+            <FolderGit2 className="w-3.5 h-3.5 text-accent" />
+            <span>{activeRepo.name}</span>
+          </div>
+          {activeRepo.default_branch && (
+            <div className="flex items-center gap-1 text-text-muted">
+              <GitBranch className="w-3.5 h-3.5" />
+              <span className="font-mono">{activeRepo.default_branch}</span>
+            </div>
+          )}
+          <div className="text-text-muted">
+            Source: <span className="text-text-secondary capitalize">{activeRepo.source_type}</span>
+          </div>
+          {activeRepo.latest_snapshot && (
+            <div className="text-text-muted font-mono">
+              Files: {activeRepo.latest_snapshot.file_count ?? "—"} ({activeRepo.latest_snapshot.total_lines_of_code ?? "—"} LOC)
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Global Error Banner */}
       {error && (
-        <div className="p-3.5 rounded-xl bg-rose-950/60 border border-rose-800 text-rose-200 text-xs flex items-center justify-between gap-3">
+        <div className="p-3.5 rounded-lg bg-status-danger-bg border border-status-danger-border text-status-danger-text text-xs flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+            <AlertTriangle className="w-4 h-4 text-status-danger shrink-0" />
             <span>{error}</span>
           </div>
           <button
             type="button"
             onClick={() => setError(null)}
-            className="text-rose-400 hover:text-rose-200"
+            className="text-status-danger-text hover:opacity-80 transition-opacity"
+            aria-label="Dismiss error"
           >
             <X className="w-4 h-4" />
           </button>
@@ -247,26 +364,27 @@ export const RemediationPage: React.FC<RemediationPageProps> = ({
       {/* Application Result Alert */}
       {applyResult && (
         <div
-          className={`p-4 rounded-xl border text-xs flex items-start justify-between gap-3 ${
+          className={cn(
+            "p-4 rounded-lg border text-xs flex items-start justify-between gap-3",
             applyResult.status === "APPLIED"
-              ? "bg-teal-950/40 border-teal-800 text-teal-200"
+              ? "bg-status-success-bg border-status-success-border text-status-success-text"
               : applyResult.status === "CANNOT_APPLY_READ_ONLY_ARCHIVE"
-              ? "bg-amber-950/40 border-amber-800 text-amber-200"
-              : "bg-rose-950/40 border-rose-800 text-rose-200"
-          }`}
+              ? "bg-status-warning-bg border-status-warning-border text-status-warning-text"
+              : "bg-status-danger-bg border-status-danger-border text-status-danger-text"
+          )}
         >
           <div className="space-y-1">
             <div className="font-bold flex items-center gap-1.5">
               {applyResult.status === "APPLIED" ? (
-                <CheckCircle2 className="w-4 h-4 text-teal-400" />
+                <CheckCircle2 className="w-4 h-4 text-status-success" />
               ) : (
-                <Info className="w-4 h-4 text-amber-400" />
+                <Info className="w-4 h-4 text-status-warning" />
               )}
               <span>Application Status: {applyResult.status}</span>
             </div>
             <p className="text-[11px] leading-relaxed">{applyResult.message}</p>
             {applyResult.new_file_hash && (
-              <div className="font-mono text-[10px] text-slate-400">
+              <div className="font-mono text-[10px] text-text-muted">
                 Verified File SHA-256: {applyResult.new_file_hash}
               </div>
             )}
@@ -274,7 +392,8 @@ export const RemediationPage: React.FC<RemediationPageProps> = ({
           <button
             type="button"
             onClick={() => setApplyResult(null)}
-            className="text-slate-400 hover:text-slate-200"
+            className="text-text-muted hover:text-text-primary transition-colors"
+            aria-label="Dismiss result"
           >
             <X className="w-4 h-4" />
           </button>
@@ -285,31 +404,25 @@ export const RemediationPage: React.FC<RemediationPageProps> = ({
       {selectedProposal ? (
         <div className="space-y-6">
           {/* Proposal Summary Card */}
-          <div className="rounded-xl border border-[#30363d] bg-[#161b22] p-5 space-y-4">
-            <div className="flex items-start justify-between gap-4 flex-wrap pb-3 border-b border-[#21262d]">
-              <div className="space-y-1">
+          <Card padding="md" className="bg-surface-card border-border-default space-y-4">
+            <div className="flex items-start justify-between gap-4 flex-wrap pb-3 border-b border-border-default">
+              <div className="space-y-1.5">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded border ${getStatusColor(
-                      selectedProposal.status
-                    )}`}
-                  >
-                    {selectedProposal.status}
-                  </span>
-                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-sky-950/40 border border-sky-800/60 text-sky-300">
+                  {getStatusBadge(selectedProposal.status)}
+                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-surface-elevated border border-border-default text-text-primary">
                     {selectedProposal.remediation_rule_id}
                   </span>
-                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-emerald-950/40 border border-emerald-800/60 text-emerald-300">
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-status-success-bg border border-status-success-border text-status-success-text">
                     {selectedProposal.confidence} CONFIDENCE
                   </span>
-                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-amber-950/40 border border-amber-800/60 text-amber-300">
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-status-warning-bg border border-status-warning-border text-status-warning-text">
                     {selectedProposal.risk_level} RISK
                   </span>
                 </div>
-                <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
-                  <FileCode className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>{selectedProposal.file_path}</span>
-                  <span className="text-xs font-mono text-slate-400">
+                <h2 className="text-base font-bold text-text-primary flex items-center gap-2">
+                  <FileCode className="w-4 h-4 text-accent shrink-0" />
+                  <span className="font-mono">{selectedProposal.file_path}</span>
+                  <span className="text-xs font-mono text-text-muted">
                     (Lines {selectedProposal.start_line}–{selectedProposal.end_line})
                   </span>
                 </h2>
@@ -317,81 +430,85 @@ export const RemediationPage: React.FC<RemediationPageProps> = ({
 
               {/* Action Buttons */}
               <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={handleValidate}
                   disabled={actionLoading}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-[#21262d] hover:bg-[#30363d] text-slate-200 border border-[#30363d] transition-colors disabled:opacity-50"
+                  leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
                   title="Re-run in-memory validation checks"
+                  className="text-xs"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
                   Re-Validate
-                </button>
+                </Button>
 
                 {selectedProposal.status === "VALIDATED" && (
-                  <button
-                    type="button"
+                  <Button
+                    variant="primary"
+                    size="sm"
                     onClick={handleApprove}
                     disabled={actionLoading}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors disabled:opacity-50 shadow-sm"
+                    leftIcon={<Check className="w-3.5 h-3.5" />}
+                    className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white"
                   >
-                    <Check className="w-3.5 h-3.5" />
                     Approve Proposal
-                  </button>
+                  </Button>
                 )}
 
                 {selectedProposal.status !== "REJECTED" && selectedProposal.status !== "APPLIED" && (
-                  <button
-                    type="button"
+                  <Button
+                    variant="danger"
+                    size="sm"
                     onClick={() => setIsRejectModalOpen(true)}
                     disabled={actionLoading}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-rose-950/40 hover:bg-rose-950/80 text-rose-300 border border-rose-800 transition-colors disabled:opacity-50"
+                    leftIcon={<X className="w-3.5 h-3.5" />}
+                    className="text-xs"
                   >
-                    <X className="w-3.5 h-3.5" />
                     Reject
-                  </button>
+                  </Button>
                 )}
 
-                <button
-                  type="button"
+                <Button
+                  variant="primary"
+                  size="sm"
                   onClick={() => setIsApplyModalOpen(true)}
                   disabled={selectedProposal.status !== "APPROVED" || actionLoading}
-                  className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-lg bg-teal-600 hover:bg-teal-500 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-md"
+                  leftIcon={<Play className="w-3.5 h-3.5 fill-current" />}
                   title={
                     selectedProposal.status !== "APPROVED"
                       ? "Requires explicit human approval before application"
                       : "Safely apply patch to workspace"
                   }
+                  className="text-xs bg-teal-600 hover:bg-teal-500 text-white"
                 >
-                  <Play className="w-3.5 h-3.5 fill-current" />
                   Apply Patch
-                </button>
+                </Button>
               </div>
             </div>
 
             {/* Rationale and Strategy Information */}
-            <div className="space-y-2 text-xs">
-              <div className="font-semibold text-slate-300 flex items-center gap-1.5">
-                <Shield className="w-3.5 h-3.5 text-emerald-400" />
+            <div className="space-y-1.5 text-xs">
+              <div className="font-semibold text-text-primary flex items-center gap-1.5">
+                <Shield className="w-3.5 h-3.5 text-accent" />
                 <span>Remediation Rationale:</span>
               </div>
-              <p className="p-3 rounded-lg bg-[#0d1117] border border-[#21262d] text-slate-300 leading-relaxed">
+              <p className="p-3 rounded-md bg-surface-elevated border border-border-default text-text-secondary leading-relaxed">
                 {selectedProposal.rationale}
               </p>
             </div>
 
             {/* Source & Cryptographic Integrity Card */}
-            <div className="p-3 rounded-lg bg-[#0d1117] border border-[#21262d] text-slate-400 font-mono text-[11px] grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div className="p-3 rounded-md bg-surface-elevated border border-border-default text-text-muted font-mono text-[11px] grid grid-cols-1 md:grid-cols-2 gap-2">
               <div>
-                <span className="text-slate-500">Original Hash (SHA-256): </span>
-                <span className="text-slate-300">{selectedProposal.original_content_hash}</span>
+                <span className="text-text-muted">Original Hash (SHA-256): </span>
+                <span className="text-text-primary">{selectedProposal.original_content_hash}</span>
               </div>
               <div>
-                <span className="text-slate-500">Target Hash (SHA-256): </span>
-                <span className="text-slate-300">{selectedProposal.target_content_hash}</span>
+                <span className="text-text-muted">Target Hash (SHA-256): </span>
+                <span className="text-text-primary">{selectedProposal.target_content_hash}</span>
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Validation Report Checklist */}
           <ValidationChecklist
@@ -414,203 +531,229 @@ export const RemediationPage: React.FC<RemediationPageProps> = ({
       ) : (
         /* View Mode: Proposal List */
         <div className="space-y-4">
-          {/* Filter Bar */}
-          <div className="flex items-center justify-between flex-wrap gap-3 p-3 bg-[#161b22] rounded-xl border border-[#30363d]">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-xs text-slate-400 mr-2">Filter Status:</span>
-              {[
-                "ALL",
-                "PROPOSED",
-                "VALIDATED",
-                "APPROVED",
-                "APPLIED",
-                "REJECTED",
-                "STALE",
-              ].map((st) => (
-                <button
-                  key={st}
-                  type="button"
-                  onClick={() => setStatusFilter(st)}
-                  className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-colors ${
-                    statusFilter === st
-                      ? "bg-emerald-600 text-white font-semibold"
-                      : "bg-[#21262d] text-slate-300 hover:bg-[#30363d]"
-                  }`}
-                >
-                  {st}
-                </button>
-              ))}
-            </div>
+          {/* Remediation Overview Summary Cards */}
+          <RemediationSummaryCards proposals={proposals} />
 
-            <div className="text-xs font-mono text-slate-400">
-              Total Proposals: {proposals.length}
+          {/* Filter Bar */}
+          <Card padding="sm" className="bg-surface-card border-border-default">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              {/* Status Filter Buttons */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs text-text-muted mr-1.5 flex items-center gap-1">
+                  <Filter className="w-3 h-3" />
+                  Filter Status:
+                </span>
+                {[
+                  "ALL",
+                  "PROPOSED",
+                  "VALIDATED",
+                  "APPROVED",
+                  "APPLIED",
+                  "REJECTED",
+                  "STALE",
+                ].map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => setStatusFilter(st)}
+                    className={cn(
+                      "px-2.5 py-1 text-xs rounded-md font-medium transition-colors",
+                      statusFilter === st
+                        ? "bg-accent text-accent-foreground font-semibold shadow-xs"
+                        : "bg-surface-elevated text-text-secondary hover:text-text-primary hover:bg-surface-hover"
+                    )}
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
+
+              {/* Search Box & Total Count */}
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search path, rule, rationale..."
+                    className="pl-8 pr-3 py-1 bg-surface-elevated border border-border-default rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent w-48 sm:w-56"
+                  />
+                </div>
+                <div className="text-xs font-mono text-text-muted whitespace-nowrap">
+                  Total Proposals: {filteredProposals.length}
+                </div>
+              </div>
             </div>
-          </div>
+          </Card>
 
           {/* Proposal Table / Cards */}
           {loading ? (
-            <div className="p-12 text-center text-xs text-slate-400 font-mono">
-              Loading remediation proposals...
+            <div className="p-12 text-center flex flex-col items-center justify-center space-y-3">
+              <LoadingSpinner size="md" />
+              <div className="text-xs text-text-muted font-mono">
+                Loading remediation proposals...
+              </div>
             </div>
-          ) : proposals.length === 0 ? (
-            <div className="p-12 text-center rounded-xl border border-dashed border-[#30363d] bg-[#161b22] space-y-2">
-              <Wrench className="w-8 h-8 text-slate-600 mx-auto" />
-              <h3 className="text-sm font-semibold text-slate-300">
+          ) : filteredProposals.length === 0 ? (
+            <div className="p-12 text-center rounded-lg border border-dashed border-border-default bg-surface-card space-y-3">
+              <div className="w-10 h-10 rounded-full bg-surface-elevated border border-border-default flex items-center justify-center mx-auto text-text-muted">
+                <Wrench className="w-5 h-5" />
+              </div>
+              <h3 className="text-sm font-semibold text-text-primary">
                 No Remediation Proposals Found
               </h3>
-              <p className="text-xs text-slate-500 max-w-md mx-auto">
+              <p className="text-xs text-text-secondary max-w-md mx-auto">
                 Select a code finding from the Static Analysis or Security view to synthesize a safe,
                 reviewable patch proposal.
               </p>
             </div>
           ) : (
-            <div className="rounded-xl border border-[#30363d] bg-[#161b22] overflow-hidden">
-              <div className="divide-y divide-[#21262d]">
-                {proposals.map((prop) => (
+            <Card padding="none" className="bg-surface-card border-border-default overflow-hidden">
+              <div className="divide-y divide-border-default">
+                {filteredProposals.map((prop) => (
                   <div
                     key={prop.id}
                     onClick={() => selectProposal(prop.id)}
-                    className="p-4 hover:bg-[#1f242c] transition-colors cursor-pointer flex items-center justify-between gap-4 flex-wrap"
+                    className="p-4 hover:bg-surface-hover transition-colors cursor-pointer flex items-center justify-between gap-4 flex-wrap"
                   >
-                    <div className="space-y-1.5">
+                    <div className="space-y-1.5 flex-1 min-w-[280px]">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded border ${getStatusColor(
-                            prop.status
-                          )}`}
-                        >
-                          {prop.status}
-                        </span>
-                        <code className="text-xs font-mono text-slate-300 font-bold">
+                        {getStatusBadge(prop.status)}
+                        <code className="text-xs font-mono text-text-primary font-bold">
                           {prop.file_path}
                         </code>
-                        <span className="text-[11px] font-mono text-slate-500">
+                        <span className="text-[11px] font-mono text-text-muted">
                           (L{prop.start_line}–{prop.end_line})
                         </span>
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-elevated text-text-muted border border-border-default">
+                          {prop.remediation_rule_id}
+                        </span>
                       </div>
-                      <p className="text-xs text-slate-400 line-clamp-1">
+                      <p className="text-xs text-text-secondary line-clamp-1">
                         {prop.rationale}
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-4 text-xs font-mono">
-                      <span className="text-slate-400 text-[11px]">
+                    <div className="flex items-center gap-4 text-xs font-mono shrink-0">
+                      <span className="text-text-muted text-[11px]">
                         {new Date(prop.created_at).toLocaleDateString()}
                       </span>
-                      <button
-                        type="button"
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
                           selectProposal(prop.id);
                         }}
-                        className="px-3 py-1.5 rounded-lg bg-[#21262d] hover:bg-[#30363d] text-slate-200 text-xs font-medium border border-[#30363d]"
+                        className="text-xs font-medium"
                       >
                         Review
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
+            </Card>
           )}
         </div>
       )}
 
       {/* Confirmation Modal for Safe Patch Application */}
-      {isApplyModalOpen && selectedProposal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-xl bg-[#161b22] border border-[#30363d] shadow-2xl p-6 space-y-4 text-slate-200">
-            <div className="flex items-center gap-2 pb-2 border-b border-[#21262d]">
-              <Play className="w-5 h-5 text-teal-400 fill-current" />
-              <h3 className="text-sm font-bold text-slate-100">
-                Confirm Patch Application
-              </h3>
-            </div>
-
-            <p className="text-xs text-slate-300 leading-relaxed">
+      <Modal
+        isOpen={isApplyModalOpen && !!selectedProposal}
+        onClose={() => setIsApplyModalOpen(false)}
+        title="Confirm Patch Application"
+        size="md"
+        footer={
+          <div className="flex items-center justify-end gap-2 w-full">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsApplyModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleApply}
+              disabled={actionLoading}
+              isLoading={actionLoading}
+              className="bg-teal-600 hover:bg-teal-500 text-white font-bold"
+            >
+              Confirm & Apply
+            </Button>
+          </div>
+        }
+      >
+        {selectedProposal && (
+          <div className="space-y-4 text-text-secondary text-xs">
+            <p className="leading-relaxed">
               You are about to apply the approved patch to:
             </p>
-            <div className="p-2.5 rounded bg-[#0d1117] border border-[#21262d] font-mono text-xs text-emerald-300">
+            <div className="p-2.5 rounded-md bg-surface-elevated border border-border-default font-mono text-xs text-text-primary">
               {selectedProposal.file_path} (Lines {selectedProposal.start_line}–{selectedProposal.end_line})
             </div>
 
-            <div className="space-y-1.5 text-[11px] text-slate-400 bg-teal-950/20 border border-teal-900/40 p-3 rounded-lg">
-              <div className="font-semibold text-teal-300 flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5" />
+            <div className="space-y-1.5 text-[11px] text-text-secondary bg-surface-elevated border border-border-default p-3 rounded-md">
+              <div className="font-semibold text-text-primary flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-accent" />
                 Automated Safety Guarantees:
               </div>
-              <ul className="list-disc list-inside space-y-0.5">
+              <ul className="list-disc list-inside space-y-0.5 text-text-muted">
                 <li>Pre-write hash verification aborts write if file drifted.</li>
                 <li>Atomic temporary file replacement prevents partial writes.</li>
                 <li>Post-write hash verification confirms file output.</li>
                 <li>Original immutable snapshot is never modified.</li>
               </ul>
             </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#21262d]">
-              <button
-                type="button"
-                onClick={() => setIsApplyModalOpen(false)}
-                className="px-3 py-1.5 text-xs rounded-lg bg-[#21262d] hover:bg-[#30363d] text-slate-300 font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleApply}
-                disabled={actionLoading}
-                className="px-4 py-1.5 text-xs rounded-lg bg-teal-600 hover:bg-teal-500 text-white font-bold disabled:opacity-50"
-              >
-                {actionLoading ? "Applying..." : "Confirm & Apply"}
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
-      {/* Reject Modal */}
-      {isRejectModalOpen && selectedProposal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-xl bg-[#161b22] border border-[#30363d] shadow-2xl p-6 space-y-4 text-slate-200">
-            <div className="flex items-center gap-2 pb-2 border-b border-[#21262d]">
-              <XCircle className="w-5 h-5 text-rose-400" />
-              <h3 className="text-sm font-bold text-slate-100">
-                Reject Remediation Proposal
-              </h3>
-            </div>
-
-            <p className="text-xs text-slate-300">
-              Please specify the reason for rejecting this patch proposal. The source files will remain unchanged.
-            </p>
-
-            <textarea
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="e.g., Code logic relies on dynamic execution here; manual refactoring planned."
-              rows={3}
-              className="w-full rounded-lg bg-[#0d1117] border border-[#30363d] p-2.5 text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-rose-500"
-            />
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#21262d]">
-              <button
-                type="button"
-                onClick={() => setIsRejectModalOpen(false)}
-                className="px-3 py-1.5 text-xs rounded-lg bg-[#21262d] hover:bg-[#30363d] text-slate-300 font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleReject}
-                disabled={!rejectReason.trim() || actionLoading}
-                className="px-4 py-1.5 text-xs rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold disabled:opacity-50"
-              >
-                Confirm Rejection
-              </button>
-            </div>
+      {/* Rejection Modal */}
+      <Modal
+        isOpen={isRejectModalOpen && !!selectedProposal}
+        onClose={() => setIsRejectModalOpen(false)}
+        title="Reject Remediation Proposal"
+        size="md"
+        footer={
+          <div className="flex items-center justify-end gap-2 w-full">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsRejectModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={handleReject}
+              disabled={!rejectReason.trim() || actionLoading}
+              isLoading={actionLoading}
+              className="font-bold"
+            >
+              Confirm Rejection
+            </Button>
           </div>
+        }
+      >
+        <div className="space-y-4 text-xs">
+          <p className="text-text-secondary">
+            Please specify the reason for rejecting this patch proposal. The source files will remain unchanged.
+          </p>
+
+          <textarea
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            placeholder="e.g., Code logic relies on dynamic execution here; manual refactoring planned."
+            rows={3}
+            className="w-full rounded-md bg-surface-elevated border border-border-default p-2.5 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-status-danger"
+          />
         </div>
-      )}
+      </Modal>
     </div>
   );
 };
