@@ -8,6 +8,7 @@ export interface StatusBadgeProps {
   variant?: BadgeVariant;
   dot?: boolean;
   className?: string;
+  isMono?: boolean;
 }
 
 /**
@@ -19,6 +20,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   variant = "neutral",
   dot = false,
   className,
+  isMono = true,
 }) => {
   return (
     <Badge
@@ -26,6 +28,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
       variant={variant}
       dot={dot}
       className={className}
+      isMono={isMono}
     />
   );
 };
