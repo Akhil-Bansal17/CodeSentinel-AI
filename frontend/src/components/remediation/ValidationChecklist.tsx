@@ -7,6 +7,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { RemediationValidationItem } from "../../types/remediation";
+import { Card } from "../common/Card";
 
 interface ValidationChecklistProps {
   validations: RemediationValidationItem[];
@@ -20,15 +21,15 @@ export const ValidationChecklist: React.FC<ValidationChecklistProps> = ({
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "PASSED":
-        return <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />;
+        return <CheckCircle2 className="w-4 h-4 text-status-success shrink-0" />;
       case "FAILED":
-        return <XCircle className="w-4 h-4 text-rose-400 shrink-0" />;
+        return <XCircle className="w-4 h-4 text-status-danger shrink-0" />;
       case "SKIPPED":
-        return <MinusCircle className="w-4 h-4 text-slate-400 shrink-0" />;
+        return <MinusCircle className="w-4 h-4 text-text-muted shrink-0" />;
       case "UNAVAILABLE":
-        return <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />;
+        return <AlertTriangle className="w-4 h-4 text-status-warning shrink-0" />;
       default:
-        return <MinusCircle className="w-4 h-4 text-slate-400 shrink-0" />;
+        return <MinusCircle className="w-4 h-4 text-text-muted shrink-0" />;
     }
   };
 
@@ -36,25 +37,25 @@ export const ValidationChecklist: React.FC<ValidationChecklistProps> = ({
     switch (status) {
       case "PASSED":
         return (
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800 text-emerald-300">
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-status-success-bg border border-status-success-border text-status-success-text">
             PASSED
           </span>
         );
       case "FAILED":
         return (
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-950/60 border border-rose-800 text-rose-300">
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-status-danger-bg border border-status-danger-border text-status-danger-text">
             FAILED
           </span>
         );
       case "SKIPPED":
         return (
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-400">
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-elevated border border-border-default text-text-muted">
             SKIPPED
           </span>
         );
       case "UNAVAILABLE":
         return (
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-950/60 border border-amber-800 text-amber-300">
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-status-warning-bg border border-status-warning-border text-status-warning-text">
             UNAVAILABLE
           </span>
         );
@@ -68,31 +69,34 @@ export const ValidationChecklist: React.FC<ValidationChecklistProps> = ({
   const hasFailures = validations.some((v) => v.status === "FAILED");
 
   return (
-    <div className="rounded-xl border border-[#30363d] bg-[#161b22] p-4 space-y-4">
+    <Card padding="md" className="bg-surface-card border-border-default space-y-4">
       {/* Header Summary */}
-      <div className="flex items-center justify-between pb-3 border-b border-[#21262d] flex-wrap gap-2">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="w-5 h-5 text-emerald-400" />
+      <div className="flex items-center justify-between pb-3 border-b border-border-default flex-wrap gap-2">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-md bg-accent-subtle flex items-center justify-center text-accent shrink-0">
+            <ShieldCheck className="w-4 h-4" />
+          </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-100">
+            <h3 className="text-sm font-bold text-text-primary">
               In-Memory Patch Validation Pipeline
             </h3>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] text-text-muted">
               Isolated verification running static AST analysis and integrity tests (zero runtime execution).
             </p>
           </div>
         </div>
+
         <div className="flex items-center gap-2">
-          <span className="text-xs font-mono text-slate-300">
+          <span className="text-xs font-mono text-text-secondary">
             {passedCount}/{totalCount} Checks Passed
           </span>
           <span
             className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${
               overallStatus === "VALIDATED" || overallStatus === "APPROVED" || overallStatus === "APPLIED"
-                ? "bg-emerald-950/60 border-emerald-800 text-emerald-300"
+                ? "bg-status-success-bg border-status-success-border text-status-success-text"
                 : hasFailures
-                ? "bg-rose-950/60 border-rose-800 text-rose-300"
-                : "bg-amber-950/60 border-amber-800 text-amber-300"
+                ? "bg-status-danger-bg border-status-danger-border text-status-danger-text"
+                : "bg-status-warning-bg border-status-warning-border text-status-warning-text"
             }`}
           >
             {overallStatus}
@@ -107,37 +111,37 @@ export const ValidationChecklist: React.FC<ValidationChecklistProps> = ({
             key={val.check_id}
             className={`p-3 rounded-lg border text-xs transition-colors ${
               val.status === "FAILED"
-                ? "bg-rose-950/20 border-rose-900/60 text-rose-200"
+                ? "bg-status-danger-bg/40 border-status-danger-border/80 text-rose-200"
                 : val.status === "PASSED"
-                ? "bg-[#0d1117] border-[#21262d] text-slate-200"
-                : "bg-[#0d1117] border-[#21262d] text-slate-400"
+                ? "bg-surface-elevated border-border-default text-text-primary"
+                : "bg-surface-base border-border-default text-text-secondary"
             }`}
           >
             <div className="flex items-center justify-between gap-2 mb-1">
               <div className="flex items-center gap-2">
                 {getStatusIcon(val.status)}
-                <span className="font-semibold text-slate-100">
+                <span className="font-semibold text-text-primary">
                   {val.check_name}
                 </span>
-                <code className="text-[10px] font-mono px-1 py-0.2 rounded bg-[#21262d] text-slate-400">
+                <code className="text-[10px] font-mono px-1 py-0.5 rounded bg-surface-subtle border border-border-default text-text-muted">
                   {val.check_id}
                 </code>
               </div>
               {getStatusBadge(val.status)}
             </div>
 
-            <p className="text-slate-300 text-[11px] leading-relaxed pl-6">
+            <p className="text-text-secondary text-[11px] leading-relaxed pl-6">
               {val.explanation}
             </p>
 
             {val.diagnostic_message && (
-              <div className="mt-2 ml-6 p-2 rounded bg-black/40 border border-[#30363d] font-mono text-[10px] text-slate-400 overflow-x-auto whitespace-pre">
+              <div className="mt-2 ml-6 p-2 rounded bg-surface-base border border-border-default font-mono text-[10px] text-text-muted overflow-x-auto whitespace-pre">
                 {val.diagnostic_message}
               </div>
             )}
           </div>
         ))}
       </div>
-    </div>
+    </Card>
   );
 };
