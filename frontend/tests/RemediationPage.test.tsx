@@ -196,4 +196,98 @@ describe("RemediationPage Component", () => {
       );
     });
   });
+
+  it("renders summary cards with real counts and handles search filtering", async () => {
+    render(<RemediationPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Remediation Candidates")).toBeInTheDocument();
+      expect(screen.getByText("Awaiting Review")).toBeInTheDocument();
+      expect(screen.getByText("Approved / Applied")).toBeInTheDocument();
+      expect(screen.getByText("Blocked / Failed")).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByPlaceholderText(/Search path, rule, rationale/i);
+    fireEvent.change(searchInput, { target: { value: "nonexistent.py" } });
+
+    await waitFor(() => {
+      expect(screen.queryByText("src/utils.py")).not.toBeInTheDocument();
+      expect(screen.getByText("Total Proposals: 0")).toBeInTheDocument();
+    });
+
+    fireEvent.change(searchInput, { target: { value: "utils" } });
+    await waitFor(() => {
+      expect(screen.getByText("src/utils.py")).toBeInTheDocument();
+      expect(screen.getByText("Total Proposals: 1")).toBeInTheDocument();
+    });
+  });
+
+  it("renders empty state when no proposals exist", async () => {
+    vi.mocked(remediationService.listProposals).mockResolvedValue({
+      items: [],
+      total: 0,
+    });
+
+    render(<RemediationPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("No Remediation Proposals Found")).toBeInTheDocument();
+    });
+  });
+
+  it("handles Re-Validate button click and reloads validation checklist", async () => {
+    vi.mocked(remediationService.validateProposal).mockResolvedValue(mockProposal);
+
+    render(<RemediationPage initialProposalId="prop-test-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Re-Validate/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Re-Validate/i }));
+
+    await waitFor(() => {
+      expect(remediationService.validateProposal).toHaveBeenCalledWith("prop-test-1");
+    });
+  });
+
+  it("executes safe patch application and displays success alert", async () => {
+    const approvedProposal: RemediationProposal = {
+      ...mockProposal,
+      status: "APPROVED",
+    };
+    vi.mocked(remediationService.listProposals).mockResolvedValue({
+      items: [approvedProposal],
+      total: 1,
+    });
+    vi.mocked(remediationService.getProposal).mockResolvedValue(approvedProposal);
+    vi.mocked(remediationService.applyProposal).mockResolvedValue({
+      status: "APPLIED",
+      proposal_id: "prop-test-1",
+      file_path: "src/utils.py",
+      message: "Patch applied atomically to repository workspace.",
+      can_export_diff: true,
+      new_file_hash: "verifiedhash123",
+    });
+
+    render(<RemediationPage initialProposalId="prop-test-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Apply Patch/i })).not.toBeDisabled();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Apply Patch/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Confirm & Apply/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Confirm & Apply/i }));
+
+    await waitFor(() => {
+      expect(remediationService.applyProposal).toHaveBeenCalledWith("prop-test-1");
+      expect(screen.getByText(/Application Status: APPLIED/i)).toBeInTheDocument();
+      expect(screen.getByText(/Verified File SHA-256: verifiedhash123/i)).toBeInTheDocument();
+    });
+  });
 });
