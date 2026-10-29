@@ -235,4 +235,94 @@ describe("Phase 8 CiCdAuditPage Console", () => {
       expect(screen.getByText("Combined Unified Diff Review")).toBeInTheDocument();
     });
   });
+
+  it("handles copy YAML and download workflow triggers", async () => {
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: writeTextMock,
+      },
+    });
+
+    render(<CiCdAuditPage initialRepoId="repo-cicd-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Generate Hardened Workflow")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Generate Hardened Workflow"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Copy YAML")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Copy YAML"));
+    expect(writeTextMock).toHaveBeenCalledWith(mockWorkflowResponse.yaml_content);
+  });
+
+  it("downloads SARIF and Markdown audit reports", async () => {
+    vi.mocked(cicdService.getMarkdownReport).mockResolvedValue("# Markdown Audit Report");
+
+    render(<CiCdAuditPage initialRepoId="repo-cicd-1" />);
+
+    fireEvent.click(screen.getByText("Codebase Audit Dashboard"));
+
+    await waitFor(() => {
+      expect(screen.getByText("SARIF 2.1.0 Standard")).toBeInTheDocument();
+      expect(screen.getByText("Markdown Report")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("SARIF 2.1.0 Standard"));
+    fireEvent.click(screen.getByText("Markdown Report"));
+
+    await waitFor(() => {
+      expect(cicdService.getMarkdownReport).toHaveBeenCalledWith("audit-run-123");
+    });
+  });
+
+  it("displays conflict warning when overlapping patch conflicts are detected", async () => {
+    const conflictingPrResponse = {
+      ...mockPrResponse,
+      has_conflicts: true,
+      conflict_details: {
+        message: "Proposals prop-1 and prop-2 conflict on lines 10-15 of src/calc.py",
+      },
+    };
+    vi.mocked(cicdService.preparePr).mockResolvedValue(conflictingPrResponse as any);
+
+    render(<CiCdAuditPage initialRepoId="repo-cicd-1" />);
+
+    fireEvent.click(screen.getByText("Pull Request Synthesis Console"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Synthesize Pull Request Change Set")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Synthesize Pull Request Change Set"));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Overlapping Patch Conflicts Detected — Safe Refusal Enforced")
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/Proposals prop-1 and prop-2 conflict on lines 10-15/i)
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("renders empty state when no audit records exist for repository", async () => {
+    vi.mocked(cicdService.listAudits).mockResolvedValue({
+      items: [],
+      total: 0,
+    });
+    vi.mocked(cicdService.getAudit).mockRejectedValue(new Error("Not found"));
+
+    render(<CiCdAuditPage initialRepoId="repo-cicd-1" />);
+
+    fireEvent.click(screen.getByText("Codebase Audit Dashboard"));
+
+    await waitFor(() => {
+      expect(screen.getByText("No audit records found for this repository")).toBeInTheDocument();
+    });
+  });
 });
