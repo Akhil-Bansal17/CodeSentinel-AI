@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-0.1.0-emerald.svg)](https://github.com/Akhil-Bansal17/CodeSentinel-AI/releases)
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](#testing)
-[![Tests](https://img.shields.io/badge/tests-437%20passed-success.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-454%20passed-success.svg)](#testing)
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.14-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-19.0-61DAFB.svg)](https://react.dev/)
@@ -45,7 +45,7 @@ CodeSentinel AI is a local-first software engineering intelligence and automated
 | **Evidence-Backed Repository Q&A** | Deterministic evidence-backed repository answers citing verified source locations with line ranges, uncertainty detection, and prompt injection defense. |
 | **Automated Remediation & Safe Patch Synthesis** | Transforms supported static and dependency findings into reviewable, validated patch proposals with in-memory AST syntax validation, anti-drift hashing, and safe human-approved application. |
 | **Hardened CI/CD Workflow Generation** | Synthesizes repository-appropriate GitHub Actions pipelines with immutable commit-pinned action SHAs, least-privilege permissions (`contents: read`), and shell injection sanitization. |
-| **Reusable 6-Pillar Codebase Audit Runner** | Orchestrates unified, read-only multi-pillar evaluations across Phases 1–7 and exports standardized OASIS SARIF 2.1.0 and Markdown reports. |
+| **Reusable 6-Pillar Codebase Audit Runner** | Orchestrates unified, read-only multi-pillar evaluations across Ingestion, Static AST, Dependency SCA, AppSec, Architecture, and Remediation Feasibility, exporting standardized OASIS SARIF 2.1.0 and Markdown reports. |
 | **Secure CI Result Webhook Ingestion** | Ingests external CI pipeline payloads with HMAC-SHA256 signature verification, 5MB payload ceilings, and replay protection via idempotency keys. |
 | **Safe PR Synthesis & Patch Bundle Export** | Detects line-span overlaps and conflicts across approved proposals, refuses unsafe combinations deterministically, and exports unified Git `.patch` bundles with evidence-grounded PR descriptions. |
 | **Production Readiness & Observability** | Decoupled Kubernetes-ready liveness (`/api/health/live`) and readiness (`/api/health/ready`) probes, `X-Request-ID` correlation logging with sensitive data masking, `TaskLifecycleManager` async state engine, hardened connection pooling, and fail-fast startup configuration validation. |
@@ -458,7 +458,7 @@ CodeSentinel AI is configured via environment variables or a `.env` file loaded 
 
 ## System Architecture Diagram
 
-Complete multi-tiered system topology illustrating decoupled ingestion, static analysis, architectural governance, search, remediation, and persistence pipelines.
+Multi-tiered system topology illustrating decoupled ingestion, static analysis, architectural governance, search, remediation, and persistence pipelines.
 
 ```mermaid
 flowchart TD
@@ -607,7 +607,7 @@ sequenceDiagram
     autonumber
     actor Dev as Developer / CI Pipeline
     participant UI as React UI Dashboard
-    participant API as FastAPI Router
+    participant API as FastAPI Gateway
     participant RepoService as RepositoryService
     participant Sandbox as Security Sandbox
     participant DB as PostgreSQL 16
@@ -683,7 +683,7 @@ sequenceDiagram
         API->>SearchSvc: answer_question(repo_id, snapshot_id, query)
         SearchSvc->>DB: Retrieve top candidate chunks via RRF Hybrid Search
         SearchSvc->>SearchSvc: Check evidence sufficiency (score >= 0.05)
-        SearchSvc->>SearchSvc: Sandbox retrieved code in <untrusted_repository_evidence>
+        SearchSvc->>SearchSvc: Sandbox retrieved code in untrusted evidence container
         SearchSvc->>SearchSvc: Synthesize grounded answer & validate citations
         SearchSvc-->>API: QAResponse (Answer + Line Citations + Confidence)
         API-->>UI: Render Answer with Verifiable Inline Citations
@@ -713,7 +713,7 @@ sequenceDiagram
 
 ---
 
-## Key Decision & Logic Flow: Ingestion Sandbox & Safety Gate
+## Key Decision / Logic Flow: Ingestion Sandbox & Safety Gate
 
 Multi-stage security validation, path traversal guard, and decompression bomb mitigation pipeline.
 
@@ -1258,20 +1258,20 @@ pytest -q backend/tests
 # Run top-level Search & Q&A API regression tests
 pytest -v backend/tests/test_search_api.py
 
-# Run Phase 7 automated remediation and patch engine tests
+# Run automated remediation and patch engine tests
 pytest -v backend/tests/test_remediation_rules.py \
           backend/tests/test_patch_engine.py \
           backend/tests/test_remediation_validator.py \
           backend/tests/test_remediation_api.py \
           backend/tests/test_remediation_security.py
 
-# Run Phase 6 code search and Q&A tests
+# Run code search and Q&A tests
 pytest -v backend/tests/test_search_chunker.py \
           backend/tests/test_search_retrieval.py \
           backend/tests/test_qa_service.py \
           backend/tests/test_search_database.py
 
-# Run Phase 5 architecture & health tests
+# Run architecture & health tests
 pytest -v backend/tests/test_dependency_graph.py \
           backend/tests/test_architecture_policy.py \
           backend/tests/test_codebase_health.py \
@@ -1280,7 +1280,7 @@ pytest -v backend/tests/test_dependency_graph.py \
 # Run security regression tests
 pytest -v backend/tests/test_security_regressions.py
 
-# Run Phase 12 deployment, metrics & task lifecycle tests
+# Run deployment, metrics & task lifecycle tests
 pytest -v backend/tests/test_config.py \
           backend/tests/test_metrics.py \
           backend/tests/test_tasks.py \
@@ -1298,7 +1298,7 @@ python scripts/run_smoke_tests.py
 
 ### Frontend Test Suite (Vitest)
 
-The frontend test suite includes **108 automated unit and integration tests** across 29 test suites written in Vitest and React Testing Library:
+The frontend test suite includes **125 automated unit and integration tests** across 32 test suites written in Vitest and React Testing Library:
 
 ```bash
 cd frontend
@@ -1412,12 +1412,15 @@ npm run lint
   - Comprehensive operational failure injection test suite (`test_failure_injection.py`) covering 14 failure scenarios
   - Expanded 12-gate release certification runner (`validate_release.py`, `validate_release.ps1`, `validate_release.sh`)
   - Operational recovery targets documented: RPO target 15 minutes, RTO target 30 minutes
-- [x] **UI/UX Transformation: Obsidian Sentinel High-Precision Console (Phases 1–4 Complete)**
-  - Core design tokens and 11 shared primitives: Button, Badge, Card, DataTable, Tabs, Modal, EmptyState, SkeletonLoader, CodeBlock, Input, Select, Textarea
+- [x] **UI/UX Modernization: Obsidian Sentinel High-Precision Console (Phases 1–6 Complete)**
+  - Core design tokens and 11 shared primitives: Button, Badge, StatusBadge, Card, DataTable, Tabs, Modal, EmptyState, SkeletonLoader, CodeBlock, Input, Select, Textarea
   - Application shell with grouped sidebar, live API health indicator, and global repository selector
   - System Overview command console with live stat cards, engine status matrix, and active repository inspection
   - Repositories portfolio with live search, source/status filtering, and real metrics
   - Decomposed Repository Detail console orchestrating Files & Structure, Static Analysis, Dependencies & SCA, Architecture & Coupling, Codebase Health, and CI/CD subviews
+  - Analysis & Security Intelligence console with confidence breakdown and multi-criteria finding inspector modal
+  - Remediation Studio with candidate summary metrics, status filtering, and unified/split diff inspection
+  - Decomposed CI/CD & Audit Console (`WorkflowGeneratorTab`, `AuditDashboardTab`, `PrSynthesisTab`) with SARIF/Markdown exports and conflict-safe PR patch bundling
 - [ ] **Phase 14: Production Cluster Telemetry & Distributed Multi-Node Worker Pools (Upcoming)**
   - Distributed Celery / Redis task queue workers for high-throughput enterprise repository analysis
   - Multi-tenant workspace RBAC and organization permission boundaries
