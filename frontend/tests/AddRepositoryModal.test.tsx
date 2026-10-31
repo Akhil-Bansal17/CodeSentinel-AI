@@ -127,4 +127,20 @@ describe("AddRepositoryModal Component", () => {
       await screen.findByText("Repository archive exceeds download limit (50MB).")
     ).toBeInTheDocument();
   });
+
+  it("calls onClose when Cancel button is clicked", () => {
+    const handleClose = vi.fn();
+    render(
+      <AddRepositoryModal
+        isOpen={true}
+        onClose={handleClose}
+        onSuccess={vi.fn()}
+      />
+    );
+
+    const cancelBtn = screen.getByRole("button", { name: "Cancel" });
+    fireEvent.click(cancelBtn);
+
+    expect(handleClose).toHaveBeenCalledTimes(1);
+  });
 });
