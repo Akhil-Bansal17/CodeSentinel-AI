@@ -105,8 +105,8 @@ export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Architecture Notice */}
-        <div className="p-3 rounded-md bg-accent-subtle border border-accent-border flex items-start gap-2.5">
-          <div className="text-xs text-text-secondary leading-relaxed">
+        <div className="py-2 px-3 rounded-md bg-accent-subtle border border-accent-border flex items-start gap-2">
+          <div className="text-xs text-text-secondary leading-normal">
             <span className="font-semibold text-text-primary block mb-0.5">
               Foundational Architecture In Place
             </span>
@@ -244,7 +244,7 @@ export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
             onClick={handleClose}
             disabled={loading}
           >
-            Understood
+            Cancel
           </Button>
 
           <Button
