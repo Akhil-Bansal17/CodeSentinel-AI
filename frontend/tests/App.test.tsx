@@ -68,7 +68,7 @@ describe("App Root Component", () => {
     expect(screen.getByText(/Foundational Architecture In Place/i)).toBeInTheDocument();
 
     // Close dialog
-    const closeBtn = screen.getByRole("button", { name: "Understood" });
+    const closeBtn = screen.getByRole("button", { name: "Cancel" });
     await act(async () => {
       fireEvent.click(closeBtn);
     });
