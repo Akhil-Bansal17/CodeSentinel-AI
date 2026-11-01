@@ -128,21 +128,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     if (onCloseMobile) onCloseMobile();
                   }}
                   className={cn(
-                    "w-full flex items-center justify-between px-3 py-2 rounded-md text-xs font-medium transition-colors cursor-pointer",
+                    "group w-full flex items-center justify-between px-3 py-2 rounded-md text-xs font-medium transition-all duration-150 cursor-pointer",
                     "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent",
                     isActive
-                      ? "bg-surface-elevated text-text-primary font-semibold border border-border-default shadow-xs"
-                      : "text-text-secondary hover:text-text-primary hover:bg-surface-hover/70 border border-transparent"
+                      ? "bg-accent-subtle text-text-primary font-semibold border border-accent-border shadow-xs"
+                      : "text-text-secondary hover:text-text-primary hover:bg-surface-hover hover:border-border-subtle border border-transparent"
                   )}
                 >
                   <div className="flex items-center gap-2.5 truncate">
-                    <span className={isActive ? "text-accent" : "text-text-muted"} aria-hidden="true">
+                    <span
+                      className={cn(
+                        "transition-colors duration-150 shrink-0",
+                        isActive ? "text-accent" : "text-text-muted group-hover:text-text-secondary"
+                      )}
+                      aria-hidden="true"
+                    >
                       {getIcon(item.id)}
                     </span>
                     <span className="truncate">{item.label}</span>
                   </div>
                   {item.badge && (
-                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full border border-border-default bg-surface-elevated text-text-secondary">
+                    <span
+                      className={cn(
+                        "text-[10px] font-mono px-1.5 py-0.2 rounded-full border transition-colors",
+                        isActive
+                          ? "border-accent-border bg-accent-subtle text-accent font-medium"
+                          : "border-border-default bg-surface-elevated text-text-muted group-hover:text-text-secondary"
+                      )}
+                    >
                       {item.badge}
                     </span>
                   )}
