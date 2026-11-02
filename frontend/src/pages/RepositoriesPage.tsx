@@ -270,20 +270,22 @@ export const RepositoriesPage: React.FC<RepositoriesPageProps> = ({
           {/* Search & Filter Toolbar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-surface-card border border-border-default">
             <div className="relative flex-1 max-w-md">
-              <Search className="w-3.5 h-3.5 text-text-muted absolute left-3 top-2.5 pointer-events-none" />
+              <Search className="w-3.5 h-3.5 text-text-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search repositories by name, branch, or identifier..."
+                placeholder="Search repositories by name or branch..."
+                aria-label="Search repositories"
                 className="w-full pl-9 pr-8 py-1.5 rounded-md bg-surface-base border border-border-default text-xs font-mono text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-2.5 top-2.5 text-text-muted hover:text-text-primary"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary p-0.5 rounded transition-colors"
                   title="Clear search"
+                  aria-label="Clear search query"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
