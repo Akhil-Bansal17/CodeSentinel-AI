@@ -3,13 +3,16 @@ import {
   Plus,
   GitFork,
   Folder,
+  FolderGit2,
   ChevronRight,
+  ChevronDown,
   FileCode,
   Clock,
   Search,
   Code2,
   X,
 } from "lucide-react";
+import { cn } from "../lib/utils";
 import { GithubIcon } from "../components/common/GithubIcon";
 import { EmptyState } from "../components/common/EmptyState";
 import { StatusBadge } from "../components/common/StatusBadge";
@@ -230,18 +233,23 @@ export const RepositoriesPage: React.FC<RepositoriesPageProps> = ({
     <div className="space-y-6">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border-default">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-text-primary tracking-tight">
-              Repositories
-            </h1>
-            <Badge variant="neutral" className="font-mono text-[11px]">
-              {repositories.length} {repositories.length === 1 ? "repository" : "repositories"}
-            </Badge>
+        <div className="flex items-start sm:items-center gap-3">
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent-subtle border border-accent-border text-accent shrink-0 mt-0.5 sm:mt-0">
+            <FolderGit2 className="w-4 h-4" />
           </div>
-          <p className="text-xs text-text-muted mt-1">
-            Manage tracked codebases, ingestion snapshots, and structural discovery metrics
-          </p>
+          <div>
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-xl font-bold text-text-primary tracking-tight">
+                Repositories
+              </h1>
+              <Badge variant="neutral" className="font-mono text-[11px]">
+                {repositories.length} {repositories.length === 1 ? "repository" : "repositories"}
+              </Badge>
+            </div>
+            <p className="text-xs text-text-muted mt-0.5">
+              Tracked codebase portfolio, ingestion snapshots, and structural discovery metrics
+            </p>
+          </div>
         </div>
 
         <Button
@@ -250,7 +258,7 @@ export const RepositoriesPage: React.FC<RepositoriesPageProps> = ({
           size="sm"
           onClick={onAnalyzeClick}
           leftIcon={<Plus className="w-3.5 h-3.5" />}
-          className="self-start sm:self-auto"
+          className="self-start sm:self-auto shrink-0"
         >
           <span>Connect Repository</span>
         </Button>
@@ -266,10 +274,10 @@ export const RepositoriesPage: React.FC<RepositoriesPageProps> = ({
           onAction={onAnalyzeClick}
         />
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* Search & Filter Toolbar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-surface-card border border-border-default">
-            <div className="relative flex-1 max-w-md">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2.5 sm:p-3 rounded-lg bg-surface-card border border-border-default shadow-xs">
+            <div className="relative flex-1 sm:max-w-xs md:max-w-sm">
               <Search className="w-3.5 h-3.5 text-text-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
               <input
                 type="text"
@@ -277,13 +285,13 @@ export const RepositoriesPage: React.FC<RepositoriesPageProps> = ({
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search repositories by name or branch..."
                 aria-label="Search repositories"
-                className="w-full pl-9 pr-8 py-1.5 rounded-md bg-surface-base border border-border-default text-xs font-mono text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+                className="w-full h-8 pl-9 pr-8 py-1.5 rounded-md bg-surface-base border border-border-default text-xs font-mono text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary p-0.5 rounded transition-colors"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary p-0.5 rounded hover:bg-surface-hover transition-colors"
                   title="Clear search"
                   aria-label="Clear search query"
                 >
@@ -292,28 +300,50 @@ export const RepositoriesPage: React.FC<RepositoriesPageProps> = ({
               )}
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              <select
-                value={sourceFilter}
-                onChange={(e) => setSourceFilter(e.target.value)}
-                className="px-2.5 py-1.5 rounded-md bg-surface-base border border-border-default text-xs text-text-primary focus:outline-none focus:border-accent cursor-pointer"
-              >
-                <option value="all">All Sources</option>
-                <option value="github">GitHub</option>
-                <option value="local">Local Directory</option>
-              </select>
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              {/* Source Filter Dropdown */}
+              <div className="relative">
+                <select
+                  value={sourceFilter}
+                  onChange={(e) => setSourceFilter(e.target.value)}
+                  aria-label="Filter by source"
+                  className={cn(
+                    "h-8 pl-3 pr-7 py-1 rounded-md text-xs font-medium border transition-colors cursor-pointer appearance-none",
+                    "focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent",
+                    sourceFilter !== "all"
+                      ? "bg-accent-subtle/30 border-accent-border text-accent font-semibold"
+                      : "bg-surface-base border-border-default text-text-secondary hover:text-text-primary hover:border-border-strong"
+                  )}
+                >
+                  <option value="all" className="bg-surface-card text-text-primary">All Sources</option>
+                  <option value="github" className="bg-surface-card text-text-primary">GitHub</option>
+                  <option value="local" className="bg-surface-card text-text-primary">Local Directory</option>
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-text-muted absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
+              </div>
 
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-2.5 py-1.5 rounded-md bg-surface-base border border-border-default text-xs text-text-primary focus:outline-none focus:border-accent cursor-pointer"
-              >
-                <option value="all">All Statuses</option>
-                <option value="completed">Completed</option>
-                <option value="processing">Processing</option>
-                <option value="pending">Pending</option>
-                <option value="failed">Failed</option>
-              </select>
+              {/* Status Filter Dropdown */}
+              <div className="relative">
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  aria-label="Filter by status"
+                  className={cn(
+                    "h-8 pl-3 pr-7 py-1 rounded-md text-xs font-medium border transition-colors cursor-pointer appearance-none",
+                    "focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent",
+                    statusFilter !== "all"
+                      ? "bg-accent-subtle/30 border-accent-border text-accent font-semibold"
+                      : "bg-surface-base border-border-default text-text-secondary hover:text-text-primary hover:border-border-strong"
+                  )}
+                >
+                  <option value="all" className="bg-surface-card text-text-primary">All Statuses</option>
+                  <option value="completed" className="bg-surface-card text-text-primary">Completed</option>
+                  <option value="processing" className="bg-surface-card text-text-primary">Processing</option>
+                  <option value="pending" className="bg-surface-card text-text-primary">Pending</option>
+                  <option value="failed" className="bg-surface-card text-text-primary">Failed</option>
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-text-muted absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
+              </div>
 
               {isFiltered && (
                 <Button
@@ -321,12 +351,37 @@ export const RepositoriesPage: React.FC<RepositoriesPageProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={resetFilters}
-                  className="text-xs text-text-muted hover:text-text-primary"
+                  leftIcon={<X className="w-3 h-3" />}
+                  className="h-8 text-xs text-text-muted hover:text-text-primary hover:bg-surface-hover/80 px-2"
                 >
                   Reset Filters
                 </Button>
               )}
             </div>
+          </div>
+
+          {/* Results Telemetry & Status Bar */}
+          <div className="flex items-center justify-between text-xs text-text-muted px-1">
+            <div className="flex items-center gap-2">
+              <span>
+                Showing <strong className="font-semibold text-text-primary">{filteredRepositories.length}</strong> of{" "}
+                <strong className="font-semibold text-text-primary">{repositories.length}</strong> {repositories.length === 1 ? "repository" : "repositories"}
+              </span>
+              {isFiltered && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-accent-subtle text-accent border border-accent-border">
+                  Filtered
+                </span>
+              )}
+            </div>
+            {isFiltered && (
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="text-xs text-text-muted hover:text-accent transition-colors cursor-pointer"
+              >
+                Clear all filters
+              </button>
+            )}
           </div>
 
           {/* Filter Empty State */}
