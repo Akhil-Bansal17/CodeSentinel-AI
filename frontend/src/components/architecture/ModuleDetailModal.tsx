@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 import { ModuleDetail } from "../../types/architecture";
+import { Button } from "../common/Button";
 
 interface ModuleDetailModalProps {
   detail: ModuleDetail | null;
@@ -31,7 +32,15 @@ export const ModuleDetailModal: React.FC<ModuleDetailModalProps> = ({ detail, on
 
   if (!detail) return null;
 
-  const { node, incoming_dependencies, outgoing_dependencies, external_dependencies, unresolved_dependencies, cycles, violations } = detail;
+  const {
+    node,
+    incoming_dependencies,
+    outgoing_dependencies,
+    external_dependencies,
+    unresolved_dependencies,
+    cycles,
+    violations,
+  } = detail;
 
   const handleCopyPath = async () => {
     try {
@@ -48,25 +57,31 @@ export const ModuleDetailModal: React.FC<ModuleDetailModalProps> = ({ detail, on
       role="dialog"
       aria-modal="true"
       aria-labelledby="module-detail-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-150"
     >
-      <div className="bg-surface-card border border-border-default rounded-xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-surface-card border border-border-default rounded-xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
         {/* Modal Header */}
         <div className="p-4 border-b border-border-default flex items-center justify-between bg-surface-base">
-          <div className="flex items-center gap-2 overflow-hidden flex-1 mr-2">
-            <Boxes className="w-5 h-5 text-accent shrink-0" />
-            <h2 id="module-detail-title" className="text-base font-semibold text-text-primary font-mono truncate" title={node.path}>
+          <div className="flex items-center gap-2.5 overflow-hidden flex-1 mr-2">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent-subtle border border-accent-border text-accent shrink-0">
+              <Boxes className="w-4 h-4" />
+            </div>
+            <h2
+              id="module-detail-title"
+              className="text-sm font-semibold text-text-primary font-mono truncate"
+              title={node.path}
+            >
               {node.path}
             </h2>
             <button
               type="button"
               onClick={handleCopyPath}
-              className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-surface-overlay transition-colors shrink-0 cursor-pointer"
+              className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-surface-elevated transition-colors shrink-0 cursor-pointer"
               title="Copy module path"
               aria-label="Copy module path"
             >
               {copiedPath ? (
-                <Check className="w-3.5 h-3.5 text-status-success" />
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
               ) : (
                 <Copy className="w-3.5 h-3.5" />
               )}
@@ -74,7 +89,7 @@ export const ModuleDetailModal: React.FC<ModuleDetailModalProps> = ({ detail, on
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-overlay rounded-lg transition-colors cursor-pointer"
+            className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer"
             title="Close modal"
             aria-label="Close dialog"
           >
@@ -83,59 +98,59 @@ export const ModuleDetailModal: React.FC<ModuleDetailModalProps> = ({ detail, on
         </div>
 
         {/* Modal Body */}
-        <div className="p-5 overflow-y-auto space-y-6 text-sm">
+        <div className="p-5 overflow-y-auto space-y-6 text-xs">
           {/* Coupling Metrics Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 p-3.5 bg-surface-base rounded-lg border border-border-default">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 p-3.5 bg-surface-base rounded-lg border border-border-default shadow-xs">
             <div>
               <div className="text-[11px] text-text-muted">Afferent (Ca)</div>
-              <div className="text-base font-bold text-text-primary mt-0.5">{node.afferent_coupling}</div>
+              <div className="text-base font-bold text-text-primary font-mono mt-0.5">{node.afferent_coupling}</div>
               <div className="text-[10px] text-text-muted">incoming modules</div>
             </div>
             <div>
               <div className="text-[11px] text-text-muted">Efferent (Ce)</div>
-              <div className="text-base font-bold text-text-primary mt-0.5">{node.efferent_coupling}</div>
+              <div className="text-base font-bold text-text-primary font-mono mt-0.5">{node.efferent_coupling}</div>
               <div className="text-[10px] text-text-muted">outgoing modules</div>
             </div>
             <div>
               <div className="text-[11px] text-text-muted">Instability (I)</div>
-              <div className="text-base font-bold text-text-primary mt-0.5">
+              <div className="text-base font-bold text-text-primary font-mono mt-0.5">
                 {node.instability !== null ? node.instability.toFixed(2) : "N/A"}
               </div>
-              <div className="text-[10px] text-text-muted">Ce / (Ca + Ce)</div>
+              <div className="text-[10px] text-text-muted font-mono">Ce / (Ca + Ce)</div>
             </div>
             <div>
               <div className="text-[11px] text-text-muted">Abstractness (A)</div>
-              <div className="text-base font-bold text-text-primary mt-0.5">
+              <div className="text-base font-bold text-text-primary font-mono mt-0.5">
                 {node.abstractness !== null ? node.abstractness.toFixed(2) : "N/A"}
               </div>
-              <div className="text-[10px] text-text-muted">{node.abstract_classes_count}/{node.classes_count} classes</div>
+              <div className="text-[10px] text-text-muted font-mono">{node.abstract_classes_count}/{node.classes_count} classes</div>
             </div>
             <div>
               <div className="text-[11px] text-text-muted">Main Seq Distance</div>
-              <div className="text-base font-bold text-text-primary mt-0.5">
+              <div className="text-base font-bold text-text-primary font-mono mt-0.5">
                 {node.main_sequence_distance !== null ? node.main_sequence_distance.toFixed(2) : "N/A"}
               </div>
-              <div className="text-[10px] text-text-muted">|A + I - 1|</div>
+              <div className="text-[10px] text-text-muted font-mono">|A + I - 1|</div>
             </div>
           </div>
 
           {/* Violations if present */}
           {violations.length > 0 && (
             <div className="space-y-2">
-              <div className="flex items-center gap-1.5 text-status-danger font-semibold text-xs uppercase tracking-wider">
+              <div className="flex items-center gap-1.5 text-rose-400 font-semibold text-xs uppercase tracking-wider">
                 <ShieldAlert className="w-4 h-4" />
                 <span>Architectural Violations ({violations.length})</span>
               </div>
               <div className="space-y-2">
                 {violations.map((v, i) => (
-                  <div key={i} className="p-3 bg-status-danger/10 border border-status-danger/30 rounded-lg text-xs space-y-1">
+                  <div key={i} className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-lg text-xs space-y-1 shadow-xs">
                     <div className="flex items-center justify-between font-mono">
-                      <span className="font-bold text-status-danger">{String(v.rule_id || "")}</span>
+                      <span className="font-bold text-rose-400">{String(v.rule_id || "")}</span>
                       <span className="text-text-muted text-[10px]">Line {String(v.line_number || 1)}</span>
                     </div>
                     <div className="text-text-primary">{String(v.description || "")}</div>
                     {Boolean(v.remediation) && (
-                      <div className="text-status-success text-[11px] font-mono">
+                      <div className="text-emerald-400 text-[11px] font-mono">
                         Remediation: {String(v.remediation)}
                       </div>
                     )}
@@ -165,15 +180,17 @@ export const ModuleDetailModal: React.FC<ModuleDetailModalProps> = ({ detail, on
           {/* Incoming Dependencies */}
           <div className="space-y-2">
             <div className="flex items-center gap-1.5 text-text-secondary font-semibold text-xs uppercase tracking-wider">
-              <ArrowDownLeft className="w-4 h-4 text-status-success" />
+              <ArrowDownLeft className="w-4 h-4 text-emerald-400" />
               <span>Incoming Dependencies (Imported By: {incoming_dependencies.length})</span>
             </div>
             {incoming_dependencies.length === 0 ? (
-              <div className="text-xs text-text-muted italic">No internal modules import this module directly.</div>
+              <div className="text-xs text-text-muted italic p-2 bg-surface-base rounded border border-border-default">
+                No internal modules import this module directly.
+              </div>
             ) : (
-              <div className="max-h-36 overflow-y-auto space-y-1 rounded border border-border-default p-2 bg-surface-base">
+              <div className="max-h-36 overflow-y-auto space-y-1 rounded-lg border border-border-default p-2.5 bg-surface-base font-mono">
                 {incoming_dependencies.map((e, idx) => (
-                  <div key={idx} className="flex items-center justify-between font-mono text-xs text-text-secondary py-0.5">
+                  <div key={idx} className="flex items-center justify-between text-xs text-text-secondary py-0.5">
                     <span className="truncate">{e.source_path}</span>
                     <span className="text-text-muted text-[11px] shrink-0 ml-2">Line {e.line_number}</span>
                   </div>
@@ -189,11 +206,13 @@ export const ModuleDetailModal: React.FC<ModuleDetailModalProps> = ({ detail, on
               <span>Outgoing Internal Dependencies (Imports: {outgoing_dependencies.length})</span>
             </div>
             {outgoing_dependencies.length === 0 ? (
-              <div className="text-xs text-text-muted italic">No internal module dependencies.</div>
+              <div className="text-xs text-text-muted italic p-2 bg-surface-base rounded border border-border-default">
+                No internal module dependencies.
+              </div>
             ) : (
-              <div className="max-h-36 overflow-y-auto space-y-1 rounded border border-border-default p-2 bg-surface-base">
+              <div className="max-h-36 overflow-y-auto space-y-1 rounded-lg border border-border-default p-2.5 bg-surface-base font-mono">
                 {outgoing_dependencies.map((e, idx) => (
-                  <div key={idx} className="flex items-center justify-between font-mono text-xs text-text-secondary py-0.5">
+                  <div key={idx} className="flex items-center justify-between text-xs text-text-secondary py-0.5">
                     <span className="truncate">{e.target_path}</span>
                     <span className="text-text-muted text-[11px] shrink-0 ml-2">({e.specifier})</span>
                   </div>
@@ -222,6 +241,18 @@ export const ModuleDetailModal: React.FC<ModuleDetailModalProps> = ({ detail, on
               </div>
             </div>
           )}
+        </div>
+
+        {/* Modal Footer */}
+        <div className="p-4 border-t border-border-default bg-surface-base flex justify-end">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={onClose}
+          >
+            Close
+          </Button>
         </div>
       </div>
     </div>
