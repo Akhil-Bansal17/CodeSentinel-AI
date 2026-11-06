@@ -3,10 +3,10 @@ import {
   AlertTriangle,
   Boxes,
   CheckCircle2,
+  ChevronDown,
   Layers,
   Network,
   Play,
-  RefreshCw,
   RotateCw,
   ShieldAlert,
 } from "lucide-react";
@@ -26,6 +26,9 @@ import {
   listViolations,
   startArchitectureRun,
 } from "../../services/architectureService";
+import { LoadingSpinner } from "../common/LoadingSpinner";
+import { EmptyState } from "../common/EmptyState";
+import { Button } from "../common/Button";
 import { ArchitectureSummaryCards } from "./ArchitectureSummaryCards";
 import { ModuleExplorerTable } from "./ModuleExplorerTable";
 import { ArchitectureViolationsTable } from "./ArchitectureViolationsTable";
@@ -208,109 +211,103 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ repository }
   }, [activeTab, policyInfo, fetchPolicy]);
 
   if (isLoadingRuns) {
-    return (
-      <div className="p-12 text-center bg-surface-card border border-border-default rounded-lg">
-        <RefreshCw className="w-8 h-8 text-accent animate-spin mx-auto mb-3" />
-        <h3 className="text-sm font-semibold text-text-primary">Loading Architecture History</h3>
-        <p className="text-xs text-text-muted mt-1">Retrieving module dependency graphs and governance assessments...</p>
-      </div>
-    );
+    return <LoadingSpinner message="Loading architecture governance and coupling data..." />;
   }
 
   return (
     <div className="space-y-6">
       {/* Run Selection & Trigger Toolbar */}
-      <div className="p-4 bg-surface-card border border-border-default rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="p-3.5 bg-surface-card border border-border-default rounded-lg shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-accent-subtle border border-accent-border text-accent">
-            <Network className="w-5 h-5" />
+          <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-accent-subtle border border-accent-border text-accent shrink-0 shadow-xs">
+            <Network className="w-4 h-4" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-bold text-text-primary">Architecture Governance & Coupling</h2>
+              <h2 className="text-sm font-bold text-text-primary tracking-tight">
+                Architecture Governance & Coupling
+              </h2>
               {activeRun && (
                 <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-surface-base text-text-secondary border border-border-default">
                   v1.0.0
                 </span>
               )}
             </div>
-            <p className="text-xs text-text-muted">
-              Module dependency resolution, Martin's coupling metrics ($Ca, Ce, I, A, D$), Tarjan's SCC cycles, and layer governance.
+            <p className="text-xs text-text-muted mt-0.5">
+              Module dependency resolution, Martin's coupling metrics (Ca, Ce, I, A, D), Tarjan's SCC cycles, and layer governance.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           {runs.length > 1 && (
-            <select
-              value={selectedRunId || ""}
-              onChange={(e) => setSelectedRunId(e.target.value)}
-              className="px-2.5 py-1.5 rounded-md bg-surface-base border border-border-default text-xs text-text-primary focus:outline-none focus:border-accent cursor-pointer"
-            >
-              {runs.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {new Date(r.started_at).toLocaleString()} ({r.status})
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={selectedRunId || ""}
+                onChange={(e) => setSelectedRunId(e.target.value)}
+                aria-label="Select architecture analysis run"
+                className="h-8 pl-2.5 pr-7 py-1 text-xs bg-surface-base border border-border-default rounded-md text-text-primary font-mono focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent appearance-none cursor-pointer"
+              >
+                {runs.map((r, idx) => (
+                  <option key={r.id} value={r.id}>
+                    Run #{runs.length - idx} • {new Date(r.started_at).toLocaleDateString()} ({r.status})
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-text-muted absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
           )}
 
-          <button
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
             onClick={handleStartRun}
             disabled={isStartingRun || !snapshot || snapshot.status !== "completed"}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-accent hover:bg-accent/90 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+            leftIcon={
+              isStartingRun ? (
+                <RotateCw className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Play className="w-3.5 h-3.5" />
+              )
+            }
           >
-            {isStartingRun ? (
-              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Play className="w-3.5 h-3.5" />
-            )}
-            <span>{isStartingRun ? "Analyzing..." : "Run Architecture Analysis"}</span>
-          </button>
+            {isStartingRun ? "Analyzing Architecture..." : "Run Architecture Analysis"}
+          </Button>
         </div>
       </div>
 
       {runError && (
-        <div className="p-3 bg-status-danger/10 border border-status-danger/30 rounded-md text-xs text-status-danger flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-status-danger shrink-0" />
+        <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-lg text-xs text-rose-400 flex items-center gap-2 shadow-xs">
+          <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
           <span>{runError}</span>
         </div>
       )}
 
       {/* Main Content */}
       {!activeRun ? (
-        <div className="p-12 rounded-lg bg-surface-card border border-border-default text-center space-y-3">
-          <div className="w-12 h-12 rounded-full bg-surface-base border border-border-default flex items-center justify-center mx-auto text-accent">
-            <Network className="w-6 h-6" />
-          </div>
-          <h3 className="text-sm font-semibold text-text-primary">No Architecture Analysis Executed</h3>
-          <p className="text-xs text-text-muted max-w-md mx-auto">
-            Extract deterministic module dependency graphs, evaluate layer boundary rules from
-            <code className="text-text-secondary mx-1">codesentinel.architecture.json</code>,
-            and inspect cyclic dependency clusters.
-          </p>
-          <button
-            onClick={handleStartRun}
-            disabled={!snapshot || snapshot.status !== "completed"}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-accent hover:bg-accent/90 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-          >
-            <Play className="w-3.5 h-3.5" />
-            <span>Run Initial Architecture Analysis</span>
-          </button>
-        </div>
+        <EmptyState
+          icon={<Network className="w-6 h-6 text-accent" />}
+          title="No Architecture Analysis Executed"
+          description="Extract deterministic module dependency graphs, evaluate layer boundary rules from codesentinel.architecture.json, and inspect cyclic dependency clusters."
+          actionLabel="Run Initial Architecture Analysis"
+          onAction={handleStartRun}
+        />
       ) : activeRun.status === "failed" ? (
-        <div className="p-8 rounded-lg bg-surface-card border border-status-danger/40 text-center space-y-3">
-          <AlertTriangle className="w-8 h-8 text-status-danger mx-auto" />
+        <div className="p-8 rounded-lg bg-surface-card border border-rose-500/40 text-center space-y-3 shadow-xs">
+          <AlertTriangle className="w-8 h-8 text-rose-400 mx-auto" />
           <h3 className="text-sm font-semibold text-text-primary">Architecture Run Failed</h3>
           <p className="text-xs text-text-muted max-w-md mx-auto">
             {activeRun.failure_reason || "Architecture extraction failed to complete."}
           </p>
-          <button
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
             onClick={handleStartRun}
-            className="px-3 py-1.5 rounded-md bg-surface-subtle hover:bg-surface-overlay text-xs font-medium text-text-primary border border-border-default cursor-pointer"
           >
             Retry Analysis
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="space-y-5">
@@ -318,10 +315,10 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ repository }
           <ArchitectureSummaryCards run={activeRun} />
 
           {/* Sub-tab Navigation */}
-          <div className="flex items-center gap-2 border-b border-border-default pt-2">
+          <div className="flex items-center gap-6 border-b border-border-default text-xs font-medium">
             <button
               onClick={() => setActiveTab("modules")}
-              className={`flex items-center gap-2 px-3 py-2 text-xs font-medium border-b-2 transition-colors cursor-pointer ${
+              className={`flex items-center gap-2 pb-2.5 transition-colors border-b-2 cursor-pointer ${
                 activeTab === "modules"
                   ? "border-accent text-accent font-semibold"
                   : "border-transparent text-text-muted hover:text-text-primary"
@@ -329,14 +326,14 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ repository }
             >
               <Boxes className="w-3.5 h-3.5" />
               <span>Modules & Coupling</span>
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-surface-subtle text-text-secondary border border-border-default">
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-surface-elevated text-text-secondary border border-border-default">
                 {activeRun.modules_analyzed}
               </span>
             </button>
 
             <button
               onClick={() => setActiveTab("violations")}
-              className={`flex items-center gap-2 px-3 py-2 text-xs font-medium border-b-2 transition-colors cursor-pointer ${
+              className={`flex items-center gap-2 pb-2.5 transition-colors border-b-2 cursor-pointer ${
                 activeTab === "violations"
                   ? "border-accent text-accent font-semibold"
                   : "border-transparent text-text-muted hover:text-text-primary"
@@ -345,11 +342,11 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ repository }
               <ShieldAlert className="w-3.5 h-3.5" />
               <span>Governance Violations</span>
               {activeRun.violations_count > 0 ? (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-status-danger/10 border border-status-danger/30 text-status-danger">
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-rose-500/10 border border-rose-500/30 text-rose-400">
                   {activeRun.violations_count}
                 </span>
               ) : (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-surface-subtle text-text-muted border border-border-default">
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-surface-elevated text-text-muted border border-border-default">
                   0
                 </span>
               )}
@@ -357,7 +354,7 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ repository }
 
             <button
               onClick={() => setActiveTab("cycles")}
-              className={`flex items-center gap-2 px-3 py-2 text-xs font-medium border-b-2 transition-colors cursor-pointer ${
+              className={`flex items-center gap-2 pb-2.5 transition-colors border-b-2 cursor-pointer ${
                 activeTab === "cycles"
                   ? "border-accent text-accent font-semibold"
                   : "border-transparent text-text-muted hover:text-text-primary"
@@ -366,11 +363,11 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ repository }
               <RotateCw className="w-3.5 h-3.5" />
               <span>Circular Dependencies</span>
               {activeRun.cycles_count > 0 ? (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-status-danger/10 border border-status-danger/30 text-status-danger">
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-rose-500/10 border border-rose-500/30 text-rose-400">
                   {activeRun.cycles_count}
                 </span>
               ) : (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-surface-subtle text-text-muted border border-border-default">
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-surface-elevated text-text-muted border border-border-default">
                   0
                 </span>
               )}
@@ -378,7 +375,7 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ repository }
 
             <button
               onClick={() => setActiveTab("policy")}
-              className={`flex items-center gap-2 px-3 py-2 text-xs font-medium border-b-2 transition-colors cursor-pointer ${
+              className={`flex items-center gap-2 pb-2.5 transition-colors border-b-2 cursor-pointer ${
                 activeTab === "policy"
                   ? "border-accent text-accent font-semibold"
                   : "border-transparent text-text-muted hover:text-text-primary"
@@ -387,11 +384,11 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ repository }
               <Layers className="w-3.5 h-3.5" />
               <span>Architectural Policy</span>
               {activeRun.policy_configured ? (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-status-success/10 border border-status-success/30 text-status-success">
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
                   Configured
                 </span>
               ) : (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-surface-subtle text-text-muted border border-border-default">
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-surface-elevated text-text-muted border border-border-default">
                   Default
                 </span>
               )}
@@ -443,12 +440,11 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ repository }
             <div className="space-y-3">
               {isLoadingGraph ? (
                 <div className="p-8 text-center bg-surface-card border border-border-default rounded-lg">
-                  <RefreshCw className="w-6 h-6 text-accent animate-spin mx-auto mb-2" />
-                  <span className="text-xs text-text-secondary">Resolving circular dependency components...</span>
+                  <LoadingSpinner message="Resolving circular dependency components..." />
                 </div>
               ) : !graph || graph.cycles.length === 0 ? (
-                <div className="p-10 bg-surface-card border border-border-default rounded-lg text-center space-y-2">
-                  <CheckCircle2 className="w-8 h-8 text-status-success mx-auto" />
+                <div className="p-10 bg-surface-card border border-border-default rounded-lg text-center space-y-2 shadow-xs">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
                   <h4 className="text-sm font-semibold text-text-primary">Zero Circular Dependencies Detected</h4>
                   <p className="text-xs text-text-muted max-w-md mx-auto">
                     The module dependency graph is a clean Directed Acyclic Graph (DAG) with no mutual recursion or cyclical coupling.
@@ -457,7 +453,7 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ repository }
               ) : (
                 <div className="space-y-3">
                   <div className="text-xs text-text-secondary">
-                    Found <strong className="text-status-danger font-mono">{graph.cycles.length}</strong> strongly connected circular dependency cluster(s) via Tarjan's SCC algorithm:
+                    Found <strong className="text-rose-400 font-mono">{graph.cycles.length}</strong> strongly connected circular dependency cluster(s) via Tarjan's SCC algorithm:
                   </div>
 
                   {graph.cycles.map((cycle, idx) => {
@@ -465,14 +461,14 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ repository }
                     return (
                       <div
                         key={cycle.id || idx}
-                        className="p-4 bg-surface-card border border-status-danger/30 rounded-lg space-y-2.5"
+                        className="p-4 bg-surface-card border border-rose-500/30 rounded-lg space-y-2.5 shadow-xs"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-status-danger flex items-center gap-1.5">
-                            <RotateCw className="w-3.5 h-3.5 text-status-danger" />
+                          <span className="text-xs font-bold text-rose-400 flex items-center gap-1.5">
+                            <RotateCw className="w-3.5 h-3.5 text-rose-400" />
                             Cycle #{idx + 1} ({cycleModules.length} modules involved)
                           </span>
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-status-danger/10 text-status-danger border border-status-danger/30">
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/30">
                             TARJAN SCC CLUSTER
                           </span>
                         </div>
@@ -484,11 +480,11 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ repository }
                                 {modPath}
                               </span>
                               {mIdx < cycleModules.length - 1 && (
-                                <span className="text-status-danger font-bold">→</span>
+                                <span className="text-rose-400 font-bold">→</span>
                               )}
                             </React.Fragment>
                           ))}
-                          <span className="text-status-danger font-bold">↺</span>
+                          <span className="text-rose-400 font-bold">↺</span>
                         </div>
                       </div>
                     );
@@ -500,7 +496,7 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ repository }
 
           {/* Tab 4: Architectural Policy */}
           {activeTab === "policy" && (
-            <div className="p-4 bg-surface-card border border-border-default rounded-lg space-y-4">
+            <div className="p-4 bg-surface-card border border-border-default rounded-lg space-y-4 shadow-xs">
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="text-sm font-bold text-text-primary flex items-center gap-2">
@@ -512,12 +508,12 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ repository }
                   </p>
                 </div>
                 {policyInfo?.policy_configured ? (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-status-success/10 text-status-success border border-status-success/30">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-status-success" />
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                     Custom Policy Active
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-surface-subtle text-text-muted border border-border-default">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-surface-elevated text-text-muted border border-border-default">
                     Default Policy (No Config File)
                   </span>
                 )}
@@ -528,19 +524,19 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ repository }
               ) : (
                 <div className="space-y-3 pt-2">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                    <div className="p-3 bg-surface-base rounded border border-border-default">
+                    <div className="p-3 bg-surface-base rounded-lg border border-border-default">
                       <span className="text-text-muted block mb-1">Configuration Path</span>
                       <code className="text-text-primary font-mono text-[11px] break-all">
                         {policyInfo?.policy_path || "codesentinel.architecture.json"}
                       </code>
                     </div>
-                    <div className="p-3 bg-surface-base rounded border border-border-default">
+                    <div className="p-3 bg-surface-base rounded-lg border border-border-default">
                       <span className="text-text-muted block mb-1">Defined Layers</span>
                       <strong className="text-text-primary font-mono text-sm">
                         {policyInfo?.policy?.layers ? policyInfo.policy.layers.length : 0}
                       </strong>
                     </div>
-                    <div className="p-3 bg-surface-base rounded border border-border-default">
+                    <div className="p-3 bg-surface-base rounded-lg border border-border-default">
                       <span className="text-text-muted block mb-1">Forbidden Rules</span>
                       <strong className="text-text-primary font-mono text-sm">
                         {policyInfo?.policy?.forbidden_dependencies ? policyInfo.policy.forbidden_dependencies.length : 0}
@@ -553,7 +549,7 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ repository }
                       <span className="text-xs font-semibold text-text-secondary">Layer Hierarchy & Patterns:</span>
                       <div className="space-y-2">
                         {policyInfo.policy.layers.map((layer) => (
-                          <div key={layer.name} className="p-3 bg-surface-base rounded border border-border-default space-y-1 text-xs">
+                          <div key={layer.name} className="p-3 bg-surface-base rounded-lg border border-border-default space-y-1 text-xs">
                             <div className="flex items-center justify-between">
                               <strong className="text-accent font-mono">{layer.name}</strong>
                               <span className="text-[11px] text-text-muted font-mono">
