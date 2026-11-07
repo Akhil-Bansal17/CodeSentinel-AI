@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { CodebaseHealthDashboard } from "../src/components/architecture/CodebaseHealthDashboard";
 import * as healthService from "../src/services/healthService";
 import { Repository } from "../src/types/api";
@@ -7,6 +7,7 @@ import { CodebaseHealth } from "../src/types/health";
 
 vi.mock("../src/services/healthService", () => ({
   getRepositoryHealth: vi.fn(),
+  listHealthHistory: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, page_size: 10 }),
 }));
 
 const mockRepository: Repository = {
@@ -183,6 +184,50 @@ describe("CodebaseHealthDashboard Component", () => {
       expect(screen.getByText("--")).toBeInTheDocument();
       expect(screen.getByText("Unavailable")).toBeInTheDocument();
       expect(screen.getByText(/Overall health score is unavailable until/i)).toBeInTheDocument();
+    });
+  });
+
+  it("filters recommendations by priority", async () => {
+    vi.mocked(healthService.getRepositoryHealth).mockResolvedValue(mockHealthAssessment);
+    render(<CodebaseHealthDashboard repository={mockRepository} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Remediate SQL Injection")).toBeInTheDocument();
+      expect(screen.getByText("Refactor Cyclomatic Complexity")).toBeInTheDocument();
+    });
+
+    // Click "HIGH" priority filter pill
+    const highButton = screen.getByRole("button", { name: /high/i });
+    fireEvent.click(highButton);
+
+    expect(screen.getByText("Remediate SQL Injection")).toBeInTheDocument();
+    expect(screen.queryByText("Refactor Cyclomatic Complexity")).not.toBeInTheDocument();
+  });
+
+  it("renders historical assessment records when multiple health evaluations exist", async () => {
+    vi.mocked(healthService.getRepositoryHealth).mockResolvedValue(mockHealthAssessment);
+    vi.mocked(healthService.listHealthHistory).mockResolvedValue({
+      items: [
+        mockHealthAssessment,
+        {
+          ...mockHealthAssessment,
+          id: "hist-prev-1",
+          overall_score: 74.0,
+          status: "completed",
+          assessed_at: new Date(Date.now() - 86400000).toISOString(),
+        },
+      ],
+      total: 2,
+      page: 1,
+      page_size: 10,
+    });
+
+    render(<CodebaseHealthDashboard repository={mockRepository} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Historical Health Assessment Log/i)).toBeInTheDocument();
+      expect(screen.getByText("74.0")).toBeInTheDocument();
+      expect(screen.getByText(/Chronological audit trail of health evaluations/i)).toBeInTheDocument();
     });
   });
 });
