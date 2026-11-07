@@ -46,6 +46,7 @@ vi.mock("../src/services/healthService", () => ({
     recommendations: [],
     assessed_at: new Date().toISOString(),
   }),
+  listHealthHistory: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, page_size: 10 }),
 }));
 
 const mockFiles: RepositoryFile[] = [
