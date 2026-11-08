@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Terminal,
   Workflow,
+  X,
   XCircle,
 } from "lucide-react";
 import { Repository } from "../types/api";
@@ -85,55 +86,78 @@ export const CiCdAuditPage: React.FC<CiCdAuditPageProps> = ({ initialRepoId }) =
     if (repoContext?.selectedRepoId && repoContext.selectedRepoId !== selectedRepoId) {
       setSelectedRepoId(repoContext.selectedRepoId);
     }
-  }, [repoContext?.selectedRepoId]);
+  }, [repoContext?.selectedRepoId, selectedRepoId]);
 
   // Load repositories on mount
   useEffect(() => {
+    let isMounted = true;
     async function loadRepos() {
       setIsLoadingRepos(true);
       try {
         if (repoContext?.repositories && repoContext.repositories.length > 0) {
-          setRepositories(repoContext.repositories);
-          if (!selectedRepoId) {
-            setSelectedRepoId(repoContext.repositories[0].id);
+          if (isMounted) {
+            setRepositories(repoContext.repositories);
+            setSelectedRepoId((prev) => prev || (repoContext.repositories ? repoContext.repositories[0].id : ""));
           }
         } else {
           const resp = await repositoryService.listRepositories(1, 100);
-          setRepositories(resp.items || []);
-          if (resp.items && resp.items.length > 0) {
-            setSelectedRepoId((prev) => prev || resp.items[0].id);
+          if (isMounted) {
+            setRepositories(resp.items || []);
+            if (resp.items && resp.items.length > 0) {
+              setSelectedRepoId((prev) => prev || resp.items[0].id);
+            }
           }
         }
       } catch (err) {
         console.error("Failed to load repositories:", err);
       } finally {
-        setIsLoadingRepos(false);
+        if (isMounted) {
+          setIsLoadingRepos(false);
+        }
       }
     }
     loadRepos();
+    return () => {
+      isMounted = false;
+    };
   }, [initialRepoId, repoContext?.repositories]);
 
   // Load audits and proposals when selected repository changes
   useEffect(() => {
     if (!selectedRepoId) return;
+    let isMounted = true;
 
     // Load audit run history
     cicdService
       .listAudits(selectedRepoId)
       .then((res) => {
+        if (!isMounted) return;
         setAuditRuns(res.items || []);
-        if (res.items?.length > 0) {
-          cicdService.getAudit(res.items[0].id).then(setSelectedAuditRun).catch(console.error);
+        if (res.items && res.items.length > 0) {
+          cicdService
+            .getAudit(res.items[0].id)
+            .then((audit) => {
+              if (isMounted) setSelectedAuditRun(audit);
+            })
+            .catch(() => {
+              if (isMounted) setSelectedAuditRun(null);
+            });
         } else {
           setSelectedAuditRun(null);
         }
       })
-      .catch(console.error);
+      .catch(() => {
+        if (isMounted) {
+          setAuditRuns([]);
+          setSelectedAuditRun(null);
+        }
+      });
 
     // Load remediation proposals
     remediationService
       .listProposals({ repositoryId: selectedRepoId })
       .then((res) => {
+        if (!isMounted) return;
         setProposals(res.items || []);
         // Pre-select validated or approved proposals
         const eligible = (res.items || [])
@@ -141,7 +165,16 @@ export const CiCdAuditPage: React.FC<CiCdAuditPageProps> = ({ initialRepoId }) =
           .map((p) => p.id);
         setSelectedProposalIds(eligible);
       })
-      .catch(console.error);
+      .catch(() => {
+        if (isMounted) {
+          setProposals([]);
+          setSelectedProposalIds([]);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [selectedRepoId]);
 
   // Auto-dismiss notification
@@ -185,8 +218,9 @@ export const CiCdAuditPage: React.FC<CiCdAuditPageProps> = ({ initialRepoId }) =
       });
       setGeneratedWorkflow(resp);
       showFeedback("success", `Workflow generated (${resp.filename}) with pinned commit SHAs!`);
-    } catch (err: any) {
-      showFeedback("error", err?.message || "Failed to generate workflow.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to generate workflow.";
+      showFeedback("error", message);
     } finally {
       setIsGeneratingWorkflow(false);
     }
@@ -232,8 +266,9 @@ export const CiCdAuditPage: React.FC<CiCdAuditPageProps> = ({ initialRepoId }) =
         "success",
         `Audit completed: ${result.overall_status} (${result.summary.total_checks} pillars evaluated)`
       );
-    } catch (err: any) {
-      showFeedback("error", err?.message || "Failed to execute audit.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to execute audit.";
+      showFeedback("error", message);
     } finally {
       setIsExecutingAudit(false);
     }
@@ -244,8 +279,9 @@ export const CiCdAuditPage: React.FC<CiCdAuditPageProps> = ({ initialRepoId }) =
     try {
       const data = await cicdService.getAudit(auditId);
       setSelectedAuditRun(data);
-    } catch (err: any) {
-      showFeedback("error", err?.message || "Failed to load audit run.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to load audit run.";
+      showFeedback("error", message);
     } finally {
       setIsLoadingAuditDetails(false);
     }
@@ -285,8 +321,9 @@ export const CiCdAuditPage: React.FC<CiCdAuditPageProps> = ({ initialRepoId }) =
         }
       }
       showFeedback("info", "Downloaded Markdown audit report.");
-    } catch (err: any) {
-      showFeedback("error", err?.message || "Failed to download Markdown report.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to download Markdown report.";
+      showFeedback("error", message);
     }
   };
 
@@ -327,8 +364,9 @@ export const CiCdAuditPage: React.FC<CiCdAuditPageProps> = ({ initialRepoId }) =
           `PR change set synthesized successfully: ${result.proposal_count} patches composed.`
         );
       }
-    } catch (err: any) {
-      showFeedback("error", err?.message || "Failed to prepare PR.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to prepare PR.";
+      showFeedback("error", message);
     } finally {
       setIsPreparingPr(false);
     }
@@ -350,8 +388,9 @@ export const CiCdAuditPage: React.FC<CiCdAuditPageProps> = ({ initialRepoId }) =
         }
       }
       showFeedback("info", "Downloaded .patch bundle.");
-    } catch (err: any) {
-      showFeedback("error", err?.message || "Failed to download patch bundle.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to download patch bundle.";
+      showFeedback("error", message);
     }
   };
 
@@ -365,31 +404,31 @@ export const CiCdAuditPage: React.FC<CiCdAuditPageProps> = ({ initialRepoId }) =
     switch (status) {
       case "PASSED":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-status-success-bg text-status-success-text border border-status-success-border">
-            <CheckCircle2 className="w-3 h-3 text-status-success" /> Passed
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-mono">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Passed
           </span>
         );
       case "WARNING":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-status-warning-bg text-status-warning-text border border-status-warning-border">
-            <AlertTriangle className="w-3 h-3 text-status-warning" /> Warning
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30 font-mono">
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> Warning
           </span>
         );
       case "FAILED":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-status-danger-bg text-status-danger-text border border-status-danger-border">
-            <XCircle className="w-3 h-3 text-status-danger" /> Failed
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/30 font-mono">
+            <XCircle className="w-3.5 h-3.5 text-rose-400" /> Failed
           </span>
         );
       case "SKIPPED":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-surface-elevated text-text-muted border border-border-default">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-surface-elevated text-text-muted border border-border-default font-mono">
             Skipped
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-surface-elevated text-text-muted border border-border-default">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-surface-elevated text-text-muted border border-border-default font-mono">
             {status}
           </span>
         );
@@ -418,99 +457,112 @@ export const CiCdAuditPage: React.FC<CiCdAuditPageProps> = ({ initialRepoId }) =
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
+      {/* Console Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-default pb-5">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2 py-0.5 text-xs font-semibold bg-accent-subtle text-accent border border-accent-border rounded">
-              Phase 8
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-accent-subtle text-accent border border-accent-border font-semibold">
+              Pipeline Automation & Governance
             </span>
-            <span className="text-xs text-text-muted">Automated Pipeline & Governance</span>
+            <span className="text-xs text-text-muted">• Security CI/CD Console</span>
           </div>
           <h1 className="text-xl md:text-2xl font-bold tracking-tight text-text-primary flex items-center gap-2.5">
-            <div className="flex items-center justify-center w-8 h-8 rounded-md bg-accent-subtle border border-accent-border text-accent">
-              <Workflow className="w-5 h-5" />
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent-subtle border border-accent-border text-accent shrink-0 shadow-xs">
+              <Workflow className="w-4.5 h-4.5" />
             </div>
             CI/CD Automation, Security Audits & PR Synthesis
           </h1>
-          <p className="text-xs sm:text-sm text-text-muted mt-1 max-w-3xl leading-relaxed">
+          <p className="text-xs sm:text-sm text-text-muted mt-1.5 max-w-3xl leading-relaxed">
             Generate hardened GitHub Actions workflows, execute 6-pillar codebase audits, and safely synthesize reviewable PR patches.
           </p>
         </div>
 
-        {/* Repository Selector */}
-        <div className="flex items-center gap-3">
-          <label htmlFor="cicd-repo-selector" className="text-xs text-text-muted font-medium whitespace-nowrap flex items-center gap-1.5">
-            <FolderGit2 className="w-3.5 h-3.5 text-text-muted" />
-            Active Repository:
-          </label>
-          <select
-            id="cicd-repo-selector"
-            value={selectedRepoId}
-            onChange={(e) => {
-              const newId = e.target.value;
-              setSelectedRepoId(newId);
-              repoContext?.setSelectedRepoId(newId);
-            }}
-            disabled={isLoadingRepos}
-            className="bg-surface-elevated border border-border-default text-text-primary text-xs rounded-md px-3 py-1.5 focus:ring-1 focus:ring-accent focus:outline-none min-w-[200px]"
-          >
-            {repositories.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name} ({r.source_type})
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Repository Selector (Toolbar context) */}
+        {!initialRepoId && (
+          <div className="flex items-center gap-2.5 bg-surface-card border border-border-default rounded-lg px-3 py-2 shadow-xs shrink-0">
+            <label htmlFor="cicd-repo-selector" className="text-xs text-text-muted font-medium whitespace-nowrap flex items-center gap-1.5">
+              <FolderGit2 className="w-3.5 h-3.5 text-accent" />
+              Repository:
+            </label>
+            <select
+              id="cicd-repo-selector"
+              value={selectedRepoId}
+              onChange={(e) => {
+                const newId = e.target.value;
+                setSelectedRepoId(newId);
+                repoContext?.setSelectedRepoId(newId);
+              }}
+              disabled={isLoadingRepos}
+              className="bg-surface-elevated border border-border-default text-text-primary text-xs rounded-md px-2.5 py-1.5 focus:ring-1 focus:ring-accent focus:outline-hidden min-w-[190px] font-medium"
+            >
+              {repositories.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name} ({r.source_type})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
-      {/* Active Repository Context Strip */}
+      {/* Active Repository Provenance Strip */}
       {activeRepo && (
-        <div className="flex items-center gap-4 px-3.5 py-2 rounded-lg bg-surface-card border border-border-default text-xs text-text-secondary flex-wrap">
+        <div className="flex items-center gap-4 px-3.5 py-2.5 rounded-lg bg-surface-card border border-border-default text-xs text-text-secondary flex-wrap shadow-xs">
           <div className="flex items-center gap-1.5 text-text-primary font-medium">
             <FolderGit2 className="w-3.5 h-3.5 text-accent" />
-            <span>{activeRepo.name}</span>
+            <span className="font-semibold">{activeRepo.name}</span>
           </div>
           {activeRepo.default_branch && (
             <div className="flex items-center gap-1 text-text-muted">
               <GitBranch className="w-3.5 h-3.5" />
-              <span className="font-mono">{activeRepo.default_branch}</span>
+              <span className="font-mono text-text-secondary">{activeRepo.default_branch}</span>
             </div>
           )}
           <div className="text-text-muted">
-            Source: <span className="text-text-secondary capitalize">{activeRepo.source_type}</span>
+            Source: <span className="text-text-secondary capitalize font-mono">{activeRepo.source_type}</span>
           </div>
           {activeRepo.latest_snapshot && (
             <div className="text-text-muted font-mono">
-              Files: {activeRepo.latest_snapshot.file_count ?? "—"} ({activeRepo.latest_snapshot.total_lines_of_code ?? "—"} LOC)
+              Files: <span className="text-text-primary">{activeRepo.latest_snapshot.file_count ?? "—"}</span> (
+              <span className="text-text-primary">{activeRepo.latest_snapshot.total_lines_of_code ?? "—"}</span> LOC)
             </div>
           )}
         </div>
       )}
 
-      {/* Toast Feedback */}
+      {/* High-Precision Feedback Toast / Banner */}
       {feedbackMessage && (
         <div
           className={cn(
-            "p-3 rounded-lg border text-xs sm:text-sm flex items-center gap-2.5 shadow-xs transition-all",
+            "p-3 rounded-lg border text-xs sm:text-sm flex items-center justify-between gap-3 shadow-xs transition-all",
             feedbackMessage.type === "success" &&
-              "bg-status-success-bg border-status-success-border text-status-success-text",
+              "bg-emerald-500/10 border-emerald-500/30 text-emerald-300",
             feedbackMessage.type === "error" &&
-              "bg-status-danger-bg border-status-danger-border text-status-danger-text",
+              "bg-rose-500/10 border-rose-500/30 text-rose-300",
             feedbackMessage.type === "info" &&
               "bg-accent-subtle border-accent-border text-accent"
           )}
         >
-          {feedbackMessage.type === "success" && (
-            <CheckCircle2 className="w-4 h-4 shrink-0 text-status-success" />
-          )}
-          {feedbackMessage.type === "error" && (
-            <AlertCircle className="w-4 h-4 shrink-0 text-status-danger" />
-          )}
-          {feedbackMessage.type === "info" && (
-            <Shield className="w-4 h-4 shrink-0 text-accent" />
-          )}
-          <span>{feedbackMessage.text}</span>
+          <div className="flex items-center gap-2.5">
+            {feedbackMessage.type === "success" && (
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+            )}
+            {feedbackMessage.type === "error" && (
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+            )}
+            {feedbackMessage.type === "info" && (
+              <Shield className="w-4 h-4 shrink-0 text-accent" />
+            )}
+            <span className="font-medium">{feedbackMessage.text}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFeedbackMessage(null)}
+            className="text-text-muted hover:text-text-primary p-0.5 rounded transition-colors"
+            aria-label="Dismiss feedback"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
 
