@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   AlertTriangle,
   Clock,
@@ -6,7 +6,9 @@ import {
   Layers,
   Play,
   RefreshCw,
+  Search,
   ShieldCheck,
+  CheckCircle2,
 } from "lucide-react";
 import { AuditRunListItem, AuditRunResponse } from "../../types/cicd";
 import { Button } from "../common/Button";
@@ -39,10 +41,23 @@ export const AuditDashboardTab: React.FC<AuditDashboardTabProps> = ({
   setSeverityFilter,
   getStatusBadge,
 }) => {
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
+  const filteredFindings = (selectedAuditRun?.findings_preview || []).filter((f) => {
+    const matchesSeverity = severityFilter === "ALL" || f.severity === severityFilter;
+    if (!matchesSeverity) return false;
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    const rule = (f.rule_id || "").toLowerCase();
+    const file = (f.file_path || "").toLowerCase();
+    const evidence = (f.evidence_summary || "").toLowerCase();
+    return rule.includes(query) || file.includes(query) || evidence.includes(query);
+  });
+
   return (
     <div className="space-y-6">
       {/* Audit Controls & Action Bar */}
-      <Card padding="md" className="bg-surface-card border-border-default flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <Card padding="md" className="bg-surface-card border-border-default flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
         <div className="flex items-center gap-3 flex-wrap">
           <Button
             variant="primary"
@@ -57,7 +72,7 @@ export const AuditDashboardTab: React.FC<AuditDashboardTabProps> = ({
                 <Play className="w-4 h-4 fill-current" />
               )
             }
-            className="text-xs font-semibold"
+            className="text-xs font-semibold shadow-xs"
           >
             {isExecutingAudit ? "Executing 6-Pillar Audit..." : "Run Codebase Audit"}
           </Button>
@@ -68,7 +83,7 @@ export const AuditDashboardTab: React.FC<AuditDashboardTabProps> = ({
               <select
                 value={selectedAuditRun?.id || ""}
                 onChange={(e) => onSelectAuditRun(e.target.value)}
-                className="bg-surface-elevated border border-border-default text-text-primary text-xs rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-accent"
+                className="bg-surface-elevated border border-border-default text-text-primary text-xs rounded-md px-2.5 py-1.5 focus:outline-hidden focus:ring-1 focus:ring-accent font-mono"
               >
                 {auditRuns.map((a) => (
                   <option key={a.id} value={a.id}>
@@ -108,64 +123,75 @@ export const AuditDashboardTab: React.FC<AuditDashboardTabProps> = ({
         <div className="space-y-6">
           {/* Executive Summary Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-            <Card padding="sm" className="bg-surface-card border-border-default">
+            <Card padding="sm" className="bg-surface-card border-border-default shadow-xs flex flex-col justify-between">
               <span className="text-xs text-text-muted font-medium">Overall Audit Health</span>
-              <div className="mt-2 flex items-center gap-2">
+              <div className="mt-2.5 flex items-center gap-2">
                 {getStatusBadge(selectedAuditRun.overall_status)}
               </div>
             </Card>
 
-            <Card padding="sm" className="bg-surface-card border-border-default">
+            <Card padding="sm" className="bg-surface-card border-border-default shadow-xs flex flex-col justify-between">
               <span className="text-xs text-text-muted font-medium">Pillar Checks Evaluated</span>
-              <div className="mt-2 text-2xl font-bold font-mono text-text-primary">
-                {selectedAuditRun.summary.passed_checks} / {selectedAuditRun.summary.total_checks}
-                <span className="text-xs font-normal text-text-muted ml-2">Passed</span>
+              <div className="mt-2 text-2xl font-bold font-mono text-text-primary flex items-baseline gap-1.5">
+                <span>
+                  {selectedAuditRun.summary.passed_checks} / {selectedAuditRun.summary.total_checks}
+                </span>
+                <span className="text-xs font-normal text-text-muted">Passed</span>
               </div>
             </Card>
 
-            <Card padding="sm" className="bg-surface-card border-border-default">
+            <Card padding="sm" className="bg-surface-card border-border-default shadow-xs flex flex-col justify-between">
               <span className="text-xs text-text-muted font-medium">Total Discovered Findings</span>
-              <div className="mt-2 text-2xl font-bold font-mono text-text-primary">
-                {selectedAuditRun.summary.total_findings}
-                <span className="text-xs font-normal text-text-muted ml-2">
+              <div className="mt-2 text-2xl font-bold font-mono text-text-primary flex items-baseline gap-1.5">
+                <span>{selectedAuditRun.summary.total_findings}</span>
+                <span className="text-xs font-normal text-text-muted">
                   ({selectedAuditRun.summary.findings_by_severity?.HIGH || 0} High, {selectedAuditRun.summary.findings_by_severity?.MEDIUM || 0} Med)
                 </span>
               </div>
             </Card>
 
-            <Card padding="sm" className="bg-surface-card border-border-default">
+            <Card padding="sm" className="bg-surface-card border-border-default shadow-xs flex flex-col justify-between">
               <span className="text-xs text-text-muted font-medium">Audit Execution Duration</span>
-              <div className="mt-2 text-2xl font-bold font-mono text-text-primary flex items-center gap-1.5">
-                <Clock className="w-4 h-4 text-accent" />
-                {selectedAuditRun.summary.total_duration_ms} ms
+              <div className="mt-2 text-2xl font-bold font-mono text-text-primary flex items-center gap-2">
+                <Clock className="w-4 h-4 text-accent shrink-0" />
+                <span>{selectedAuditRun.summary.total_duration_ms} ms</span>
               </div>
             </Card>
           </div>
 
           {/* 6 Pillars Check Breakdown */}
-          <Card padding="md" className="bg-surface-card border-border-default space-y-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-text-primary flex items-center gap-2">
-              <Layers className="w-4 h-4 text-accent" />
-              6-Pillar Analysis Verification
-            </h3>
+          <Card padding="md" className="bg-surface-card border-border-default space-y-4 shadow-xs">
+            <div className="flex items-center justify-between border-b border-border-default pb-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-text-primary flex items-center gap-2">
+                <Layers className="w-4 h-4 text-accent" />
+                6-Pillar Analysis Verification
+              </h3>
+              <span className="text-[11px] font-mono text-text-muted">
+                {selectedAuditRun.checks.length} pillar checkpoints
+              </span>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {selectedAuditRun.checks.map((c) => (
                 <div
                   key={c.check_id}
-                  className="p-3.5 rounded-lg bg-surface-elevated border border-border-default flex flex-col justify-between space-y-2"
+                  className="p-3.5 rounded-lg bg-surface-elevated border border-border-default flex flex-col justify-between space-y-3 shadow-xs hover:border-border-strong transition-colors"
                 >
                   <div>
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <span className="text-[11px] font-mono text-text-muted">{c.category}</span>
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <span className="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-surface-base text-text-muted border border-border-default">
+                        {c.category}
+                      </span>
                       {getStatusBadge(c.status)}
                     </div>
-                    <h4 className="text-xs font-semibold text-text-primary">{c.name}</h4>
-                    <p className="text-[11px] text-text-secondary mt-1 line-clamp-2">{c.description}</p>
+                    <h4 className="text-xs font-semibold text-text-primary leading-snug">{c.name}</h4>
+                    <p className="text-[11px] text-text-secondary mt-1.5 line-clamp-2 leading-relaxed">
+                      {c.description}
+                    </p>
                   </div>
 
                   <div className="pt-2 border-t border-border-default flex items-center justify-between text-[11px] text-text-muted font-mono">
-                    <span>{c.check_id}</span>
+                    <span className="text-accent">{c.check_id}</span>
                     <span>{c.duration_ms} ms</span>
                   </div>
                 </div>
@@ -174,48 +200,64 @@ export const AuditDashboardTab: React.FC<AuditDashboardTabProps> = ({
           </Card>
 
           {/* Discovered Findings Table */}
-          <Card padding="md" className="bg-surface-card border-border-default space-y-4">
-            <div className="flex items-center justify-between flex-wrap gap-2">
+          <Card padding="md" className="bg-surface-card border-border-default space-y-4 shadow-xs">
+            <div className="flex items-center justify-between flex-wrap gap-3">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-text-primary flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-status-warning" />
+                <AlertTriangle className="w-4 h-4 text-amber-400" />
                 Discovered Findings & Evidence ({selectedAuditRun.findings_preview.length})
               </h3>
 
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-text-muted">Severity:</span>
-                <select
-                  value={severityFilter}
-                  onChange={(e) => setSeverityFilter(e.target.value)}
-                  className="bg-surface-elevated border border-border-default text-text-primary text-xs rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent"
-                >
-                  <option value="ALL">All Severities</option>
-                  <option value="CRITICAL">Critical</option>
-                  <option value="HIGH">High</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="LOW">Low</option>
-                </select>
+              <div className="flex items-center gap-3 flex-wrap">
+                {/* Search */}
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-text-muted absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search findings..."
+                    className="bg-surface-elevated border border-border-default text-text-primary text-xs rounded-md pl-8 pr-2.5 py-1 focus:outline-hidden focus:ring-1 focus:ring-accent w-44"
+                  />
+                </div>
+
+                {/* Severity Dropdown */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-text-muted">Severity:</span>
+                  <select
+                    value={severityFilter}
+                    onChange={(e) => setSeverityFilter(e.target.value)}
+                    className="bg-surface-elevated border border-border-default text-text-primary text-xs rounded-md px-2 py-1 focus:outline-hidden focus:ring-1 focus:ring-accent font-medium"
+                  >
+                    <option value="ALL">All Severities</option>
+                    <option value="CRITICAL">Critical</option>
+                    <option value="HIGH">High</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="LOW">Low</option>
+                  </select>
+                </div>
               </div>
             </div>
 
             {selectedAuditRun.findings_preview.length > 0 ? (
-              <div className="overflow-x-auto rounded-lg border border-border-default">
-                <table className="w-full text-left text-xs text-text-secondary">
-                  <thead className="bg-surface-elevated text-text-muted font-medium border-b border-border-default">
-                    <tr>
-                      <th className="px-3 py-2.5">Rule ID</th>
-                      <th className="px-3 py-2.5">Severity</th>
-                      <th className="px-3 py-2.5">Category</th>
-                      <th className="px-3 py-2.5">Target Location</th>
-                      <th className="px-3 py-2.5">Evidence Summary</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border-default bg-surface-base">
-                    {selectedAuditRun.findings_preview
-                      .filter((f) => severityFilter === "ALL" || f.severity === severityFilter)
-                      .map((f, i) => (
-                        <tr key={i} className="hover:bg-surface-hover transition-colors">
-                          <td className="px-3 py-2 font-mono text-accent font-medium">{f.rule_id}</td>
-                          <td className="px-3 py-2">
+              filteredFindings.length > 0 ? (
+                <div className="overflow-x-auto rounded-lg border border-border-default">
+                  <table className="w-full text-left text-xs text-text-secondary">
+                    <thead className="bg-surface-elevated text-text-muted font-medium border-b border-border-default uppercase font-mono text-[11px] tracking-wider">
+                      <tr>
+                        <th className="px-3.5 py-2.5">Rule ID</th>
+                        <th className="px-3.5 py-2.5">Severity</th>
+                        <th className="px-3.5 py-2.5">Category</th>
+                        <th className="px-3.5 py-2.5">Target Location</th>
+                        <th className="px-3.5 py-2.5">Evidence Summary</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border-default bg-surface-base">
+                      {filteredFindings.map((f, i) => (
+                        <tr key={i} className="hover:bg-surface-hover/70 transition-colors">
+                          <td className="px-3.5 py-2.5 font-mono text-accent font-medium whitespace-nowrap">
+                            {f.rule_id}
+                          </td>
+                          <td className="px-3.5 py-2.5 whitespace-nowrap">
                             <StatusBadge
                               label={f.severity}
                               variant={
@@ -228,30 +270,43 @@ export const AuditDashboardTab: React.FC<AuditDashboardTabProps> = ({
                               isMono={true}
                             />
                           </td>
-                          <td className="px-3 py-2 font-mono text-text-muted">{f.category}</td>
-                          <td className="px-3 py-2 font-mono text-text-primary">
+                          <td className="px-3.5 py-2.5 font-mono text-text-muted whitespace-nowrap">
+                            {f.category}
+                          </td>
+                          <td className="px-3.5 py-2.5 font-mono text-text-primary whitespace-nowrap">
                             {f.file_path}:{f.start_line}
                           </td>
-                          <td className="px-3 py-2 text-text-secondary max-w-md truncate">{f.evidence_summary}</td>
+                          <td className="px-3.5 py-2.5 text-text-secondary max-w-md truncate">
+                            {f.evidence_summary}
+                          </td>
                         </tr>
                       ))}
-                  </tbody>
-                </table>
-              </div>
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-6 text-center text-text-muted bg-surface-elevated rounded-lg text-xs space-y-1">
+                  <p className="font-medium text-text-secondary">No findings match the current filter</p>
+                  <p className="text-text-muted">Try adjusting your severity filter or search query.</p>
+                </div>
+              )
             ) : (
-              <div className="p-6 text-center text-text-muted bg-surface-elevated rounded-lg text-xs">
-                Zero security or complexity findings identified in this snapshot!
+              <div className="p-6 text-center text-text-muted bg-surface-elevated rounded-lg text-xs flex items-center justify-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>Zero security or complexity findings identified in this snapshot!</span>
               </div>
             )}
           </Card>
         </div>
       ) : (
-        <Card padding="lg" className="bg-surface-card border-border-default text-center text-text-muted">
-          <ShieldCheck className="w-12 h-12 text-text-muted opacity-40 mx-auto mb-3" />
-          <p className="text-sm font-medium text-text-primary">
+        <Card padding="lg" className="bg-surface-card border-border-default text-center text-text-muted shadow-xs">
+          <div className="w-12 h-12 rounded-xl bg-surface-elevated border border-border-default flex items-center justify-center text-text-muted opacity-50 mx-auto mb-3 shadow-xs">
+            <ShieldCheck className="w-6 h-6" />
+          </div>
+          <p className="text-sm font-semibold text-text-primary">
             No audit records found for this repository
           </p>
-          <p className="text-xs text-text-secondary max-w-sm mx-auto mt-1 leading-relaxed">
+          <p className="text-xs text-text-secondary max-w-sm mx-auto mt-1.5 leading-relaxed">
             Click &quot;Run Codebase Audit&quot; above to launch a complete, non-destructive 6-pillar assessment across ingestion, static AST rules, SCA, AppSec, architecture, and remediation feasibility.
           </p>
         </Card>
@@ -259,4 +314,3 @@ export const AuditDashboardTab: React.FC<AuditDashboardTabProps> = ({
     </div>
   );
 };
-
