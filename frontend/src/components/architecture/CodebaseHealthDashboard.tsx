@@ -67,12 +67,48 @@ export const CodebaseHealthDashboard: React.FC<CodebaseHealthDashboardProps> = (
     fetchHealth();
   }, [fetchHealth]);
 
-  const getScoreColor = (score: number | null): { text: string; bg: string; border: string } => {
-    if (score === null) return { text: "text-text-muted", bg: "bg-surface-elevated", border: "border-border-default" };
-    if (score >= 85) return { text: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/30" };
-    if (score >= 70) return { text: "text-accent", bg: "bg-accent-subtle", border: "border-accent-border" };
-    if (score >= 50) return { text: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/30" };
-    return { text: "text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/30" };
+  const getScoreColor = (
+    score: number | null
+  ): { text: string; bg: string; border: string; hoverBorder: string; hoverBg: string } => {
+    if (score === null)
+      return {
+        text: "text-text-muted",
+        bg: "bg-surface-elevated/80",
+        border: "border-border-default",
+        hoverBorder: "hover:border-border-strong",
+        hoverBg: "hover:bg-surface-elevated",
+      };
+    if (score >= 85)
+      return {
+        text: "text-emerald-400",
+        bg: "bg-emerald-500/10",
+        border: "border-emerald-500/30",
+        hoverBorder: "hover:border-emerald-500/60",
+        hoverBg: "hover:bg-emerald-500/15",
+      };
+    if (score >= 70)
+      return {
+        text: "text-accent",
+        bg: "bg-accent-subtle",
+        border: "border-accent-border",
+        hoverBorder: "hover:border-accent",
+        hoverBg: "hover:bg-accent/15",
+      };
+    if (score >= 50)
+      return {
+        text: "text-amber-400",
+        bg: "bg-amber-500/10",
+        border: "border-amber-500/30",
+        hoverBorder: "hover:border-amber-500/60",
+        hoverBg: "hover:bg-amber-500/15",
+      };
+    return {
+      text: "text-rose-400",
+      bg: "bg-rose-500/10",
+      border: "border-rose-500/30",
+      hoverBorder: "hover:border-rose-500/60",
+      hoverBg: "hover:bg-rose-500/15",
+    };
   };
 
   const getStatusBadge = (status: string, score: number | null) => {
@@ -94,7 +130,7 @@ export const CodebaseHealthDashboard: React.FC<CodebaseHealthDashboardProps> = (
     }
     if (score !== null && score >= 85) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 shadow-xs">
           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
           Excellent Health
         </span>
@@ -102,7 +138,7 @@ export const CodebaseHealthDashboard: React.FC<CodebaseHealthDashboardProps> = (
     }
     if (score !== null && score >= 70) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-accent-subtle text-accent border border-accent-border">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-accent-subtle text-accent border border-accent-border shadow-xs">
           <CheckCircle2 className="w-3.5 h-3.5 text-accent" />
           Good Health
         </span>
@@ -110,14 +146,14 @@ export const CodebaseHealthDashboard: React.FC<CodebaseHealthDashboardProps> = (
     }
     if (score !== null && score >= 50) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/40 shadow-xs">
           <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
           Needs Improvement
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/30">
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/15 text-rose-300 border border-rose-500/40 shadow-xs">
         <AlertOctagon className="w-3.5 h-3.5 text-rose-400" />
         Critical Risk
       </span>
@@ -225,12 +261,14 @@ export const CodebaseHealthDashboard: React.FC<CodebaseHealthDashboardProps> = (
           {/* Overall Score Dial */}
           <div className="flex items-center gap-5">
             <div
-              className={`w-24 h-24 rounded-2xl flex flex-col items-center justify-center border-2 ${scoreTheme.bg} ${scoreTheme.border} transition-all shadow-xs shrink-0`}
+              className={`w-24 h-24 rounded-2xl flex flex-col items-center justify-center border-2 ${scoreTheme.bg} ${scoreTheme.border} ${scoreTheme.hoverBg} ${scoreTheme.hoverBorder} transition-all duration-300 ease-out shadow-xs hover:shadow-sm shrink-0 select-none cursor-default group`}
             >
-              <span className={`text-3xl font-extrabold font-mono tracking-tight ${scoreTheme.text}`}>
+              <span
+                className={`text-3xl font-extrabold font-mono tracking-tight ${scoreTheme.text} transition-colors duration-200`}
+              >
                 {health.overall_score !== null ? health.overall_score.toFixed(1) : "--"}
               </span>
-              <span className="text-[10px] uppercase font-bold text-text-muted tracking-wider mt-0.5">
+              <span className="text-[10px] uppercase font-semibold text-text-secondary tracking-widest mt-0.5 transition-colors duration-200">
                 / 100 PTS
               </span>
             </div>
