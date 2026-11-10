@@ -88,15 +88,15 @@ export const Tabs: React.FC<TabsProps> = ({
         if (variant === "underline") {
           variantStyle = isActive
             ? "border-b-2 border-accent text-text-primary font-semibold -mb-px"
-            : "border-b-2 border-transparent text-text-muted hover:text-text-secondary hover:border-border-strong";
+            : "border-b-2 border-transparent text-text-muted hover:text-text-primary hover:border-border-strong hover:bg-surface-hover/30 rounded-t-md";
         } else if (variant === "pills") {
           variantStyle = isActive
             ? "bg-accent text-accent-foreground font-semibold rounded-md shadow-xs"
             : "text-text-muted hover:text-text-primary hover:bg-surface-hover rounded-md";
         } else if (variant === "enclosed") {
           variantStyle = isActive
-            ? "bg-surface-card border-t border-x border-border-default rounded-t-md text-text-primary font-semibold -mb-px"
-            : "text-text-muted hover:text-text-primary rounded-t-md";
+            ? "bg-surface-card border-t-2 border-t-accent border-x border-border-default rounded-t-md text-text-primary font-semibold -mb-px"
+            : "text-text-muted hover:text-text-primary hover:bg-surface-hover/40 rounded-t-md";
         }
 
         return (
@@ -112,23 +112,32 @@ export const Tabs: React.FC<TabsProps> = ({
             onClick={() => onChange(tab.id)}
             onKeyDown={(e) => handleKeyDown(e, index)}
             className={cn(
-              "inline-flex items-center justify-center font-medium whitespace-nowrap transition-colors cursor-pointer select-none",
-              "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent",
+              "inline-flex items-center justify-center font-medium whitespace-nowrap transition-all duration-200 ease-in-out cursor-pointer select-none relative",
+              "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background z-10",
               "disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none",
               sizeStyles[size],
               variantStyle
             )}
           >
-            {tab.icon && <span className="shrink-0">{tab.icon}</span>}
+            {tab.icon && (
+              <span
+                className={cn(
+                  "shrink-0 transition-colors duration-200",
+                  isActive ? "text-accent" : "text-text-muted"
+                )}
+              >
+                {tab.icon}
+              </span>
+            )}
             <span>{tab.label}</span>
             {tab.badge !== undefined && (
               <span
                 className={cn(
-                  "px-1.5 py-0.2 rounded-full text-[10px] font-mono",
+                  "px-1.5 py-0.5 rounded-full text-[10px] font-mono font-medium transition-colors duration-200",
                   isActive
                     ? variant === "pills"
                       ? "bg-white/20 text-white"
-                      : "bg-accent-subtle text-accent-foreground border border-accent-border"
+                      : "bg-accent-subtle text-accent border border-accent-border"
                     : "bg-surface-elevated text-text-muted border border-border-default"
                 )}
               >
