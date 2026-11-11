@@ -1,14 +1,22 @@
 import React, { useState } from "react";
 import {
   AlertTriangle,
+  CheckCircle2,
   Clock,
+  Code2,
+  Database,
   Download,
   Layers,
+  Network,
+  PackageCheck,
   Play,
   RefreshCw,
   Search,
+  Shield,
+  ShieldAlert,
   ShieldCheck,
-  CheckCircle2,
+  Sparkles,
+  X,
 } from "lucide-react";
 import { AuditRunListItem, AuditRunResponse } from "../../types/cicd";
 import { Button } from "../common/Button";
@@ -54,107 +62,168 @@ export const AuditDashboardTab: React.FC<AuditDashboardTabProps> = ({
     return rule.includes(query) || file.includes(query) || evidence.includes(query);
   });
 
+  const getPillarCategoryIcon = (category: string) => {
+    switch (category?.toUpperCase()) {
+      case "INGESTION":
+        return <Database className="w-3.5 h-3.5 text-blue-400" />;
+      case "STATIC_ANALYSIS":
+        return <Code2 className="w-3.5 h-3.5 text-accent" />;
+      case "DEPENDENCY_SCA":
+        return <PackageCheck className="w-3.5 h-3.5 text-amber-400" />;
+      case "APPSEC_INTELLIGENCE":
+        return <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />;
+      case "ARCHITECTURE_GOVERNANCE":
+        return <Network className="w-3.5 h-3.5 text-purple-400" />;
+      case "REMEDIATION_VALIDATION":
+        return <Sparkles className="w-3.5 h-3.5 text-emerald-400" />;
+      default:
+        return <Shield className="w-3.5 h-3.5 text-text-muted" />;
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Audit Controls & Action Bar */}
-      <Card padding="md" className="bg-surface-card border-border-default flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
-        <div className="flex items-center gap-3 flex-wrap">
-          <Button
-            variant="primary"
-            size="md"
-            onClick={onExecuteAudit}
-            disabled={isExecutingAudit}
-            isLoading={isExecutingAudit}
-            leftIcon={
-              isExecutingAudit ? (
-                <RefreshCw className="w-4 h-4 animate-spin" />
-              ) : (
-                <Play className="w-4 h-4 fill-current" />
-              )
-            }
-            className="text-xs font-semibold shadow-xs"
-          >
-            {isExecutingAudit ? "Executing 6-Pillar Audit..." : "Run Codebase Audit"}
-          </Button>
+      <Card padding="md" className="bg-surface-card border-border-default shadow-xs">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <Button
+              variant="primary"
+              size="md"
+              onClick={onExecuteAudit}
+              disabled={isExecutingAudit}
+              isLoading={isExecutingAudit}
+              leftIcon={
+                isExecutingAudit ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Play className="w-4 h-4 fill-current" />
+                )
+              }
+              className="text-xs font-semibold shadow-xs"
+            >
+              {isExecutingAudit ? "Executing 6-Pillar Audit..." : "Run Codebase Audit"}
+            </Button>
 
-          {auditRuns.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-text-muted font-medium">History:</span>
-              <select
-                value={selectedAuditRun?.id || ""}
-                onChange={(e) => onSelectAuditRun(e.target.value)}
-                className="bg-surface-elevated border border-border-default text-text-primary text-xs rounded-md px-2.5 py-1.5 focus:outline-hidden focus:ring-1 focus:ring-accent font-mono"
+            {auditRuns.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-text-muted font-medium">History:</span>
+                <select
+                  value={selectedAuditRun?.id || ""}
+                  onChange={(e) => onSelectAuditRun(e.target.value)}
+                  className="bg-surface-elevated border border-border-default text-text-primary text-xs rounded-md px-2.5 py-1.5 focus:outline-hidden focus:ring-1 focus:ring-accent font-mono transition-colors"
+                  aria-label="Select audit run history"
+                >
+                  {auditRuns.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {formatDate(a.started_at)} — {a.overall_status} ({a.total_findings} findings)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {selectedAuditRun && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onDownloadSarif}
+                leftIcon={<Download className="w-3.5 h-3.5 text-accent" />}
+                className="text-xs font-medium"
               >
-                {auditRuns.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {formatDate(a.started_at)} — {a.overall_status} ({a.total_findings} findings)
-                  </option>
-                ))}
-              </select>
+                SARIF 2.1.0 Standard
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onDownloadMarkdown}
+                leftIcon={<Download className="w-3.5 h-3.5 text-accent" />}
+                className="text-xs font-medium"
+              >
+                Markdown Report
+              </Button>
             </div>
           )}
         </div>
-
-        {selectedAuditRun && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={onDownloadSarif}
-              leftIcon={<Download className="w-3.5 h-3.5 text-accent" />}
-              className="text-xs font-medium"
-            >
-              SARIF 2.1.0 Standard
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={onDownloadMarkdown}
-              leftIcon={<Download className="w-3.5 h-3.5 text-accent" />}
-              className="text-xs font-medium"
-            >
-              Markdown Report
-            </Button>
-          </div>
-        )}
       </Card>
 
       {selectedAuditRun ? (
         <div className="space-y-6">
-          {/* Executive Summary Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-            <Card padding="sm" className="bg-surface-card border-border-default shadow-xs flex flex-col justify-between">
-              <span className="text-xs text-text-muted font-medium">Overall Audit Health</span>
-              <div className="mt-2.5 flex items-center gap-2">
+          {/* Executive Summary Telemetry Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <Card padding="md" className="bg-surface-card border-border-default shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-text-muted font-medium uppercase tracking-wider">Overall Audit Health</span>
+                <ShieldCheck className="w-4 h-4 text-accent/70" />
+              </div>
+              <div className="mt-3 flex items-center gap-2">
                 {getStatusBadge(selectedAuditRun.overall_status)}
+              </div>
+              <div className="mt-2 text-[11px] font-mono text-text-muted">
+                Run ID: {selectedAuditRun.id.slice(0, 8)}
               </div>
             </Card>
 
-            <Card padding="sm" className="bg-surface-card border-border-default shadow-xs flex flex-col justify-between">
-              <span className="text-xs text-text-muted font-medium">Pillar Checks Evaluated</span>
-              <div className="mt-2 text-2xl font-bold font-mono text-text-primary flex items-baseline gap-1.5">
+            <Card padding="md" className="bg-surface-card border-border-default shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-text-muted font-medium uppercase tracking-wider">Pillars Evaluated</span>
+                <Layers className="w-4 h-4 text-accent/70" />
+              </div>
+              <div className="mt-2.5 text-2xl font-bold font-mono text-text-primary flex items-baseline gap-1.5">
                 <span>
                   {selectedAuditRun.summary.passed_checks} / {selectedAuditRun.summary.total_checks}
                 </span>
                 <span className="text-xs font-normal text-text-muted">Passed</span>
               </div>
+              <div className="mt-2 w-full bg-surface-base h-1.5 rounded-full overflow-hidden border border-border-default">
+                <div
+                  className="bg-accent h-full rounded-full transition-all duration-300"
+                  style={{
+                    width: `${
+                      selectedAuditRun.summary.total_checks > 0
+                        ? (selectedAuditRun.summary.passed_checks / selectedAuditRun.summary.total_checks) * 100
+                        : 0
+                    }%`,
+                  }}
+                />
+              </div>
             </Card>
 
-            <Card padding="sm" className="bg-surface-card border-border-default shadow-xs flex flex-col justify-between">
-              <span className="text-xs text-text-muted font-medium">Total Discovered Findings</span>
-              <div className="mt-2 text-2xl font-bold font-mono text-text-primary flex items-baseline gap-1.5">
+            <Card padding="md" className="bg-surface-card border-border-default shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-text-muted font-medium uppercase tracking-wider">Total Findings</span>
+                <AlertTriangle className="w-4 h-4 text-amber-400/80" />
+              </div>
+              <div className="mt-2.5 text-2xl font-bold font-mono text-text-primary flex items-baseline gap-1.5">
                 <span>{selectedAuditRun.summary.total_findings}</span>
-                <span className="text-xs font-normal text-text-muted">
-                  ({selectedAuditRun.summary.findings_by_severity?.HIGH || 0} High, {selectedAuditRun.summary.findings_by_severity?.MEDIUM || 0} Med)
+                <span className="text-xs font-normal text-text-muted">identified</span>
+              </div>
+              <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-300 border border-rose-500/30">
+                  {selectedAuditRun.summary.findings_by_severity?.HIGH || 0} High
+                </span>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                  {selectedAuditRun.summary.findings_by_severity?.MEDIUM || 0} Med
+                </span>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-base text-text-muted border border-border-default">
+                  {selectedAuditRun.summary.findings_by_severity?.LOW || 0} Low
                 </span>
               </div>
             </Card>
 
-            <Card padding="sm" className="bg-surface-card border-border-default shadow-xs flex flex-col justify-between">
-              <span className="text-xs text-text-muted font-medium">Audit Execution Duration</span>
-              <div className="mt-2 text-2xl font-bold font-mono text-text-primary flex items-center gap-2">
-                <Clock className="w-4 h-4 text-accent shrink-0" />
-                <span>{selectedAuditRun.summary.total_duration_ms} ms</span>
+            <Card padding="md" className="bg-surface-card border-border-default shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-text-muted font-medium uppercase tracking-wider">Execution Duration</span>
+                <Clock className="w-4 h-4 text-accent/70" />
+              </div>
+              <div className="mt-2.5 text-2xl font-bold font-mono text-text-primary flex items-center gap-2">
+                <span>{selectedAuditRun.summary.total_duration_ms}</span>
+                <span className="text-xs font-normal text-text-muted">ms</span>
+              </div>
+              <div className="mt-2 text-[11px] font-mono text-text-muted truncate">
+                Finished {formatDate(selectedAuditRun.completed_at || selectedAuditRun.started_at)}
               </div>
             </Card>
           </div>
@@ -162,10 +231,14 @@ export const AuditDashboardTab: React.FC<AuditDashboardTabProps> = ({
           {/* 6 Pillars Check Breakdown */}
           <Card padding="md" className="bg-surface-card border-border-default space-y-4 shadow-xs">
             <div className="flex items-center justify-between border-b border-border-default pb-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-text-primary flex items-center gap-2">
-                <Layers className="w-4 h-4 text-accent" />
-                6-Pillar Analysis Verification
-              </h3>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded bg-accent-subtle border border-accent-border flex items-center justify-center text-accent">
+                  <Layers className="w-3.5 h-3.5" />
+                </div>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-text-primary">
+                  6-Pillar Analysis Verification
+                </h3>
+              </div>
               <span className="text-[11px] font-mono text-text-muted">
                 {selectedAuditRun.checks.length} pillar checkpoints
               </span>
@@ -175,13 +248,16 @@ export const AuditDashboardTab: React.FC<AuditDashboardTabProps> = ({
               {selectedAuditRun.checks.map((c) => (
                 <div
                   key={c.check_id}
-                  className="p-3.5 rounded-lg bg-surface-elevated border border-border-default flex flex-col justify-between space-y-3 shadow-xs hover:border-border-strong transition-colors"
+                  className="p-3.5 rounded-lg bg-surface-elevated border border-border-default flex flex-col justify-between space-y-3 shadow-xs hover:border-border-strong transition-all duration-200"
                 >
                   <div>
-                    <div className="flex items-center justify-between gap-2 mb-1.5">
-                      <span className="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-surface-base text-text-muted border border-border-default">
-                        {c.category}
-                      </span>
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-surface-base text-text-muted border border-border-default">
+                        {getPillarCategoryIcon(c.category)}
+                        <span className="text-[10px] font-mono uppercase tracking-wider">
+                          {c.category}
+                        </span>
+                      </div>
                       {getStatusBadge(c.status)}
                     </div>
                     <h4 className="text-xs font-semibold text-text-primary leading-snug">{c.name}</h4>
@@ -190,9 +266,12 @@ export const AuditDashboardTab: React.FC<AuditDashboardTabProps> = ({
                     </p>
                   </div>
 
-                  <div className="pt-2 border-t border-border-default flex items-center justify-between text-[11px] text-text-muted font-mono">
-                    <span className="text-accent">{c.check_id}</span>
-                    <span>{c.duration_ms} ms</span>
+                  <div className="pt-2.5 border-t border-border-default flex items-center justify-between text-[11px] text-text-muted font-mono">
+                    <span className="text-accent font-medium">{c.check_id}</span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-text-muted" />
+                      {c.duration_ms} ms
+                    </span>
                   </div>
                 </div>
               ))}
@@ -202,10 +281,14 @@ export const AuditDashboardTab: React.FC<AuditDashboardTabProps> = ({
           {/* Discovered Findings Table */}
           <Card padding="md" className="bg-surface-card border-border-default space-y-4 shadow-xs">
             <div className="flex items-center justify-between flex-wrap gap-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-text-primary flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-400" />
-                Discovered Findings & Evidence ({selectedAuditRun.findings_preview.length})
-              </h3>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                </div>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-text-primary">
+                  Discovered Findings & Evidence ({selectedAuditRun.findings_preview.length})
+                </h3>
+              </div>
 
               <div className="flex items-center gap-3 flex-wrap">
                 {/* Search */}
@@ -216,8 +299,18 @@ export const AuditDashboardTab: React.FC<AuditDashboardTabProps> = ({
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search findings..."
-                    className="bg-surface-elevated border border-border-default text-text-primary text-xs rounded-md pl-8 pr-2.5 py-1 focus:outline-hidden focus:ring-1 focus:ring-accent w-44"
+                    className="bg-surface-elevated border border-border-default text-text-primary text-xs rounded-md pl-8 pr-7 py-1.5 focus:outline-hidden focus:ring-1 focus:ring-accent w-48 transition-colors"
                   />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary"
+                      aria-label="Clear search"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
                 </div>
 
                 {/* Severity Dropdown */}
@@ -226,7 +319,8 @@ export const AuditDashboardTab: React.FC<AuditDashboardTabProps> = ({
                   <select
                     value={severityFilter}
                     onChange={(e) => setSeverityFilter(e.target.value)}
-                    className="bg-surface-elevated border border-border-default text-text-primary text-xs rounded-md px-2 py-1 focus:outline-hidden focus:ring-1 focus:ring-accent font-medium"
+                    className="bg-surface-elevated border border-border-default text-text-primary text-xs rounded-md px-2.5 py-1.5 focus:outline-hidden focus:ring-1 focus:ring-accent font-medium transition-colors"
+                    aria-label="Filter findings by severity"
                   >
                     <option value="ALL">All Severities</option>
                     <option value="CRITICAL">Critical</option>
@@ -285,23 +379,27 @@ export const AuditDashboardTab: React.FC<AuditDashboardTabProps> = ({
                   </table>
                 </div>
               ) : (
-                <div className="p-6 text-center text-text-muted bg-surface-elevated rounded-lg text-xs space-y-1">
-                  <p className="font-medium text-text-secondary">No findings match the current filter</p>
-                  <p className="text-text-muted">Try adjusting your severity filter or search query.</p>
+                <div className="p-8 text-center text-text-muted bg-surface-elevated rounded-lg text-xs space-y-1.5 border border-border-default">
+                  <p className="font-semibold text-text-secondary">No findings match the current filter</p>
+                  <p className="text-text-muted text-[11px]">
+                    Try adjusting your severity filter or clearing the search query.
+                  </p>
                 </div>
               )
             ) : (
-              <div className="p-6 text-center text-text-muted bg-surface-elevated rounded-lg text-xs flex items-center justify-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span>Zero security or complexity findings identified in this snapshot!</span>
+              <div className="p-8 text-center text-text-muted bg-surface-elevated rounded-lg text-xs flex items-center justify-center gap-2.5 border border-border-default">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <span className="font-medium text-emerald-300">
+                  Zero security or complexity findings identified in this snapshot!
+                </span>
               </div>
             )}
           </Card>
         </div>
       ) : (
         <Card padding="lg" className="bg-surface-card border-border-default text-center text-text-muted shadow-xs">
-          <div className="w-12 h-12 rounded-xl bg-surface-elevated border border-border-default flex items-center justify-center text-text-muted opacity-50 mx-auto mb-3 shadow-xs">
-            <ShieldCheck className="w-6 h-6" />
+          <div className="w-12 h-12 rounded-xl bg-surface-elevated border border-border-default flex items-center justify-center text-text-muted opacity-60 mx-auto mb-3 shadow-xs">
+            <ShieldCheck className="w-6 h-6 text-accent" />
           </div>
           <p className="text-sm font-semibold text-text-primary">
             No audit records found for this repository
