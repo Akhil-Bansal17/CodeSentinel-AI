@@ -404,19 +404,19 @@ export const CiCdAuditPage: React.FC<CiCdAuditPageProps> = ({ initialRepoId }) =
     switch (status) {
       case "PASSED":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-mono">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-mono shadow-xs">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Passed
           </span>
         );
       case "WARNING":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30 font-mono">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30 font-mono shadow-xs">
             <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> Warning
           </span>
         );
       case "FAILED":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/30 font-mono">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/15 text-rose-400 border border-rose-500/30 font-mono shadow-xs">
             <XCircle className="w-3.5 h-3.5 text-rose-400" /> Failed
           </span>
         );
@@ -477,7 +477,7 @@ export const CiCdAuditPage: React.FC<CiCdAuditPageProps> = ({ initialRepoId }) =
           </p>
         </div>
 
-        {/* Repository Selector (Toolbar context) */}
+        {/* Repository Selector (Only shown in standalone page context) */}
         {!initialRepoId && (
           <div className="flex items-center gap-2.5 bg-surface-card border border-border-default rounded-lg px-3 py-2 shadow-xs shrink-0">
             <label htmlFor="cicd-repo-selector" className="text-xs text-text-muted font-medium whitespace-nowrap flex items-center gap-1.5">
@@ -558,7 +558,7 @@ export const CiCdAuditPage: React.FC<CiCdAuditPageProps> = ({ initialRepoId }) =
           <button
             type="button"
             onClick={() => setFeedbackMessage(null)}
-            className="text-text-muted hover:text-text-primary p-0.5 rounded transition-colors"
+            className="text-text-muted hover:text-text-primary p-0.5 rounded transition-colors cursor-pointer"
             aria-label="Dismiss feedback"
           >
             <X className="w-3.5 h-3.5" />
