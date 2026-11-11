@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {
   AlertCircle,
+  Check,
   CheckCircle2,
   Copy,
   Download,
@@ -8,6 +9,8 @@ import {
   GitPullRequest,
   RefreshCw,
   Search,
+  Sparkles,
+  X,
 } from "lucide-react";
 import { PrPrepareResponse } from "../../types/cicd";
 import { RemediationProposal } from "../../types/remediation";
@@ -42,6 +45,8 @@ export const PrSynthesisTab: React.FC<PrSynthesisTabProps> = ({
   onDownloadPatch,
 }) => {
   const [proposalSearch, setProposalSearch] = useState<string>("");
+  const [copiedPrBody, setCopiedPrBody] = useState(false);
+  const [copiedDiff, setCopiedDiff] = useState(false);
 
   const eligibleProposals = proposals.filter((p) =>
     ["VALIDATED", "APPROVED"].includes(p.status)
@@ -72,22 +77,59 @@ export const PrSynthesisTab: React.FC<PrSynthesisTabProps> = ({
     });
   };
 
+  const handleCopyBody = () => {
+    onCopyPrDescription();
+    setCopiedPrBody(true);
+    setTimeout(() => setCopiedPrBody(false), 2000);
+  };
+
+  const handleCopyDiff = () => {
+    if (preparedPr?.combined_diff) {
+      navigator.clipboard.writeText(preparedPr.combined_diff);
+      setCopiedDiff(true);
+      setTimeout(() => setCopiedDiff(false), 2000);
+    }
+  };
+
+  const renderDiffLine = (line: string, index: number) => {
+    let lineClass = "text-text-secondary";
+    if (line.startsWith("+") && !line.startsWith("+++")) {
+      lineClass = "text-emerald-400 bg-emerald-500/10 font-medium";
+    } else if (line.startsWith("-") && !line.startsWith("---")) {
+      lineClass = "text-rose-400 bg-rose-500/10 font-medium";
+    } else if (line.startsWith("@@")) {
+      lineClass = "text-accent bg-accent-subtle/40 font-semibold";
+    } else if (line.startsWith("diff --git") || line.startsWith("index ")) {
+      lineClass = "text-text-primary font-bold";
+    }
+
+    return (
+      <div key={index} className={cn("px-2 py-0.5 font-mono text-[11px] leading-relaxed", lineClass)}>
+        {line || " "}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Proposal Selection Card */}
       <Card padding="md" className="bg-surface-card border-border-default space-y-4 shadow-xs">
-        <div>
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-text-primary flex items-center gap-2">
-            <GitPullRequest className="w-4 h-4 text-accent" />
-            Select Validated Proposals for PR Change Set
-          </h2>
-          <p className="text-xs text-text-muted mt-1 leading-relaxed max-w-2xl">
-            Choose approved or validated remediation patches. CodeSentinel AI will verify source hashes, detect overlapping line conflicts, and compose a unified diff.
-          </p>
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 rounded-lg bg-accent-subtle border border-accent-border flex items-center justify-center text-accent shrink-0 mt-0.5">
+            <GitPullRequest className="w-4 h-4" />
+          </div>
+          <div>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-text-primary flex items-center gap-2">
+              Select Validated Proposals for PR Change Set
+            </h2>
+            <p className="text-xs text-text-secondary mt-1 leading-relaxed max-w-2xl">
+              Choose approved or validated remediation patches. CodeSentinel AI verifies source hashes, validates line overlaps using AST boundary checks, and composes a unified, conflict-free git diff bundle.
+            </p>
+          </div>
         </div>
 
         {/* Custom PR Title */}
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 pt-1">
           <label className="block text-xs font-medium text-text-muted">
             Custom PR Title (Optional)
           </label>
@@ -96,7 +138,7 @@ export const PrSynthesisTab: React.FC<PrSynthesisTabProps> = ({
             value={customPrTitle}
             onChange={(e) => setCustomPrTitle(e.target.value)}
             placeholder="e.g. fix(security): remediate dynamic eval & restore TLS"
-            className="w-full bg-surface-elevated border border-border-default text-text-primary text-xs rounded-md px-3 py-2 focus:ring-1 focus:ring-accent focus:border-accent focus:outline-hidden placeholder:text-text-muted font-medium"
+            className="w-full bg-surface-elevated border border-border-default text-text-primary text-xs rounded-md px-3 py-2 focus:ring-1 focus:ring-accent focus:border-accent focus:outline-hidden placeholder:text-text-muted font-medium transition-colors"
           />
         </div>
 
@@ -123,20 +165,31 @@ export const PrSynthesisTab: React.FC<PrSynthesisTabProps> = ({
                     Clear Selection
                   </Button>
                 )}
+                <span className="text-[11px] font-mono text-text-muted pl-1">
+                  {selectedProposalIds.length} of {eligibleProposals.length} eligible selected
+                </span>
               </div>
 
-              {proposals.length > 5 && (
-                <div className="relative">
-                  <Search className="w-3.5 h-3.5 text-text-muted absolute left-2.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    value={proposalSearch}
-                    onChange={(e) => setProposalSearch(e.target.value)}
-                    placeholder="Search proposals..."
-                    className="bg-surface-elevated border border-border-default text-text-primary text-xs rounded-md pl-8 pr-2.5 py-1 focus:outline-hidden focus:ring-1 focus:ring-accent w-48"
-                  />
-                </div>
-              )}
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-text-muted absolute left-2.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={proposalSearch}
+                  onChange={(e) => setProposalSearch(e.target.value)}
+                  placeholder="Search proposals..."
+                  className="bg-surface-elevated border border-border-default text-text-primary text-xs rounded-md pl-8 pr-7 py-1 focus:outline-hidden focus:ring-1 focus:ring-accent w-48 transition-colors"
+                />
+                {proposalSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setProposalSearch("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary"
+                    aria-label="Clear search"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="overflow-x-auto rounded-lg border border-border-default">
@@ -175,6 +228,7 @@ export const PrSynthesisTab: React.FC<PrSynthesisTabProps> = ({
                                 ? "Select proposal for PR change set"
                                 : "Only VALIDATED or APPROVED proposals can be synthesized"
                             }
+                            aria-label={`Select proposal ${p.remediation_rule_id}`}
                           />
                         </td>
                         <td className="px-3.5 py-2.5 font-mono text-accent font-medium whitespace-nowrap">
@@ -210,8 +264,11 @@ export const PrSynthesisTab: React.FC<PrSynthesisTabProps> = ({
             </div>
           </div>
         ) : (
-          <div className="p-6 text-center text-text-muted bg-surface-elevated rounded-lg text-xs">
-            No remediation proposals found for this repository. Run analysis or generate proposals in the Remediation tab first.
+          <div className="p-8 text-center text-text-muted bg-surface-elevated rounded-lg text-xs space-y-1 border border-border-default">
+            <p className="font-semibold text-text-secondary">No remediation proposals found</p>
+            <p className="text-text-muted">
+              Run analysis or generate proposals in the Remediation tab first.
+            </p>
           </div>
         )}
 
@@ -271,11 +328,11 @@ export const PrSynthesisTab: React.FC<PrSynthesisTabProps> = ({
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={onCopyPrDescription}
-                  leftIcon={<Copy className="w-3.5 h-3.5" />}
+                  onClick={handleCopyBody}
+                  leftIcon={copiedPrBody ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                   className="text-xs font-medium"
                 >
-                  Copy PR Body
+                  {copiedPrBody ? "Copied Body" : "Copy PR Body"}
                 </Button>
                 <Button
                   variant="primary"
@@ -300,8 +357,9 @@ export const PrSynthesisTab: React.FC<PrSynthesisTabProps> = ({
                 {preparedPr.status}
               </span>
             </div>
-            <div className="p-3 bg-surface-base rounded-md text-sm font-semibold text-text-primary font-mono border border-border-default shadow-xs">
-              {preparedPr.title}
+            <div className="p-3 bg-surface-base rounded-md text-sm font-semibold text-text-primary font-mono border border-border-default shadow-xs flex items-center justify-between">
+              <span>{preparedPr.title}</span>
+              <Sparkles className="w-4 h-4 text-accent shrink-0 ml-2" />
             </div>
 
             <div className="flex items-center justify-between pt-2">
@@ -311,11 +369,11 @@ export const PrSynthesisTab: React.FC<PrSynthesisTabProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={onCopyPrDescription}
-                leftIcon={<Copy className="w-3 h-3" />}
+                onClick={handleCopyBody}
+                leftIcon={copiedPrBody ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
                 className="text-[11px] h-6 px-2 text-text-muted hover:text-text-primary"
               >
-                Copy
+                {copiedPrBody ? "Copied" : "Copy"}
               </Button>
             </div>
             <pre className="p-4 rounded-lg bg-surface-base border border-border-default text-xs font-mono text-text-secondary overflow-x-auto whitespace-pre-wrap leading-relaxed select-all max-h-[300px]">
@@ -326,18 +384,33 @@ export const PrSynthesisTab: React.FC<PrSynthesisTabProps> = ({
           {/* Unified Diff Review */}
           <Card padding="md" className="bg-surface-card border-border-default space-y-3 shadow-xs">
             <div className="flex items-center justify-between border-b border-border-default pb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-text-primary flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <FileCheck2 className="w-4 h-4 text-accent" />
-                Combined Unified Diff Review
-              </span>
-              <span className="text-xs text-text-muted font-mono px-2 py-0.5 rounded bg-surface-elevated border border-border-default">
-                {preparedPr.proposal_count} Patches Applied
-              </span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-text-primary">
+                  Combined Unified Diff Review
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-text-muted font-mono px-2 py-0.5 rounded bg-surface-elevated border border-border-default">
+                  {preparedPr.proposal_count} Patches Applied
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCopyDiff}
+                  leftIcon={copiedDiff ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                  className="text-[11px] h-6 px-2 text-text-muted hover:text-text-primary"
+                >
+                  {copiedDiff ? "Copied Diff" : "Copy Diff"}
+                </Button>
+              </div>
             </div>
 
-            <pre className="p-4 rounded-lg bg-surface-base border border-border-default text-xs font-mono text-text-secondary overflow-x-auto whitespace-pre leading-relaxed select-all max-h-[400px]">
-              {preparedPr.combined_diff}
-            </pre>
+            <div className="rounded-lg bg-surface-base border border-border-default overflow-x-auto max-h-[420px] divide-y divide-border-default/40">
+              {preparedPr.combined_diff.split("\n").map((line, idx) =>
+                renderDiffLine(line, idx)
+              )}
+            </div>
           </Card>
         </div>
       )}
