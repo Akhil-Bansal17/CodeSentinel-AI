@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Code2,
   Copy,
@@ -10,6 +10,8 @@ import {
   CheckCircle2,
   Cpu,
   Layers,
+  GitBranch,
+  Check,
 } from "lucide-react";
 import { WorkflowGenerateResponse } from "../../types/cicd";
 import { Button } from "../common/Button";
@@ -75,6 +77,14 @@ export const WorkflowGeneratorTab: React.FC<WorkflowGeneratorTabProps> = ({
   onCopyWorkflow,
   onDownloadWorkflow,
 }) => {
+  const [copied, setCopied] = useState<boolean>(false);
+
+  const handleCopy = () => {
+    onCopyWorkflow();
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
       {/* Configuration Controls Column */}
@@ -90,62 +100,65 @@ export const WorkflowGeneratorTab: React.FC<WorkflowGeneratorTabProps> = ({
             </p>
           </div>
 
-          {/* Ecosystem Segmented Control */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-medium text-text-muted">
-              Runtime Ecosystem
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              {(["python", "node", "mixed", "generic"] as const).map((eco) => (
-                <button
-                  key={eco}
-                  type="button"
-                  onClick={() => setEcosystem(eco)}
-                  className={cn(
-                    "px-3 py-2 text-xs font-medium rounded-md border text-left capitalize transition-all select-none cursor-pointer flex items-center justify-between",
-                    ecosystem === eco
-                      ? "bg-accent-subtle border-accent text-accent font-semibold shadow-xs"
-                      : "bg-surface-elevated border-border-default text-text-secondary hover:border-border-strong hover:text-text-primary"
-                  )}
-                >
-                  <span>{eco === "mixed" ? "Mixed (Python & Node)" : eco}</span>
-                  {ecosystem === eco && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
-                  )}
-                </button>
-              ))}
+          {/* Section 1: Ecosystem & Target */}
+          <div className="space-y-3 pt-1">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium text-text-muted">
+                Runtime Ecosystem
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {(["python", "node", "mixed", "generic"] as const).map((eco) => (
+                  <button
+                    key={eco}
+                    type="button"
+                    onClick={() => setEcosystem(eco)}
+                    className={cn(
+                      "px-3 py-2 text-xs font-medium rounded-md border text-left capitalize transition-all select-none cursor-pointer flex items-center justify-between",
+                      ecosystem === eco
+                        ? "bg-accent-subtle border-accent text-accent font-semibold shadow-xs"
+                        : "bg-surface-elevated border-border-default text-text-secondary hover:border-border-strong hover:text-text-primary"
+                    )}
+                  >
+                    <span>{eco === "mixed" ? "Mixed (Python & Node)" : eco}</span>
+                    {ecosystem === eco && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Workflow Name */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium text-text-muted">
+                Workflow Name
+              </label>
+              <input
+                type="text"
+                value={workflowName}
+                onChange={(e) => setWorkflowName(e.target.value)}
+                className="w-full bg-surface-elevated border border-border-default text-text-primary text-xs rounded-md px-3 py-2 focus:ring-1 focus:ring-accent focus:border-accent focus:outline-hidden font-medium"
+              />
+            </div>
+
+            {/* Trigger Branches */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium text-text-muted flex items-center gap-1.5">
+                <GitBranch className="w-3.5 h-3.5 text-text-muted" />
+                Trigger Branches (comma-separated)
+              </label>
+              <input
+                type="text"
+                value={triggerBranches}
+                onChange={(e) => setTriggerBranches(e.target.value)}
+                placeholder="main, release"
+                className="w-full bg-surface-elevated border border-border-default text-text-primary text-xs rounded-md px-3 py-2 focus:ring-1 focus:ring-accent focus:border-accent focus:outline-hidden font-mono text-xs"
+              />
             </div>
           </div>
 
-          {/* Workflow Name */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-medium text-text-muted">
-              Workflow Name
-            </label>
-            <input
-              type="text"
-              value={workflowName}
-              onChange={(e) => setWorkflowName(e.target.value)}
-              className="w-full bg-surface-elevated border border-border-default text-text-primary text-xs rounded-md px-3 py-2 focus:ring-1 focus:ring-accent focus:border-accent focus:outline-hidden font-medium"
-            />
-          </div>
-
-          {/* Trigger Branches */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-medium text-text-muted">
-              Trigger Branches (comma-separated)
-            </label>
-            <input
-              type="text"
-              value={triggerBranches}
-              onChange={(e) => setTriggerBranches(e.target.value)}
-              placeholder="main, release"
-              className="w-full bg-surface-elevated border border-border-default text-text-primary text-xs rounded-md px-3 py-2 focus:ring-1 focus:ring-accent focus:border-accent focus:outline-hidden font-mono text-xs"
-            />
-          </div>
-
-          {/* Included Pipeline Stages */}
-          <div className="pt-2 border-t border-border-default space-y-2.5">
+          {/* Section 2: Included Pipeline Stages */}
+          <div className="pt-3 border-t border-border-default space-y-2.5">
             <div className="flex items-center justify-between">
               <label className="block text-xs font-semibold text-text-primary">
                 Included Pipeline Stages
@@ -216,8 +229,8 @@ export const WorkflowGeneratorTab: React.FC<WorkflowGeneratorTabProps> = ({
             </div>
           </div>
 
-          {/* Runtime Version Controls */}
-          <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border-default">
+          {/* Section 3: Runtime Version Controls */}
+          <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border-default">
             {ecosystem !== "node" && (
               <div className="space-y-1">
                 <label className="block text-xs font-medium text-text-muted flex items-center gap-1.5">
@@ -262,7 +275,7 @@ export const WorkflowGeneratorTab: React.FC<WorkflowGeneratorTabProps> = ({
                 <Workflow className="w-4 h-4" />
               )
             }
-            className="w-full mt-3 text-xs font-semibold justify-center shadow-sm"
+            className="w-full mt-3 text-xs font-semibold justify-center shadow-sm cursor-pointer"
           >
             {isGeneratingWorkflow
               ? "Synthesizing Secure Workflow..."
@@ -270,7 +283,7 @@ export const WorkflowGeneratorTab: React.FC<WorkflowGeneratorTabProps> = ({
           </Button>
         </Card>
 
-        {/* Security Guarantee Box */}
+        {/* Hardened Security Standards Card */}
         <Card padding="md" className="bg-surface-card border-border-default text-xs text-text-secondary space-y-2.5 shadow-xs">
           <h3 className="font-semibold text-text-primary flex items-center gap-1.5 text-xs">
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
@@ -326,18 +339,18 @@ export const WorkflowGeneratorTab: React.FC<WorkflowGeneratorTabProps> = ({
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={onCopyWorkflow}
-                  leftIcon={<Copy className="w-3.5 h-3.5" />}
-                  className="text-xs font-medium"
+                  onClick={handleCopy}
+                  leftIcon={copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  className="text-xs font-medium cursor-pointer"
                 >
-                  Copy YAML
+                  {copied ? "Copied YAML" : "Copy YAML"}
                 </Button>
                 <Button
                   variant="primary"
                   size="sm"
                   onClick={onDownloadWorkflow}
                   leftIcon={<Download className="w-3.5 h-3.5" />}
-                  className="text-xs font-medium"
+                  className="text-xs font-medium cursor-pointer"
                 >
                   Download
                 </Button>
