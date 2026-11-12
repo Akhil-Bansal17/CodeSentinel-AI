@@ -37,6 +37,21 @@ interface AuditDashboardTabProps {
   getStatusBadge: (status: string) => React.ReactNode;
 }
 
+const formatExecutionDuration = (ms: number) => {
+  if (ms >= 1000) {
+    return {
+      value: (ms / 1000).toFixed(2),
+      unit: "s",
+      secondary: `${ms.toLocaleString()} ms`,
+    };
+  }
+  return {
+    value: ms.toString(),
+    unit: "ms",
+    secondary: null,
+  };
+};
+
 export const AuditDashboardTab: React.FC<AuditDashboardTabProps> = ({
   auditRuns,
   selectedAuditRun,
@@ -213,19 +228,39 @@ export const AuditDashboardTab: React.FC<AuditDashboardTabProps> = ({
               </div>
             </Card>
 
-            <Card padding="md" className="bg-surface-card border-border-default shadow-xs flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-text-muted font-medium uppercase tracking-wider">Execution Duration</span>
-                <Clock className="w-4 h-4 text-accent/70" />
-              </div>
-              <div className="mt-2.5 text-2xl font-bold font-mono text-text-primary flex items-center gap-2">
-                <span>{selectedAuditRun.summary.total_duration_ms}</span>
-                <span className="text-xs font-normal text-text-muted">ms</span>
-              </div>
-              <div className="mt-2 text-[11px] font-mono text-text-muted truncate">
-                Finished {formatDate(selectedAuditRun.completed_at || selectedAuditRun.started_at)}
-              </div>
-            </Card>
+            {(() => {
+              const duration = formatExecutionDuration(selectedAuditRun.summary.total_duration_ms ?? 0);
+              return (
+                <Card
+                  padding="md"
+                  className="bg-surface-card border-border-default shadow-xs flex flex-col justify-between hover:border-border-strong hover:bg-surface-elevated/40 transition-all duration-200 group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-text-muted font-medium uppercase tracking-wider">
+                      Execution Duration
+                    </span>
+                    <Clock className="w-4 h-4 text-accent/70 group-hover:text-accent transition-colors" />
+                  </div>
+                  <div className="mt-2.5 flex items-baseline gap-1.5 flex-wrap">
+                    <Clock className="w-4 h-4 text-accent/80 shrink-0 self-center group-hover:text-accent transition-colors" />
+                    <span className="text-2xl font-bold font-mono text-text-primary tracking-tight">
+                      {duration.value}
+                    </span>
+                    <span className="text-xs font-mono font-medium text-text-muted">
+                      {duration.unit}
+                    </span>
+                    {duration.secondary && (
+                      <span className="text-[10px] font-mono text-text-muted/70 ml-auto">
+                        ({duration.secondary})
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-2 text-[11px] font-mono text-text-muted truncate">
+                    Finished {formatDate(selectedAuditRun.completed_at || selectedAuditRun.started_at)}
+                  </div>
+                </Card>
+              );
+            })()}
           </div>
 
           {/* 6 Pillars Check Breakdown */}
