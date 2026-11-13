@@ -145,8 +145,8 @@ export const PrSynthesisTab: React.FC<PrSynthesisTabProps> = ({
         {/* Proposals Selection Table */}
         {proposals.length > 0 ? (
           <div className="space-y-2.5">
-            <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Button
                   variant="outline"
                   size="sm"
@@ -170,23 +170,25 @@ export const PrSynthesisTab: React.FC<PrSynthesisTabProps> = ({
                 </span>
               </div>
 
-              <div className="relative">
-                <Search className="w-3.5 h-3.5 text-text-muted absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <div className="relative flex items-center w-full sm:w-56 md:w-64 group">
+                <Search className="w-3.5 h-3.5 text-text-muted group-focus-within:text-accent pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 transition-colors duration-200" />
                 <input
                   type="text"
                   value={proposalSearch}
                   onChange={(e) => setProposalSearch(e.target.value)}
                   placeholder="Search proposals..."
-                  className="bg-surface-elevated border border-border-default text-text-primary text-xs rounded-md pl-8 pr-7 py-1 focus:outline-hidden focus:ring-1 focus:ring-accent w-48 transition-colors"
+                  className="w-full bg-surface-elevated hover:bg-surface-card border border-border-default hover:border-border-strong text-text-primary placeholder:text-text-muted text-xs rounded-md pl-8 pr-8 py-1.5 focus:outline-hidden focus:border-accent focus:ring-2 focus:ring-accent/30 transition-all duration-200"
+                  aria-label="Search remediation proposals"
                 />
                 {proposalSearch && (
                   <button
                     type="button"
                     onClick={() => setProposalSearch("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-text-muted hover:text-text-primary hover:bg-surface-hover/80 focus:outline-hidden focus:ring-1 focus:ring-accent transition-colors duration-150"
                     aria-label="Clear search"
+                    title="Clear search"
                   >
-                    <X className="w-3 h-3" />
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
