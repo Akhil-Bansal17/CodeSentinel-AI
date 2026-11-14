@@ -332,7 +332,7 @@ export const PrSynthesisTab: React.FC<PrSynthesisTabProps> = ({
                   size="sm"
                   onClick={handleCopyBody}
                   leftIcon={copiedPrBody ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  className="text-xs font-medium"
+                  className="text-xs font-medium hover:bg-surface-hover hover:border-border-strong focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-1 focus-visible:ring-offset-surface-base transition-all duration-150"
                 >
                   {copiedPrBody ? "Copied Body" : "Copy PR Body"}
                 </Button>
@@ -373,7 +373,7 @@ export const PrSynthesisTab: React.FC<PrSynthesisTabProps> = ({
                 size="sm"
                 onClick={handleCopyBody}
                 leftIcon={copiedPrBody ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                className="text-[11px] h-6 px-2 text-text-muted hover:text-text-primary"
+                className="text-[11px] h-6 px-2 text-text-muted hover:text-text-primary hover:bg-surface-elevated/80 active:bg-surface-active focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-1 focus-visible:ring-offset-surface-card transition-all duration-150"
               >
                 {copiedPrBody ? "Copied" : "Copy"}
               </Button>
@@ -401,7 +401,7 @@ export const PrSynthesisTab: React.FC<PrSynthesisTabProps> = ({
                   size="sm"
                   onClick={handleCopyDiff}
                   leftIcon={copiedDiff ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                  className="text-[11px] h-6 px-2 text-text-muted hover:text-text-primary"
+                  className="text-[11px] h-6 px-2 text-text-muted hover:text-text-primary hover:bg-surface-elevated/80 active:bg-surface-active focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-1 focus-visible:ring-offset-surface-card transition-all duration-150"
                 >
                   {copiedDiff ? "Copied Diff" : "Copy Diff"}
                 </Button>
