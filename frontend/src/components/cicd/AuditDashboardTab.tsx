@@ -327,20 +327,20 @@ export const AuditDashboardTab: React.FC<AuditDashboardTabProps> = ({
 
               <div className="flex items-center gap-3 flex-wrap">
                 {/* Search */}
-                <div className="relative">
-                  <Search className="w-3.5 h-3.5 text-text-muted absolute left-2.5 top-1/2 -translate-y-1/2" />
+                <div className="relative flex items-center group">
+                  <Search className="w-3.5 h-3.5 text-text-muted group-focus-within:text-accent pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 transition-colors duration-200" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search findings..."
-                    className="bg-surface-elevated border border-border-default text-text-primary text-xs rounded-md pl-8 pr-7 py-1.5 focus:outline-hidden focus:ring-1 focus:ring-accent w-48 transition-colors"
+                    className="bg-surface-elevated hover:bg-surface-card border border-border-default hover:border-border-strong text-text-primary placeholder:text-text-muted text-xs rounded-md pl-8 pr-7 py-1.5 focus:outline-hidden focus:border-accent focus:ring-2 focus:ring-accent/30 w-48 transition-all duration-200"
                   />
                   {searchQuery && (
                     <button
                       type="button"
                       onClick={() => setSearchQuery("")}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-text-muted hover:text-text-primary hover:bg-surface-hover/80 transition-colors duration-150"
                       aria-label="Clear search"
                     >
                       <X className="w-3 h-3" />
@@ -350,18 +350,18 @@ export const AuditDashboardTab: React.FC<AuditDashboardTabProps> = ({
 
                 {/* Severity Dropdown */}
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-text-muted">Severity:</span>
+                  <span className="text-xs font-medium text-text-muted">Severity:</span>
                   <select
                     value={severityFilter}
                     onChange={(e) => setSeverityFilter(e.target.value)}
-                    className="bg-surface-elevated border border-border-default text-text-primary text-xs rounded-md px-2.5 py-1.5 focus:outline-hidden focus:ring-1 focus:ring-accent font-medium transition-colors"
+                    className="bg-surface-elevated hover:bg-surface-card border border-border-default hover:border-border-strong text-text-primary text-xs rounded-md px-2.5 py-1.5 focus:outline-hidden focus:border-accent focus:ring-2 focus:ring-accent/30 font-medium transition-all duration-200 cursor-pointer"
                     aria-label="Filter findings by severity"
                   >
-                    <option value="ALL">All Severities</option>
-                    <option value="CRITICAL">Critical</option>
-                    <option value="HIGH">High</option>
-                    <option value="MEDIUM">Medium</option>
-                    <option value="LOW">Low</option>
+                    <option value="ALL" className="bg-surface-card text-text-primary">All Severities</option>
+                    <option value="CRITICAL" className="bg-surface-card text-rose-400">Critical</option>
+                    <option value="HIGH" className="bg-surface-card text-rose-300">High</option>
+                    <option value="MEDIUM" className="bg-surface-card text-amber-300">Medium</option>
+                    <option value="LOW" className="bg-surface-card text-blue-300">Low</option>
                   </select>
                 </div>
               </div>
