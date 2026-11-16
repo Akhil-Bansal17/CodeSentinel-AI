@@ -322,12 +322,12 @@ export const WorkflowGeneratorTab: React.FC<WorkflowGeneratorTabProps> = ({
       {/* YAML Preview Column */}
       <div className="lg:col-span-7">
         <Card padding="md" className="bg-surface-card border-border-default flex flex-col h-full min-h-[560px] shadow-xs">
-          <div className="flex items-center justify-between border-b border-border-default pb-3 mb-3 flex-wrap gap-2">
-            <div className="flex items-center gap-2">
-              <div className="flex items-center justify-center w-6 h-6 rounded bg-surface-elevated border border-border-default text-accent shrink-0">
+          <div className="flex items-center justify-between border-b border-border-default/80 pb-3 mb-3.5 flex-wrap sm:flex-nowrap gap-2.5">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex items-center justify-center w-6 h-6 rounded bg-surface-elevated border border-border-default text-accent shrink-0 shadow-2xs">
                 <FileCode className="w-3.5 h-3.5" />
               </div>
-              <span className="text-xs font-mono text-text-primary font-medium tracking-tight">
+              <span className="text-xs font-mono text-text-primary font-medium tracking-tight truncate">
                 {generatedWorkflow
                   ? generatedWorkflow.filename
                   : ".github/workflows/codesentinel-ci.yml"}
@@ -335,13 +335,13 @@ export const WorkflowGeneratorTab: React.FC<WorkflowGeneratorTabProps> = ({
             </div>
 
             {generatedWorkflow && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <Button
                   variant="secondary"
                   size="sm"
                   onClick={handleCopy}
                   leftIcon={copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  className="text-xs font-medium cursor-pointer"
+                  className="text-xs font-medium cursor-pointer hover:bg-surface-hover hover:border-border-strong focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-1 focus-visible:ring-offset-surface-card transition-all duration-150"
                 >
                   {copied ? "Copied YAML" : "Copy YAML"}
                 </Button>
@@ -350,7 +350,7 @@ export const WorkflowGeneratorTab: React.FC<WorkflowGeneratorTabProps> = ({
                   size="sm"
                   onClick={onDownloadWorkflow}
                   leftIcon={<Download className="w-3.5 h-3.5" />}
-                  className="text-xs font-medium cursor-pointer"
+                  className="text-xs font-medium cursor-pointer hover:bg-accent-hover active:bg-accent-active focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-1 focus-visible:ring-offset-surface-card transition-all duration-150"
                 >
                   Download
                 </Button>
