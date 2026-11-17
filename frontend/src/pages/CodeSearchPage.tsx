@@ -203,26 +203,30 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#21262d]">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-slate-100 flex items-center gap-2">
-              <Search className="w-5 h-5 text-purple-400" />
-              <span>Semantic Code Search &amp; AST Retrieval</span>
-            </h2>
-            <StatusBadge label="Phase 6 Complete" variant="success" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border-default">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-accent-subtle border border-accent-border flex items-center justify-center text-accent shrink-0">
+            <Search className="w-5 h-5" />
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Deterministic AST symbol search, BM25 ranking, and multi-modal vector retrieval
-          </p>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-text-primary flex items-center gap-2">
+                <span>Semantic Code Search &amp; AST Retrieval</span>
+              </h2>
+              <StatusBadge label="AST Indexing & Retrieval" variant="info" isMono />
+            </div>
+            <p className="text-xs text-text-secondary mt-0.5">
+              Deterministic AST symbol search, BM25 ranking, and multi-modal vector retrieval
+            </p>
+          </div>
         </div>
 
         {/* Index Status & Action */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#161b22] border border-[#30363d] text-xs">
-            <Database className="w-3.5 h-3.5 text-purple-400" />
-            <span className="text-slate-400">Index:</span>
-            <span className="font-semibold text-slate-200">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-elevated border border-border-default text-xs">
+            <Database className="w-3.5 h-3.5 text-accent" />
+            <span className="text-text-muted">Index:</span>
+            <span className="font-semibold text-text-primary font-mono">
               {indexStatus?.status === "completed"
                 ? `${indexStatus.chunk_count} chunks`
                 : indexStatus?.status || "Unindexed"}
@@ -232,7 +236,7 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
           <button
             onClick={() => handleTriggerIndex(true)}
             disabled={isIndexing || !currentSnapshot?.id}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[#21262d] hover:bg-[#30363d] text-purple-300 border border-purple-800/40 hover:border-purple-600/50 flex items-center gap-1.5 disabled:opacity-50 transition-all shadow-sm"
+            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-surface-elevated hover:bg-surface-hover text-accent border border-accent-border hover:border-accent/50 flex items-center gap-1.5 disabled:opacity-50 transition-all shadow-sm focus:outline-none focus:ring-1 focus:ring-accent"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isIndexing ? "animate-spin" : ""}`} />
             <span>{isIndexing ? "Indexing..." : "Reindex Snapshot"}</span>
@@ -241,13 +245,13 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
       </div>
 
       {/* Repository & Snapshot Selection Bar */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-lg bg-[#161b22] border border-[#30363d]">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-lg bg-surface-card border border-border-default">
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1.5">Repository</label>
+          <label className="block text-xs font-medium text-text-muted mb-1.5">Repository</label>
           <select
             value={selectedRepoId}
             onChange={(e) => setSelectedRepoId(e.target.value)}
-            className="w-full text-xs rounded-lg bg-[#0d1117] border border-[#30363d] text-slate-200 px-3 py-2 focus:outline-none focus:border-purple-500"
+            className="w-full text-xs rounded-lg bg-surface-base border border-border-default text-text-primary px-3 py-2 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors"
           >
             {repositories.map((repo) => (
               <option key={repo.id} value={repo.id}>
@@ -258,15 +262,15 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1.5">Active Snapshot</label>
-          <div className="w-full text-xs rounded-lg bg-[#0d1117] border border-[#30363d] text-slate-200 px-3 py-2 flex items-center justify-between">
+          <label className="block text-xs font-medium text-text-muted mb-1.5">Active Snapshot</label>
+          <div className="w-full text-xs rounded-lg bg-surface-base border border-border-default text-text-secondary px-3 py-2 flex items-center justify-between">
             <span>
               {currentSnapshot
                 ? `${currentSnapshot.id.slice(0, 8)}... (${currentSnapshot.branch || "main"}) — ${currentSnapshot.file_count} files`
                 : "No completed snapshot"}
             </span>
             {currentSnapshot && (
-              <span className="text-[11px] font-mono text-purple-400">
+              <span className="text-[11px] font-mono text-accent">
                 {currentSnapshot.commit_sha ? currentSnapshot.commit_sha.slice(0, 7) : "HEAD"}
               </span>
             )}
@@ -277,19 +281,19 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
       {/* Search Input & Controls */}
       <form onSubmit={handleSearch} className="space-y-4">
         <div className="relative flex items-center">
-          <Search className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
+          <Search className="absolute left-3.5 w-4 h-4 text-text-muted pointer-events-none" />
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search symbols, functions, classes, or code concepts (e.g. authenticate_user, calculate_health)..."
-            className="w-full pl-10 pr-24 py-2.5 rounded-lg bg-[#161b22] border border-[#30363d] text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-purple-500 shadow-inner"
+            className="w-full pl-10 pr-24 py-2.5 rounded-lg bg-surface-card border border-border-default text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all shadow-inner"
           />
           {query && (
             <button
               type="button"
               onClick={() => setQuery("")}
-              className="absolute right-20 text-slate-400 hover:text-slate-200 p-1"
+              className="absolute right-20 text-text-muted hover:text-text-primary p-1 transition-colors"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -297,7 +301,7 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
           <button
             type="submit"
             disabled={isSearching || !query.trim()}
-            className="absolute right-2 px-3 py-1.5 text-xs font-medium rounded-md bg-purple-600 hover:bg-purple-500 text-white disabled:opacity-50 transition-colors"
+            className="absolute right-2 px-3 py-1.5 text-xs font-medium rounded-md bg-accent hover:bg-accent-hover text-accent-foreground disabled:opacity-50 transition-colors shadow-sm focus:outline-none focus:ring-1 focus:ring-accent"
           >
             {isSearching ? "Searching..." : "Search"}
           </button>
@@ -306,22 +310,22 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
         {/* Mode Selector and Filters */}
         <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
           {/* Mode Tabs */}
-          <div className="flex items-center gap-1 p-1 rounded-lg bg-[#161b22] border border-[#30363d]">
+          <div className="flex items-center gap-1 p-1 rounded-lg bg-surface-card border border-border-default">
             <button
               type="button"
               onClick={() => setSearchMode("hybrid")}
               className={`px-3 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1.5 ${
                 searchMode === "hybrid"
-                  ? "bg-purple-600/30 text-purple-300 border border-purple-500/40"
-                  : "text-slate-400 hover:text-slate-200"
+                  ? "bg-accent-subtle text-accent border border-accent-border"
+                  : "text-text-secondary hover:text-text-primary hover:bg-surface-hover/60 border border-transparent"
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+              <Sparkles className="w-3.5 h-3.5 text-accent" />
               <span>Hybrid (RRF)</span>
               {capabilities?.semantic_available ? (
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" title="Vector + BM25 Ready" />
+                <span className="w-1.5 h-1.5 rounded-full bg-status-success" title="Vector + BM25 Ready" />
               ) : (
-                <span className="text-[10px] text-slate-500 bg-[#21262d] px-1 rounded">BM25</span>
+                <span className="text-[10px] text-text-muted bg-surface-elevated px-1 rounded border border-border-subtle">BM25</span>
               )}
             </button>
 
@@ -330,11 +334,11 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
               onClick={() => setSearchMode("lexical")}
               className={`px-3 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1.5 ${
                 searchMode === "lexical"
-                  ? "bg-purple-600/30 text-purple-300 border border-purple-500/40"
-                  : "text-slate-400 hover:text-slate-200"
+                  ? "bg-accent-subtle text-accent border border-accent-border"
+                  : "text-text-secondary hover:text-text-primary hover:bg-surface-hover/60 border border-transparent"
               }`}
             >
-              <FileCode className="w-3.5 h-3.5 text-indigo-400" />
+              <FileCode className="w-3.5 h-3.5 text-status-info" />
               <span>Lexical (BM25)</span>
             </button>
 
@@ -343,14 +347,14 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
               onClick={() => setSearchMode("semantic")}
               className={`px-3 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1.5 ${
                 searchMode === "semantic"
-                  ? "bg-purple-600/30 text-purple-300 border border-purple-500/40"
-                  : "text-slate-400 hover:text-slate-200"
+                  ? "bg-accent-subtle text-accent border border-accent-border"
+                  : "text-text-secondary hover:text-text-primary hover:bg-surface-hover/60 border border-transparent"
               }`}
             >
-              <Binary className="w-3.5 h-3.5 text-cyan-400" />
+              <Binary className="w-3.5 h-3.5 text-accent" />
               <span>Semantic (Vector)</span>
               {!capabilities?.semantic_available && (
-                <span className="text-[10px] text-amber-400 bg-amber-950/40 border border-amber-800/40 px-1 rounded">
+                <span className="text-[10px] text-status-warning bg-status-warning-bg border border-status-warning-border px-1 rounded">
                   Optional
                 </span>
               )}
@@ -359,15 +363,15 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
 
           {/* Filter Dropdowns */}
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1.5 text-slate-400">
+            <div className="flex items-center gap-1.5 text-text-muted">
               <Filter className="w-3.5 h-3.5" />
-              <span className="text-slate-500">Filters:</span>
+              <span className="text-text-muted">Filters:</span>
             </div>
 
             <select
               value={languageFilter}
               onChange={(e) => setLanguageFilter(e.target.value)}
-              className="px-2.5 py-1 rounded bg-[#161b22] border border-[#30363d] text-slate-300 text-xs focus:outline-none focus:border-purple-500"
+              className="px-2.5 py-1 rounded bg-surface-elevated border border-border-default text-text-secondary text-xs focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors"
             >
               <option value="">All Languages</option>
               <option value="Python">Python</option>
@@ -379,7 +383,7 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
             <select
               value={symbolTypeFilter}
               onChange={(e) => setSymbolTypeFilter(e.target.value)}
-              className="px-2.5 py-1 rounded bg-[#161b22] border border-[#30363d] text-slate-300 text-xs focus:outline-none focus:border-purple-500"
+              className="px-2.5 py-1 rounded bg-surface-elevated border border-border-default text-text-secondary text-xs focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors"
             >
               <option value="">All Symbol Types</option>
               <option value="function">Function</option>
@@ -394,7 +398,7 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
               value={filePathFilter}
               onChange={(e) => setFilePathFilter(e.target.value)}
               placeholder="Filter by path..."
-              className="px-2.5 py-1 rounded bg-[#161b22] border border-[#30363d] text-slate-300 text-xs w-32 focus:outline-none focus:border-purple-500 placeholder:text-slate-600"
+              className="px-2.5 py-1 rounded bg-surface-elevated border border-border-default text-text-secondary text-xs w-32 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent placeholder:text-text-muted transition-colors"
             />
           </div>
         </div>
@@ -402,8 +406,8 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
 
       {/* Optional Semantic Status Notice */}
       {!capabilities?.semantic_available && searchMode === "semantic" && (
-        <div className="p-3 rounded-lg bg-amber-950/20 border border-amber-800/30 flex items-start gap-2.5 text-xs text-amber-300">
-          <AlertCircle className="w-4 h-4 shrink-0 text-amber-400 mt-0.5" />
+        <div className="p-3.5 rounded-lg bg-status-warning-bg border border-status-warning-border flex items-start gap-2.5 text-xs text-status-warning-text">
+          <AlertCircle className="w-4 h-4 shrink-0 text-status-warning mt-0.5" />
           <div>
             <span className="font-semibold">Semantic Embedding Provider Not Configured: </span>
             <span>
@@ -416,8 +420,8 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
 
       {/* Error Message */}
       {errorMessage && (
-        <div className="p-3 rounded-lg bg-red-950/30 border border-red-800/40 flex items-center gap-2 text-xs text-red-300">
-          <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+        <div className="p-3.5 rounded-lg bg-status-danger-bg border border-status-danger-border flex items-center gap-2 text-xs text-status-danger-text">
+          <AlertCircle className="w-4 h-4 text-status-danger shrink-0" />
           <span>{errorMessage}</span>
         </div>
       )}
@@ -425,21 +429,21 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
       {/* Search Results Display */}
       {searchResponse && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between text-xs text-slate-400 pb-2 border-b border-[#21262d]">
+          <div className="flex items-center justify-between text-xs text-text-muted pb-2 border-b border-border-default">
             <span>
-              Found <strong className="text-slate-200">{searchResponse.total_results}</strong> result(s) using{" "}
-              <code className="text-purple-300">{searchResponse.mode_used}</code> retrieval
+              Found <strong className="text-text-primary font-mono">{searchResponse.total_results}</strong> result(s) using{" "}
+              <code className="text-accent">{searchResponse.mode_used}</code> retrieval
             </span>
             {searchResponse.warning && (
-              <span className="text-amber-400 text-[11px]">{searchResponse.warning}</span>
+              <span className="text-status-warning text-[11px]">{searchResponse.warning}</span>
             )}
           </div>
 
           {searchResponse.results.length === 0 ? (
-            <div className="text-center py-12 rounded-lg bg-[#161b22] border border-[#30363d] space-y-2">
-              <Code2 className="w-8 h-8 text-slate-500 mx-auto" />
-              <h4 className="text-sm font-medium text-slate-300">No matching code chunks found</h4>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+            <div className="text-center py-12 rounded-lg bg-surface-card border border-border-default space-y-2">
+              <Code2 className="w-8 h-8 text-text-muted mx-auto" />
+              <h4 className="text-sm font-medium text-text-primary">No matching code chunks found</h4>
+              <p className="text-xs text-text-secondary max-w-sm mx-auto">
                 Try broadening your query, removing language or path filters, or triggering snapshot reindexing.
               </p>
             </div>
@@ -448,47 +452,47 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
               {searchResponse.results.map((item) => (
                 <div
                   key={item.chunk_id}
-                  className="rounded-lg bg-[#161b22] border border-[#30363d] hover:border-purple-600/40 p-4 transition-all space-y-3 group"
+                  className="rounded-lg bg-surface-card border border-border-default hover:border-accent-border p-4 transition-all space-y-3 group shadow-card"
                 >
                   {/* Result Header */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         {item.symbol_name ? (
-                          <span className="text-sm font-semibold text-purple-300 flex items-center gap-1.5">
-                            <span className="text-xs px-1.5 py-0.5 rounded bg-purple-950/60 border border-purple-800/40 text-purple-400 font-mono">
+                          <span className="text-sm font-semibold text-text-primary flex items-center gap-1.5">
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-accent-subtle border border-accent-border text-accent font-mono">
                               {item.symbol_type || item.chunk_type}
                             </span>
                             <span>{item.symbol_name}</span>
                           </span>
                         ) : (
-                          <span className="text-sm font-medium text-slate-200">
+                          <span className="text-sm font-medium text-text-primary">
                             {item.file_name}
                           </span>
                         )}
 
-                        <span className="text-xs font-mono text-indigo-300 bg-indigo-950/40 border border-indigo-800/40 px-2 py-0.5 rounded">
+                        <span className="text-xs font-mono text-accent bg-accent-subtle border border-accent-border px-2 py-0.5 rounded">
                           {item.citation}
                         </span>
 
-                        <span className="text-xs text-slate-400 bg-[#21262d] px-2 py-0.5 rounded border border-[#30363d]">
+                        <span className="text-xs text-text-secondary bg-surface-elevated px-2 py-0.5 rounded border border-border-default font-mono">
                           {item.language}
                         </span>
                       </div>
 
-                      <p className="text-xs font-mono text-slate-400 mt-1 truncate">
+                      <p className="text-xs font-mono text-text-muted mt-1 truncate">
                         {item.relative_path}
                       </p>
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs px-2 py-1 rounded bg-[#21262d] text-slate-300 border border-[#30363d] font-mono">
+                      <span className="text-xs px-2 py-1 rounded bg-surface-elevated text-text-secondary border border-border-default font-mono">
                         Score: {item.score}
                       </span>
                       <button
                         onClick={() => handleInspectChunk(item)}
                         disabled={isLoadingChunk}
-                        className="px-2.5 py-1 text-xs font-medium rounded-lg bg-[#21262d] group-hover:bg-purple-900/30 text-slate-300 group-hover:text-purple-300 border border-[#30363d] group-hover:border-purple-700/50 flex items-center gap-1 transition-all"
+                        className="px-2.5 py-1 text-xs font-medium rounded-lg bg-surface-elevated group-hover:bg-accent-subtle text-text-secondary group-hover:text-accent border border-border-default group-hover:border-accent-border flex items-center gap-1 transition-all focus:outline-none focus:ring-1 focus:ring-accent"
                       >
                         <span>Inspect</span>
                         <ChevronRight className="w-3.5 h-3.5" />
@@ -497,18 +501,18 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
                   </div>
 
                   {/* Excerpt Code Preview */}
-                  <div className="p-3 rounded bg-[#090d13] border border-[#21262d] overflow-x-auto font-mono text-xs text-slate-300 leading-relaxed max-h-40">
+                  <div className="p-3 rounded-lg bg-surface-base border border-border-default overflow-x-auto font-mono text-xs text-text-secondary leading-relaxed max-h-40 selection:bg-accent-subtle">
                     <pre className="whitespace-pre">{item.excerpt}</pre>
                   </div>
 
                   {/* Terms & Badges */}
                   {item.matched_terms && item.matched_terms.length > 0 && (
-                    <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                    <div className="flex items-center gap-1.5 text-[11px] text-text-muted">
                       <span>Matches:</span>
                       {item.matched_terms.map((term, tIdx) => (
                         <span
                           key={tIdx}
-                          className="px-1.5 py-0.5 rounded bg-[#21262d] text-slate-400 font-mono"
+                          className="px-1.5 py-0.5 rounded bg-surface-elevated text-text-secondary font-mono border border-border-subtle"
                         >
                           {term}
                         </span>
