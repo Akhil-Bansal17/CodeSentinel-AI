@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   Bot,
   ShieldCheck,
@@ -11,6 +11,12 @@ import {
   ExternalLink,
   Clock,
   Cpu,
+  Copy,
+  Check,
+  X,
+  History,
+  Sparkles,
+  Info,
 } from "lucide-react";
 import {
   CodeChunkDetail,
@@ -23,9 +29,17 @@ import { repositoryService } from "../services/repositoryService";
 import { searchService } from "../services/searchService";
 import { ChunkDetailModal } from "../components/search/ChunkDetailModal";
 import { StatusBadge } from "../components/common/StatusBadge";
+import { RepositoryContext } from "../context/RepositoryContext";
 
 interface AIAssistantPageProps {
   initialRepoId?: string | null;
+}
+
+interface QASessionItem {
+  id: string;
+  question: string;
+  response: QAResponse;
+  timestamp: string;
 }
 
 const SAMPLE_QUESTIONS = [
@@ -38,8 +52,12 @@ const SAMPLE_QUESTIONS = [
 ];
 
 export const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ initialRepoId }) => {
-  const [repositories, setRepositories] = useState<Repository[]>([]);
-  const [selectedRepoId, setSelectedRepoId] = useState<string>("");
+  const repoContext = useContext(RepositoryContext);
+
+  const [repositories, setRepositories] = useState<Repository[]>(() => repoContext?.repositories || []);
+  const [selectedRepoId, setSelectedRepoId] = useState<string>(
+    initialRepoId || repoContext?.selectedRepoId || ""
+  );
   const [currentSnapshot, setCurrentSnapshot] = useState<RepositorySnapshot | null>(null);
 
   const [question, setQuestion] = useState<string>("");
@@ -50,20 +68,41 @@ export const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ initialRepoId 
   const [qaResponse, setQaResponse] = useState<QAResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const [sessionHistory, setSessionHistory] = useState<QASessionItem[]>([]);
+  const [copiedAnswer, setCopiedAnswer] = useState<boolean>(false);
+
   const [isEvidenceExpanded, setIsEvidenceExpanded] = useState<boolean>(true);
   const [inspectingChunk, setInspectingChunk] = useState<CodeChunkDetail | null>(null);
   const [loadingStep, setLoadingStep] = useState<string>("");
 
-  // Load repositories on mount
+  // Sync with RepositoryContext
   useEffect(() => {
+    if (repoContext?.selectedRepoId && repoContext.selectedRepoId !== selectedRepoId) {
+      setSelectedRepoId(repoContext.selectedRepoId);
+    }
+  }, [repoContext?.selectedRepoId, selectedRepoId]);
+
+  useEffect(() => {
+    if (repoContext?.repositories && repoContext.repositories.length > 0) {
+      setRepositories(repoContext.repositories);
+      if (!selectedRepoId && repoContext.repositories[0]) {
+        const defaultId = initialRepoId || repoContext.repositories[0].id;
+        setSelectedRepoId(defaultId);
+      }
+    }
+  }, [repoContext?.repositories, selectedRepoId, initialRepoId]);
+
+  // Fallback load repositories if context is empty
+  useEffect(() => {
+    if (repositories.length > 0) return;
     let mounted = true;
     repositoryService
       .listRepositories(1, 50)
       .then((res) => {
         if (!mounted) return;
-        const repos = res.items;
+        const repos = res.items || [];
         setRepositories(repos);
-        if (repos.length > 0) {
+        if (repos.length > 0 && !selectedRepoId) {
           const target = initialRepoId && repos.some((r) => r.id === initialRepoId)
             ? initialRepoId
             : repos[0].id;
@@ -81,7 +120,7 @@ export const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ initialRepoId 
     return () => {
       mounted = false;
     };
-  }, [initialRepoId]);
+  }, [repositories.length, initialRepoId, selectedRepoId]);
 
   // Load repository details to get latest snapshot
   useEffect(() => {
@@ -106,10 +145,22 @@ export const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ initialRepoId 
     };
   }, [selectedRepoId]);
 
+  // Handle repository change
+  const handleRepoChange = (newRepoId: string) => {
+    setSelectedRepoId(newRepoId);
+    repoContext?.setSelectedRepoId(newRepoId);
+    setQaResponse(null);
+    setErrorMessage(null);
+    const found = repositories.find((r) => r.id === newRepoId);
+    if (found?.latest_snapshot) {
+      setCurrentSnapshot(found.latest_snapshot);
+    }
+  };
+
   // Handle Question Submit
   const handleAsk = async (e?: React.FormEvent, customQuestion?: string) => {
     if (e) e.preventDefault();
-    const q = (customQuestion || question).trim();
+    const q = (customQuestion !== undefined ? customQuestion : question).trim();
     if (!selectedRepoId || !currentSnapshot?.id || !q) return;
 
     setIsAsking(true);
@@ -124,12 +175,31 @@ export const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ initialRepoId 
         prefer_llm: preferLLM,
       });
       setQaResponse(res);
+      setSessionHistory((prev) => [
+        {
+          id: Math.random().toString(36).substring(2, 9),
+          question: q,
+          response: res,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+        ...prev.filter((item) => item.question !== q),
+      ]);
     } catch (err: unknown) {
       setErrorMessage("Q&A query failed: " + (err instanceof Error ? err.message : String(err)));
     } finally {
       setIsAsking(false);
       setLoadingStep("");
     }
+  };
+
+  const handleCopyAnswer = () => {
+    if (!qaResponse?.answer) return;
+    navigator.clipboard.writeText(qaResponse.answer).then(() => {
+      setCopiedAnswer(true);
+      setTimeout(() => setCopiedAnswer(false), 2000);
+    }).catch(() => {
+      // fallback
+    });
   };
 
   // Inspect Chunk Detail from Evidence
@@ -195,7 +265,7 @@ export const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ initialRepoId 
           <label className="block text-xs font-medium text-text-muted mb-1.5">Repository</label>
           <select
             value={selectedRepoId}
-            onChange={(e) => setSelectedRepoId(e.target.value)}
+            onChange={(e) => handleRepoChange(e.target.value)}
             className="w-full text-xs rounded-lg bg-surface-base border border-border-default text-text-primary px-3 py-2 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors"
           >
             {repositories.map((repo) => (
@@ -238,7 +308,7 @@ export const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ initialRepoId 
                 setQuestion(sq);
                 handleAsk(undefined, sq);
               }}
-              className="text-xs px-2.5 py-1.5 rounded-lg bg-surface-card hover:bg-surface-hover text-text-secondary hover:text-text-primary border border-border-default hover:border-accent-border text-left transition-colors"
+              className="text-xs px-2.5 py-1.5 rounded-lg bg-surface-card hover:bg-surface-hover text-text-secondary hover:text-text-primary border border-border-default hover:border-accent-border text-left transition-colors cursor-pointer"
             >
               {sq}
             </button>
@@ -252,14 +322,30 @@ export const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ initialRepoId 
           <textarea
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
+            onKeyDown={(e) => {
+              if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                e.preventDefault();
+                handleAsk();
+              }
+            }}
             rows={3}
             placeholder="Ask anything about the codebase (e.g. 'Where is user authentication implemented?', 'Which function creates an analysis run?')..."
             className="w-full p-3.5 pr-28 rounded-lg bg-surface-card border border-border-default text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all shadow-inner resize-none"
           />
+          {question && (
+            <button
+              type="button"
+              onClick={() => setQuestion("")}
+              className="absolute right-28 top-3 text-text-muted hover:text-text-primary p-1 transition-colors cursor-pointer"
+              title="Clear question input"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
           <button
             type="submit"
             disabled={isAsking || !question.trim() || !currentSnapshot?.id}
-            className="absolute right-3 bottom-3 px-4 py-2 text-xs font-medium rounded-lg bg-accent hover:bg-accent-hover text-accent-foreground disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow focus:outline-none focus:ring-1 focus:ring-accent"
+            className="absolute right-3 bottom-3 px-4 py-2 text-xs font-medium rounded-lg bg-accent hover:bg-accent-hover text-accent-foreground disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow focus:outline-none focus:ring-1 focus:ring-accent cursor-pointer"
           >
             {isAsking ? (
               <>
@@ -285,7 +371,7 @@ export const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ initialRepoId 
                   key={m}
                   type="button"
                   onClick={() => setRetrievalMode(m)}
-                  className={`px-2.5 py-1 rounded text-xs capitalize transition-colors ${
+                  className={`px-2.5 py-1 rounded text-xs capitalize transition-colors cursor-pointer ${
                     retrievalMode === m
                       ? "bg-accent-subtle text-accent font-medium border border-accent-border"
                       : "text-text-secondary hover:text-text-primary hover:bg-surface-hover/60 border border-transparent"
@@ -295,6 +381,9 @@ export const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ initialRepoId 
                 </button>
               ))}
             </div>
+            <span className="text-[11px] text-text-muted hidden sm:inline">
+              (Press Ctrl+Enter to ask)
+            </span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -314,6 +403,36 @@ export const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ initialRepoId 
         </div>
       </form>
 
+      {/* Session Inquiries History Strip */}
+      {sessionHistory.length > 1 && (
+        <div className="p-3 rounded-lg bg-surface-card border border-border-default space-y-2">
+          <div className="flex items-center gap-1.5 text-xs text-text-muted">
+            <History className="w-3.5 h-3.5 text-accent" />
+            <span className="font-medium">Session Inquiries ({sessionHistory.length}):</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {sessionHistory.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  setQuestion(item.question);
+                  setQaResponse(item.response);
+                }}
+                className={`text-xs px-2.5 py-1 rounded-md border text-left truncate max-w-xs transition-colors cursor-pointer ${
+                  qaResponse?.question === item.question
+                    ? "bg-accent-subtle text-accent border-accent-border font-medium"
+                    : "bg-surface-elevated text-text-secondary border-border-default hover:border-accent-border hover:text-text-primary"
+                }`}
+                title={item.question}
+              >
+                {item.question}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Loading Progression State */}
       {isAsking && (
         <div className="p-4 rounded-lg bg-surface-card border border-border-default flex items-center gap-3 text-xs text-text-secondary animate-pulse">
@@ -330,8 +449,59 @@ export const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ initialRepoId 
         </div>
       )}
 
+      {/* Initial Explanatory State (when no Q&A inquiry has been run yet) */}
+      {!qaResponse && !isAsking && (
+        <div className="rounded-xl bg-surface-card border border-border-default p-6 space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-accent-subtle border border-accent-border text-accent">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-text-primary">
+                Evidence-Grounded Architectural Intelligence
+              </h3>
+              <p className="text-xs text-text-secondary mt-1 leading-relaxed">
+                CodeSentinel AI synthesizes answers to architectural, dependency, and security inquiries strictly from verified AST source coordinates.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 text-xs">
+            <div className="p-3 rounded-lg bg-surface-elevated border border-border-subtle space-y-1">
+              <div className="font-semibold text-accent flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Zero Hallucinations</span>
+              </div>
+              <p className="text-text-muted text-[11px] leading-relaxed">
+                Every claim is anchored to exact file and line coordinates with transparent sufficiency ratings.
+              </p>
+            </div>
+
+            <div className="p-3 rounded-lg bg-surface-elevated border border-border-subtle space-y-1">
+              <div className="font-semibold text-status-info flex items-center gap-1.5">
+                <Bot className="w-3.5 h-3.5" />
+                <span>Prompt-Guard Shield</span>
+              </div>
+              <p className="text-text-muted text-[11px] leading-relaxed">
+                Inquiries are sanitized against prompt injections and system override vectors before processing.
+              </p>
+            </div>
+
+            <div className="p-3 rounded-lg bg-surface-elevated border border-border-subtle space-y-1">
+              <div className="font-semibold text-accent flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5" />
+                <span>Deterministic Mode</span>
+              </div>
+              <p className="text-text-muted text-[11px] leading-relaxed">
+                Operates fully offline without external LLMs by extracting and summarizing verified AST chunks.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Q&A Answer Display */}
-      {qaResponse && (
+      {qaResponse && !isAsking && (
         <div className="space-y-4 animate-in fade-in duration-200">
           <div className="rounded-xl bg-surface-card border border-border-default overflow-hidden shadow-elevated">
             {/* Answer Header Bar */}
@@ -363,8 +533,28 @@ export const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ initialRepoId 
                 </span>
               </div>
 
-              <div className="text-xs font-mono text-text-muted">
-                Mode: {qaResponse.retrieval_mode}
+              <div className="flex items-center gap-3">
+                <div className="text-xs font-mono text-text-muted">
+                  Mode: {qaResponse.retrieval_mode}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopyAnswer}
+                  className="px-2.5 py-1 text-xs font-medium rounded-lg bg-surface-base hover:bg-surface-hover text-text-secondary hover:text-text-primary border border-border-default hover:border-accent-border flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title="Copy synthesized answer"
+                >
+                  {copiedAnswer ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-emerald-400 font-mono text-[11px]">Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span className="font-mono text-[11px]">Copy Answer</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
 
@@ -373,6 +563,19 @@ export const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ initialRepoId 
               <div className="prose prose-invert prose-sm max-w-none text-text-primary text-xs sm:text-sm leading-relaxed whitespace-pre-line">
                 {qaResponse.answer}
               </div>
+
+              {/* Insufficient Evidence Notice */}
+              {qaResponse.evidence_sufficiency === "INSUFFICIENT" && (
+                <div className="p-3 rounded-lg bg-status-warning-bg border border-status-warning-border flex items-start gap-2 text-xs text-status-warning-text">
+                  <Info className="w-4 h-4 text-status-warning shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold">Notice: </span>
+                    <span>
+                      The indexed repository snapshot does not contain sufficient verified evidence to confidently answer this question. Try re-indexing the snapshot or inquiring with specific AST symbols.
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Citations Tag Strip */}
               {qaResponse.citations.length > 0 && (
@@ -396,7 +599,7 @@ export const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ initialRepoId 
                 <button
                   type="button"
                   onClick={() => setIsEvidenceExpanded(!isEvidenceExpanded)}
-                  className="w-full flex items-center justify-between px-6 py-3 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors"
+                  className="w-full flex items-center justify-between px-6 py-3 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-2">
                     <Layers className="w-4 h-4 text-accent" />
@@ -433,7 +636,7 @@ export const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ initialRepoId 
                             <button
                               type="button"
                               onClick={() => handleInspectEvidence(ev)}
-                              className="px-2 py-0.5 rounded bg-surface-elevated hover:bg-surface-hover text-text-secondary hover:text-text-primary border border-border-default hover:border-accent-border flex items-center gap-1 transition-colors focus:outline-none focus:ring-1 focus:ring-accent"
+                              className="px-2 py-0.5 rounded bg-surface-elevated hover:bg-surface-hover text-text-secondary hover:text-text-primary border border-border-default hover:border-accent-border flex items-center gap-1 transition-colors focus:outline-none focus:ring-1 focus:ring-accent cursor-pointer"
                             >
                               <span>Inspect</span>
                               <ExternalLink className="w-3 h-3" />
