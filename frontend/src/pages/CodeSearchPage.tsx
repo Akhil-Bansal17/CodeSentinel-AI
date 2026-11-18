@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useContext, useEffect, useState } from "react";
 import {
   Search,
   Binary,
@@ -11,6 +11,10 @@ import {
   Database,
   X,
   Code2,
+  Copy,
+  Check,
+  RotateCcw,
+  BookOpen,
 } from "lucide-react";
 import {
   CodeChunkDetail,
@@ -25,14 +29,27 @@ import { repositoryService } from "../services/repositoryService";
 import { searchService } from "../services/searchService";
 import { ChunkDetailModal } from "../components/search/ChunkDetailModal";
 import { StatusBadge } from "../components/common/StatusBadge";
+import { RepositoryContext } from "../context/RepositoryContext";
 
 interface CodeSearchPageProps {
   initialRepoId?: string | null;
 }
 
+const SUGGESTED_SYMBOLS = [
+  "create_analysis_run",
+  "parse_ast",
+  "DependencyGraph",
+  "SecurityRule",
+  "validate_token",
+];
+
 export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId }) => {
-  const [repositories, setRepositories] = useState<Repository[]>([]);
-  const [selectedRepoId, setSelectedRepoId] = useState<string>("");
+  const repoContext = useContext(RepositoryContext);
+
+  const [repositories, setRepositories] = useState<Repository[]>(() => repoContext?.repositories || []);
+  const [selectedRepoId, setSelectedRepoId] = useState<string>(
+    initialRepoId || repoContext?.selectedRepoId || ""
+  );
   const [currentSnapshot, setCurrentSnapshot] = useState<RepositorySnapshot | null>(null);
 
   const [query, setQuery] = useState<string>("");
@@ -50,17 +67,36 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
 
   const [inspectingChunk, setInspectingChunk] = useState<CodeChunkDetail | null>(null);
   const [isLoadingChunk, setIsLoadingChunk] = useState<boolean>(false);
+  const [copiedCitation, setCopiedCitation] = useState<string | null>(null);
 
-  // Load repositories on mount
+  // Sync with RepositoryContext
   useEffect(() => {
+    if (repoContext?.selectedRepoId && repoContext.selectedRepoId !== selectedRepoId) {
+      setSelectedRepoId(repoContext.selectedRepoId);
+    }
+  }, [repoContext?.selectedRepoId, selectedRepoId]);
+
+  useEffect(() => {
+    if (repoContext?.repositories && repoContext.repositories.length > 0) {
+      setRepositories(repoContext.repositories);
+      if (!selectedRepoId && repoContext.repositories[0]) {
+        const defaultId = initialRepoId || repoContext.repositories[0].id;
+        setSelectedRepoId(defaultId);
+      }
+    }
+  }, [repoContext?.repositories, selectedRepoId, initialRepoId]);
+
+  // Fallback load repositories if context is empty
+  useEffect(() => {
+    if (repositories.length > 0) return;
     let mounted = true;
     repositoryService
       .listRepositories(1, 50)
       .then((res) => {
         if (!mounted) return;
-        const repos = res.items;
+        const repos = res.items || [];
         setRepositories(repos);
-        if (repos.length > 0) {
+        if (repos.length > 0 && !selectedRepoId) {
           const target = initialRepoId && repos.some((r) => r.id === initialRepoId)
             ? initialRepoId
             : repos[0].id;
@@ -78,9 +114,9 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
     return () => {
       mounted = false;
     };
-  }, [initialRepoId]);
+  }, [repositories.length, initialRepoId, selectedRepoId]);
 
-  // Load repository details to get latest snapshot if not present
+  // Load repository details to get latest snapshot
   useEffect(() => {
     if (!selectedRepoId) return;
     let mounted = true;
@@ -112,11 +148,23 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
       .getCapabilities(selectedRepoId, currentSnapshot.id)
       .then((caps) => setCapabilities(caps))
       .catch(() => setCapabilities(null));
-  }, [selectedRepoId, currentSnapshot?.id]);
+  }, [selectedRepoId, currentSnapshot]);
 
   useEffect(() => {
     fetchIndexData();
   }, [fetchIndexData]);
+
+  // Handle repository selection change
+  const handleRepoChange = (newRepoId: string) => {
+    setSelectedRepoId(newRepoId);
+    repoContext?.setSelectedRepoId(newRepoId);
+    setSearchResponse(null);
+    setErrorMessage(null);
+    const found = repositories.find((r) => r.id === newRepoId);
+    if (found?.latest_snapshot) {
+      setCurrentSnapshot(found.latest_snapshot);
+    }
+  };
 
   // Handle Trigger Indexing
   const handleTriggerIndex = async (force: boolean = false) => {
@@ -135,15 +183,16 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
   };
 
   // Handle Search Submission
-  const handleSearch = async (e?: React.FormEvent) => {
+  const handleSearch = async (e?: React.FormEvent, customQuery?: string) => {
     if (e) e.preventDefault();
-    if (!selectedRepoId || !currentSnapshot?.id || !query.trim()) return;
+    const queryText = (customQuery !== undefined ? customQuery : query).trim();
+    if (!selectedRepoId || !currentSnapshot?.id || !queryText) return;
 
     setIsSearching(true);
     setErrorMessage(null);
     try {
       const res = await searchService.searchCode(selectedRepoId, currentSnapshot.id, {
-        query: query.trim(),
+        query: queryText,
         mode: searchMode,
         language: languageFilter || undefined,
         symbol_type: symbolTypeFilter || undefined,
@@ -159,6 +208,24 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
     } finally {
       setIsSearching(false);
     }
+  };
+
+  const handleCopyCitation = (citation: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    navigator.clipboard.writeText(citation).then(() => {
+      setCopiedCitation(citation);
+      setTimeout(() => setCopiedCitation(null), 2000);
+    }).catch(() => {
+      // fallback
+    });
+  };
+
+  const hasActiveFilters = Boolean(languageFilter || symbolTypeFilter || filePathFilter);
+
+  const handleClearFilters = () => {
+    setLanguageFilter("");
+    setSymbolTypeFilter("");
+    setFilePathFilter("");
   };
 
   // Inspect Chunk Detail
@@ -250,7 +317,7 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
           <label className="block text-xs font-medium text-text-muted mb-1.5">Repository</label>
           <select
             value={selectedRepoId}
-            onChange={(e) => setSelectedRepoId(e.target.value)}
+            onChange={(e) => handleRepoChange(e.target.value)}
             className="w-full text-xs rounded-lg bg-surface-base border border-border-default text-text-primary px-3 py-2 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors"
           >
             {repositories.map((repo) => (
@@ -279,32 +346,55 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
       </div>
 
       {/* Search Input & Controls */}
-      <form onSubmit={handleSearch} className="space-y-4">
-        <div className="relative flex items-center">
-          <Search className="absolute left-3.5 w-4 h-4 text-text-muted pointer-events-none" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search symbols, functions, classes, or code concepts (e.g. authenticate_user, calculate_health)..."
-            className="w-full pl-10 pr-24 py-2.5 rounded-lg bg-surface-card border border-border-default text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all shadow-inner"
-          />
-          {query && (
+      <form onSubmit={(e) => handleSearch(e)} className="space-y-4">
+        <div className="space-y-2">
+          <div className="relative flex items-center">
+            <Search className="absolute left-3.5 w-4 h-4 text-text-muted pointer-events-none" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search symbols, functions, classes, or code concepts (e.g. authenticate_user, calculate_health)..."
+              className="w-full pl-10 pr-24 py-2.5 rounded-lg bg-surface-card border border-border-default text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all shadow-inner"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="absolute right-20 text-text-muted hover:text-text-primary p-1 transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
             <button
-              type="button"
-              onClick={() => setQuery("")}
-              className="absolute right-20 text-text-muted hover:text-text-primary p-1 transition-colors"
+              type="submit"
+              disabled={isSearching || !query.trim()}
+              className="absolute right-2 px-3 py-1.5 text-xs font-medium rounded-md bg-accent hover:bg-accent-hover text-accent-foreground disabled:opacity-50 transition-colors shadow-sm focus:outline-none focus:ring-1 focus:ring-accent"
             >
-              <X className="w-3.5 h-3.5" />
+              {isSearching ? "Searching..." : "Search"}
             </button>
-          )}
-          <button
-            type="submit"
-            disabled={isSearching || !query.trim()}
-            className="absolute right-2 px-3 py-1.5 text-xs font-medium rounded-md bg-accent hover:bg-accent-hover text-accent-foreground disabled:opacity-50 transition-colors shadow-sm focus:outline-none focus:ring-1 focus:ring-accent"
-          >
-            {isSearching ? "Searching..." : "Search"}
-          </button>
+          </div>
+
+          {/* Suggested Quick Symbol Queries */}
+          <div className="flex items-center gap-1.5 flex-wrap text-xs text-text-muted">
+            <span className="flex items-center gap-1 text-[11px]">
+              <Sparkles className="w-3 h-3 text-accent" />
+              <span>Suggested symbols:</span>
+            </span>
+            {SUGGESTED_SYMBOLS.map((sym) => (
+              <button
+                key={sym}
+                type="button"
+                onClick={() => {
+                  setQuery(sym);
+                  handleSearch(undefined, sym);
+                }}
+                className="px-2 py-0.5 rounded bg-surface-elevated hover:bg-surface-hover text-text-secondary hover:text-accent border border-border-default hover:border-accent-border font-mono text-[11px] transition-colors cursor-pointer"
+              >
+                {sym}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Mode Selector and Filters */}
@@ -400,6 +490,18 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
               placeholder="Filter by path..."
               className="px-2.5 py-1 rounded bg-surface-elevated border border-border-default text-text-secondary text-xs w-32 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent placeholder:text-text-muted transition-colors"
             />
+
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={handleClearFilters}
+                className="inline-flex items-center gap-1 px-2 py-1 text-xs text-accent hover:text-accent-hover transition-colors cursor-pointer"
+                title="Clear all active filters"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Reset</span>
+              </button>
+            )}
           </div>
         </div>
       </form>
@@ -426,8 +528,73 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
         </div>
       )}
 
+      {/* Searching Loading State */}
+      {isSearching && (
+        <div className="space-y-3 animate-pulse">
+          <div className="p-4 rounded-lg bg-surface-card border border-border-default space-y-3">
+            <div className="h-4 bg-surface-elevated rounded w-1/3" />
+            <div className="h-16 bg-surface-base rounded" />
+          </div>
+          <div className="p-4 rounded-lg bg-surface-card border border-border-default space-y-3">
+            <div className="h-4 bg-surface-elevated rounded w-1/4" />
+            <div className="h-16 bg-surface-base rounded" />
+          </div>
+        </div>
+      )}
+
+      {/* Initial Exploration Card (when no search executed yet) */}
+      {!searchResponse && !isSearching && (
+        <div className="rounded-xl bg-surface-card border border-border-default p-6 space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-accent-subtle border border-accent-border text-accent">
+              <BookOpen className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-text-primary">
+                Codebase Exploration &amp; AST Retrieval Engine
+              </h3>
+              <p className="text-xs text-text-secondary mt-1 leading-relaxed">
+                Execute deterministic symbol lookups, BM25 keyword searches, or vector similarity queries across all indexed source syntax trees.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 text-xs">
+            <div className="p-3 rounded-lg bg-surface-elevated border border-border-subtle space-y-1">
+              <div className="font-semibold text-accent flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Hybrid (RRF)</span>
+              </div>
+              <p className="text-text-muted text-[11px] leading-relaxed">
+                Combines BM25 lexical token matching with AST symbol boost and reciprocal rank fusion.
+              </p>
+            </div>
+
+            <div className="p-3 rounded-lg bg-surface-elevated border border-border-subtle space-y-1">
+              <div className="font-semibold text-status-info flex items-center gap-1.5">
+                <FileCode className="w-3.5 h-3.5" />
+                <span>Lexical (BM25)</span>
+              </div>
+              <p className="text-text-muted text-[11px] leading-relaxed">
+                Deterministic term frequency search across functions, classes, and comments without vector overhead.
+              </p>
+            </div>
+
+            <div className="p-3 rounded-lg bg-surface-elevated border border-border-subtle space-y-1">
+              <div className="font-semibold text-accent flex items-center gap-1.5">
+                <Binary className="w-3.5 h-3.5" />
+                <span>Semantic (Vector)</span>
+              </div>
+              <p className="text-text-muted text-[11px] leading-relaxed">
+                Multi-modal dense vector retrieval capturing conceptual intent when embeddings are configured.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Search Results Display */}
-      {searchResponse && (
+      {searchResponse && !isSearching && (
         <div className="space-y-4">
           <div className="flex items-center justify-between text-xs text-text-muted pb-2 border-b border-border-default">
             <span>
@@ -490,9 +657,27 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
                         Score: {item.score}
                       </span>
                       <button
+                        type="button"
+                        onClick={(e) => handleCopyCitation(item.citation, e)}
+                        className="px-2 py-1 text-xs font-medium rounded-lg bg-surface-elevated hover:bg-surface-hover text-text-secondary hover:text-text-primary border border-border-default hover:border-accent-border flex items-center gap-1 transition-all focus:outline-none focus:ring-1 focus:ring-accent cursor-pointer"
+                        title="Copy citation"
+                      >
+                        {copiedCitation === item.citation ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                            <span className="text-emerald-400 font-mono text-[11px]">Copied</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            <span className="font-mono text-[11px]">Cite</span>
+                          </>
+                        )}
+                      </button>
+                      <button
                         onClick={() => handleInspectChunk(item)}
                         disabled={isLoadingChunk}
-                        className="px-2.5 py-1 text-xs font-medium rounded-lg bg-surface-elevated group-hover:bg-accent-subtle text-text-secondary group-hover:text-accent border border-border-default group-hover:border-accent-border flex items-center gap-1 transition-all focus:outline-none focus:ring-1 focus:ring-accent"
+                        className="px-2.5 py-1 text-xs font-medium rounded-lg bg-surface-elevated group-hover:bg-accent-subtle text-text-secondary group-hover:text-accent border border-border-default group-hover:border-accent-border flex items-center gap-1 transition-all focus:outline-none focus:ring-1 focus:ring-accent cursor-pointer"
                       >
                         <span>Inspect</span>
                         <ChevronRight className="w-3.5 h-3.5" />
