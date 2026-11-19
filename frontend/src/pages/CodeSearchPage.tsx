@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useEffect, useState } from "react";
+import React, { useCallback, useContext, useEffect, useRef, useState } from "react";
 import {
   Search,
   Binary,
@@ -68,6 +68,21 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
   const [inspectingChunk, setInspectingChunk] = useState<CodeChunkDetail | null>(null);
   const [isLoadingChunk, setIsLoadingChunk] = useState<boolean>(false);
   const [copiedCitation, setCopiedCitation] = useState<string | null>(null);
+
+  const searchRequestIdRef = useRef<number>(0);
+  const prevRepoIdRef = useRef<string>(selectedRepoId);
+
+  // When selected repository changes, invalidate stale search response, in-flight searches, and chunk inspection
+  useEffect(() => {
+    if (prevRepoIdRef.current !== selectedRepoId) {
+      prevRepoIdRef.current = selectedRepoId;
+      searchRequestIdRef.current++;
+      setIsSearching(false);
+      setSearchResponse(null);
+      setErrorMessage(null);
+      setInspectingChunk(null);
+    }
+  }, [selectedRepoId]);
 
   // Sync with RepositoryContext
   useEffect(() => {
@@ -158,11 +173,16 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
   const handleRepoChange = (newRepoId: string) => {
     setSelectedRepoId(newRepoId);
     repoContext?.setSelectedRepoId(newRepoId);
+    searchRequestIdRef.current++;
+    setIsSearching(false);
     setSearchResponse(null);
     setErrorMessage(null);
+    setInspectingChunk(null);
     const found = repositories.find((r) => r.id === newRepoId);
     if (found?.latest_snapshot) {
       setCurrentSnapshot(found.latest_snapshot);
+    } else {
+      setCurrentSnapshot(null);
     }
   };
 
@@ -182,42 +202,82 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
     }
   };
 
-  // Handle Search Submission
-  const handleSearch = async (e?: React.FormEvent, customQuery?: string) => {
-    if (e) e.preventDefault();
-    const queryText = (customQuery !== undefined ? customQuery : query).trim();
-    if (!selectedRepoId || !currentSnapshot?.id || !queryText) return;
+  // Execute Search with async race condition protection
+  const executeSearch = async (
+    queryText: string,
+    filterOverrides?: {
+      language?: string;
+      symbolType?: string;
+      filePath?: string;
+    }
+  ) => {
+    const trimmed = queryText.trim();
+    if (!selectedRepoId || !currentSnapshot?.id || !trimmed) return;
 
+    const requestId = ++searchRequestIdRef.current;
     setIsSearching(true);
     setErrorMessage(null);
+
+    const lang = filterOverrides?.language !== undefined ? filterOverrides.language : languageFilter;
+    const sym = filterOverrides?.symbolType !== undefined ? filterOverrides.symbolType : symbolTypeFilter;
+    const path = filterOverrides?.filePath !== undefined ? filterOverrides.filePath : filePathFilter;
+
     try {
       const res = await searchService.searchCode(selectedRepoId, currentSnapshot.id, {
-        query: queryText,
+        query: trimmed,
         mode: searchMode,
-        language: languageFilter || undefined,
-        symbol_type: symbolTypeFilter || undefined,
-        file_path: filePathFilter || undefined,
+        language: lang || undefined,
+        symbol_type: sym || undefined,
+        file_path: path || undefined,
         limit: 25,
       });
+
+      // Discard older responses if a newer search was dispatched
+      if (requestId !== searchRequestIdRef.current) {
+        return;
+      }
+
       setSearchResponse(res);
       if (res.capabilities) {
         setCapabilities(res.capabilities);
       }
     } catch (err: unknown) {
+      if (requestId !== searchRequestIdRef.current) {
+        return;
+      }
       setErrorMessage("Search failed: " + (err instanceof Error ? err.message : String(err)));
     } finally {
-      setIsSearching(false);
+      if (requestId === searchRequestIdRef.current) {
+        setIsSearching(false);
+      }
     }
+  };
+
+  // Handle Search Submission
+  const handleSearch = (e?: React.FormEvent, customQuery?: string) => {
+    if (e) e.preventDefault();
+    const q = customQuery !== undefined ? customQuery : query;
+    executeSearch(q);
   };
 
   const handleCopyCitation = (citation: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    navigator.clipboard.writeText(citation).then(() => {
+    if (!citation) return;
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard
+        .writeText(citation)
+        .then(() => {
+          setCopiedCitation(citation);
+          setTimeout(() => setCopiedCitation(null), 2000);
+        })
+        .catch(() => {
+          setCopiedCitation(citation);
+          setTimeout(() => setCopiedCitation(null), 2000);
+        });
+    } else {
       setCopiedCitation(citation);
       setTimeout(() => setCopiedCitation(null), 2000);
-    }).catch(() => {
-      // fallback
-    });
+    }
   };
 
   const hasActiveFilters = Boolean(languageFilter || symbolTypeFilter || filePathFilter);
@@ -226,6 +286,10 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
     setLanguageFilter("");
     setSymbolTypeFilter("");
     setFilePathFilter("");
+    // If a search query is active, immediately re-query with filters cleared
+    if (query.trim() && selectedRepoId && currentSnapshot?.id) {
+      executeSearch(query, { language: "", symbolType: "", filePath: "" });
+    }
   };
 
   // Inspect Chunk Detail
@@ -237,6 +301,9 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
         item.snapshot_id,
         item.chunk_id
       );
+      if (!detail) {
+        throw new Error("Empty chunk detail returned");
+      }
       setInspectingChunk(detail);
     } catch {
       setInspectingChunk({
@@ -245,18 +312,18 @@ export const CodeSearchPage: React.FC<CodeSearchPageProps> = ({ initialRepoId })
         repository_id: item.repository_id,
         snapshot_id: item.snapshot_id,
         relative_path: item.relative_path,
-        file_name: item.file_name,
-        language: item.language,
+        file_name: item.file_name || item.relative_path.split("/").pop() || "unknown",
+        language: item.language || "Code",
         chunk_index: 0,
-        chunk_type: item.chunk_type,
+        chunk_type: item.chunk_type || item.symbol_type || "code_block",
         symbol_name: item.symbol_name,
         symbol_type: item.symbol_type,
-        start_line: item.start_line,
-        end_line: item.end_line,
-        start_column: item.start_column,
-        end_column: item.end_column,
-        content: item.excerpt,
-        content_hash: item.content_hash,
+        start_line: item.start_line ?? 1,
+        end_line: item.end_line ?? 1,
+        start_column: item.start_column ?? 0,
+        end_column: item.end_column ?? 0,
+        content: item.excerpt || "// Chunk content unavailable or deleted from snapshot",
+        content_hash: item.content_hash || "000000000000",
         chunk_fingerprint: "",
         has_embedding: false,
         metadata_json: {},
