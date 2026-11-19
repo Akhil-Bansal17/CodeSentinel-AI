@@ -19,7 +19,7 @@ export const ChunkDetailModal: React.FC<ChunkDetailModalProps> = ({ chunk, onClo
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const lines = chunk.content.split("\n");
+  const lines = (chunk.content || "").split("\n");
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4 animate-in fade-in duration-150">
@@ -90,7 +90,7 @@ export const ChunkDetailModal: React.FC<ChunkDetailModalProps> = ({ chunk, onClo
           </div>
           <div className="flex items-center gap-1.5 font-mono text-[11px] text-text-muted ml-auto">
             <Hash className="w-3 h-3" />
-            <span>SHA: {chunk.content_hash.slice(0, 12)}...</span>
+            <span>SHA: {(chunk.content_hash || "").slice(0, 12)}...</span>
           </div>
         </div>
 
