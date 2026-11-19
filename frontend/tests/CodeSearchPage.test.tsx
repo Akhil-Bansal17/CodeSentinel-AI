@@ -234,4 +234,167 @@ describe("CodeSearchPage Component", () => {
       expect(screen.getByText("Lines 1 – 20")).toBeInTheDocument();
     });
   });
+
+  it("resets all active filters and re-queries active search", async () => {
+    vi.mocked(searchService.searchCode).mockResolvedValue({
+      query: "test_query",
+      mode_requested: "hybrid",
+      mode_used: "hybrid",
+      total_results: 1,
+      capabilities: {} as any,
+      results: [
+        {
+          chunk_id: "chk-reset-1",
+          repository_id: "repo-search-1",
+          snapshot_id: "snap-search-1",
+          relative_path: "src/reset.py",
+          file_name: "reset.py",
+          language: "Python",
+          chunk_type: "function",
+          symbol_name: "reset_filters_fn",
+          symbol_type: "function",
+          start_line: 1,
+          end_line: 10,
+          score: 0.99,
+          rank: 1,
+          retrieval_mode: "hybrid",
+          content_hash: "hash_rst",
+          excerpt: "def reset_filters_fn(): pass",
+          citation: "src/reset.py:L1-L10",
+        },
+      ],
+    });
+
+    render(<CodeSearchPage />);
+
+    await waitFor(() => {
+      expect(repositoryService.listRepositories).toHaveBeenCalled();
+    });
+
+    // Set query and a filter
+    const input = screen.getByPlaceholderText(/Search symbols, functions, classes/i);
+    fireEvent.change(input, { target: { value: "test_query" } });
+
+    const langSelect = screen.getByDisplayValue("All Languages");
+    fireEvent.change(langSelect, { target: { value: "Python" } });
+
+    expect(screen.getByRole("button", { name: /Reset/i })).toBeInTheDocument();
+
+    // Click Reset
+    fireEvent.click(screen.getByRole("button", { name: /Reset/i }));
+
+    await waitFor(() => {
+      // searchCode should have been called with language: undefined (cleared)
+      expect(searchService.searchCode).toHaveBeenCalledWith(
+        "repo-search-1",
+        "snap-search-1",
+        expect.objectContaining({
+          query: "test_query",
+          language: undefined,
+          symbol_type: undefined,
+          file_path: undefined,
+        })
+      );
+    });
+  });
+
+  it("discards earlier in-flight search responses when a newer query finishes first", async () => {
+    let resolveFirstSearch!: (val: any) => void;
+    const firstSearchPromise = new Promise((resolve) => {
+      resolveFirstSearch = resolve;
+    });
+
+    const secondSearchResult = {
+      query: "second_query",
+      mode_requested: "hybrid",
+      mode_used: "hybrid",
+      total_results: 1,
+      capabilities: {} as any,
+      results: [
+        {
+          chunk_id: "chk-second",
+          repository_id: "repo-search-1",
+          snapshot_id: "snap-search-1",
+          relative_path: "src/second.py",
+          file_name: "second.py",
+          language: "Python",
+          chunk_type: "function",
+          symbol_name: "second_symbol",
+          symbol_type: "function",
+          start_line: 5,
+          end_line: 15,
+          score: 0.88,
+          rank: 1,
+          retrieval_mode: "hybrid",
+          content_hash: "hash_sec",
+          excerpt: "def second_symbol(): pass",
+          citation: "src/second.py:L5-L15",
+        },
+      ],
+    };
+
+    const firstSearchResult = {
+      query: "first_query",
+      mode_requested: "hybrid",
+      mode_used: "hybrid",
+      total_results: 1,
+      capabilities: {} as any,
+      results: [
+        {
+          chunk_id: "chk-first",
+          repository_id: "repo-search-1",
+          snapshot_id: "snap-search-1",
+          relative_path: "src/first.py",
+          file_name: "first.py",
+          language: "Python",
+          chunk_type: "function",
+          symbol_name: "stale_first_symbol",
+          symbol_type: "function",
+          start_line: 1,
+          end_line: 10,
+          score: 0.77,
+          rank: 1,
+          retrieval_mode: "hybrid",
+          content_hash: "hash_fst",
+          excerpt: "def stale_first_symbol(): pass",
+          citation: "src/first.py:L1-L10",
+        },
+      ],
+    };
+
+    // First call hangs until resolveFirstSearch is called; second call resolves immediately
+    vi.mocked(searchService.searchCode)
+      .mockReturnValueOnce(firstSearchPromise as any)
+      .mockResolvedValueOnce(secondSearchResult as any);
+
+    render(<CodeSearchPage />);
+
+    await waitFor(() => {
+      expect(repositoryService.listRepositories).toHaveBeenCalled();
+    });
+
+    const input = screen.getByPlaceholderText(/Search symbols, functions, classes/i);
+
+    // Trigger first search
+    fireEvent.change(input, { target: { value: "first_query" } });
+    fireEvent.submit(input.closest("form")!);
+
+    // Trigger second search immediately
+    fireEvent.change(input, { target: { value: "second_query" } });
+    fireEvent.submit(input.closest("form")!);
+
+    // Second search resolves first
+    await waitFor(() => {
+      expect(screen.getByText("second_symbol")).toBeInTheDocument();
+    });
+
+    // Now resolve the older first search
+    resolveFirstSearch(firstSearchResult);
+
+    // Ensure the stale first search response did NOT overwrite the results
+    await waitFor(() => {
+      expect(screen.queryByText("stale_first_symbol")).not.toBeInTheDocument();
+      expect(screen.getByText("second_symbol")).toBeInTheDocument();
+    });
+  });
 });
