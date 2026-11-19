@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import {
   Bot,
   ShieldCheck,
@@ -35,8 +35,10 @@ interface AIAssistantPageProps {
   initialRepoId?: string | null;
 }
 
-interface QASessionItem {
+export interface QASessionItem {
   id: string;
+  repositoryId: string;
+  snapshotId: string;
   question: string;
   response: QAResponse;
   timestamp: string;
@@ -75,6 +77,9 @@ export const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ initialRepoId 
   const [inspectingChunk, setInspectingChunk] = useState<CodeChunkDetail | null>(null);
   const [loadingStep, setLoadingStep] = useState<string>("");
 
+  const inquiryRequestIdRef = useRef<number>(0);
+  const prevRepoIdRef = useRef<string>(selectedRepoId);
+
   // Sync with RepositoryContext
   useEffect(() => {
     if (repoContext?.selectedRepoId && repoContext.selectedRepoId !== selectedRepoId) {
@@ -91,6 +96,18 @@ export const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ initialRepoId 
       }
     }
   }, [repoContext?.repositories, selectedRepoId, initialRepoId]);
+
+  // When selected repository changes, invalidate stale Q&A response and active requests
+  useEffect(() => {
+    if (prevRepoIdRef.current !== selectedRepoId) {
+      prevRepoIdRef.current = selectedRepoId;
+      inquiryRequestIdRef.current++;
+      setIsAsking(false);
+      setQaResponse(null);
+      setErrorMessage(null);
+      setInspectingChunk(null);
+    }
+  }, [selectedRepoId]);
 
   // Fallback load repositories if context is empty
   useEffect(() => {
@@ -151,18 +168,20 @@ export const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ initialRepoId 
     repoContext?.setSelectedRepoId(newRepoId);
     setQaResponse(null);
     setErrorMessage(null);
+    setInspectingChunk(null);
     const found = repositories.find((r) => r.id === newRepoId);
     if (found?.latest_snapshot) {
       setCurrentSnapshot(found.latest_snapshot);
     }
   };
 
-  // Handle Question Submit
+  // Handle Question Submit with race condition prevention
   const handleAsk = async (e?: React.FormEvent, customQuestion?: string) => {
     if (e) e.preventDefault();
     const q = (customQuestion !== undefined ? customQuestion : question).trim();
     if (!selectedRepoId || !currentSnapshot?.id || !q) return;
 
+    const requestId = ++inquiryRequestIdRef.current;
     setIsAsking(true);
     setErrorMessage(null);
     setLoadingStep("Retrieving candidate AST chunks from snapshot...");
@@ -174,32 +193,56 @@ export const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ initialRepoId 
         retrieval_mode: retrievalMode,
         prefer_llm: preferLLM,
       });
+
+      // Race condition check: ensure response belongs to latest request
+      if (requestId !== inquiryRequestIdRef.current) {
+        return;
+      }
+
       setQaResponse(res);
       setSessionHistory((prev) => [
         {
           id: Math.random().toString(36).substring(2, 9),
+          repositoryId: selectedRepoId,
+          snapshotId: currentSnapshot.id,
           question: q,
           response: res,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         },
-        ...prev.filter((item) => item.question !== q),
-      ]);
+        ...prev.filter(
+          (item) => !(item.repositoryId === selectedRepoId && item.question === q)
+        ),
+      ].slice(0, 15));
     } catch (err: unknown) {
+      if (requestId !== inquiryRequestIdRef.current) {
+        return;
+      }
       setErrorMessage("Q&A query failed: " + (err instanceof Error ? err.message : String(err)));
     } finally {
-      setIsAsking(false);
-      setLoadingStep("");
+      if (requestId === inquiryRequestIdRef.current) {
+        setIsAsking(false);
+        setLoadingStep("");
+      }
     }
   };
 
   const handleCopyAnswer = () => {
     if (!qaResponse?.answer) return;
-    navigator.clipboard.writeText(qaResponse.answer).then(() => {
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard
+        .writeText(qaResponse.answer)
+        .then(() => {
+          setCopiedAnswer(true);
+          setTimeout(() => setCopiedAnswer(false), 2000);
+        })
+        .catch(() => {
+          setCopiedAnswer(true);
+          setTimeout(() => setCopiedAnswer(false), 2000);
+        });
+    } else {
       setCopiedAnswer(true);
       setTimeout(() => setCopiedAnswer(false), 2000);
-    }).catch(() => {
-      // fallback
-    });
+    }
   };
 
   // Inspect Chunk Detail from Evidence
@@ -231,6 +274,11 @@ export const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ initialRepoId 
       });
     }
   };
+
+  // Filter history strictly to active repository
+  const currentRepoHistory = sessionHistory.filter(
+    (item) => item.repositoryId === selectedRepoId
+  );
 
   return (
     <div className="space-y-6">
@@ -404,14 +452,14 @@ export const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ initialRepoId 
       </form>
 
       {/* Session Inquiries History Strip */}
-      {sessionHistory.length > 1 && (
+      {currentRepoHistory.length > 0 && (
         <div className="p-3 rounded-lg bg-surface-card border border-border-default space-y-2">
           <div className="flex items-center gap-1.5 text-xs text-text-muted">
             <History className="w-3.5 h-3.5 text-accent" />
-            <span className="font-medium">Session Inquiries ({sessionHistory.length}):</span>
+            <span className="font-medium">Session Inquiries ({currentRepoHistory.length}):</span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {sessionHistory.map((item) => (
+            {currentRepoHistory.map((item) => (
               <button
                 key={item.id}
                 type="button"
