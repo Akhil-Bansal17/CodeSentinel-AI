@@ -24,40 +24,77 @@ interface SettingsPageProps {
   healthState: HealthState;
 }
 
-const STORAGE_PREFS_KEY = "codesentinel_user_preferences";
+export const STORAGE_PREFS_KEY = "codesentinel_user_preferences";
 
-interface UserPreferences {
+export interface UserPreferences {
   defaultSearchMode: "hybrid" | "lexical" | "semantic";
   codeFontSize: "compact" | "normal";
   autoExpandEvidence: boolean;
   showMatchBadges: boolean;
 }
 
-const DEFAULT_PREFERENCES: UserPreferences = {
+export const DEFAULT_PREFERENCES: UserPreferences = {
   defaultSearchMode: "hybrid",
   codeFontSize: "compact",
   autoExpandEvidence: true,
   showMatchBadges: true,
 };
 
+export function parseAndValidatePreferences(raw: string | null): UserPreferences {
+  if (!raw) return DEFAULT_PREFERENCES;
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+      return DEFAULT_PREFERENCES;
+    }
+
+    const defaultSearchMode: "hybrid" | "lexical" | "semantic" = [
+      "hybrid",
+      "lexical",
+      "semantic",
+    ].includes(parsed.defaultSearchMode)
+      ? parsed.defaultSearchMode
+      : DEFAULT_PREFERENCES.defaultSearchMode;
+
+    const codeFontSize: "compact" | "normal" = ["compact", "normal"].includes(parsed.codeFontSize)
+      ? parsed.codeFontSize
+      : DEFAULT_PREFERENCES.codeFontSize;
+
+    const autoExpandEvidence =
+      typeof parsed.autoExpandEvidence === "boolean"
+        ? parsed.autoExpandEvidence
+        : DEFAULT_PREFERENCES.autoExpandEvidence;
+
+    const showMatchBadges =
+      typeof parsed.showMatchBadges === "boolean"
+        ? parsed.showMatchBadges
+        : DEFAULT_PREFERENCES.showMatchBadges;
+
+    return {
+      defaultSearchMode,
+      codeFontSize,
+      autoExpandEvidence,
+      showMatchBadges,
+    };
+  } catch {
+    return DEFAULT_PREFERENCES;
+  }
+}
+
 export const SettingsPage: React.FC<SettingsPageProps> = ({ healthState }) => {
   const [prefs, setPrefs] = useState<UserPreferences>(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_PREFS_KEY);
-      if (raw) {
-        return { ...DEFAULT_PREFERENCES, ...JSON.parse(raw) };
-      }
+      return parseAndValidatePreferences(localStorage.getItem(STORAGE_PREFS_KEY));
     } catch {
-      // fallback
+      return DEFAULT_PREFERENCES;
     }
-    return DEFAULT_PREFERENCES;
   });
   const [prefsSaved, setPrefsSaved] = useState(false);
 
   const [testGithubUrl, setTestGithubUrl] = useState("https://github.com/psf/requests");
   const [isTestingGithub, setIsTestingGithub] = useState(false);
   const [githubTestResult, setGithubTestResult] = useState<{
-    type: "success" | "error";
+    type: "success" | "error" | "warning";
     message: string;
   } | null>(null);
 
@@ -68,7 +105,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ healthState }) => {
       setPrefsSaved(true);
       setTimeout(() => setPrefsSaved(false), 2500);
     } catch {
-      // ignore
+      // ignore storage errors
     }
   };
 
@@ -79,14 +116,23 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ healthState }) => {
       setPrefsSaved(true);
       setTimeout(() => setPrefsSaved(false), 2500);
     } catch {
-      // ignore
+      // ignore storage errors
     }
   };
 
-  const handleTestGithubUrl = (e?: React.FormEvent) => {
+  const parseGithubCoordinates = (url: string): { owner: string; repo: string } | null => {
+    const trimmed = url.trim();
+    const match = trimmed.match(
+      /^https:\/\/github\.com\/([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+?)(?:\.git)?(?:\/)?$/
+    );
+    if (!match) return null;
+    return { owner: match[1], repo: match[2] };
+  };
+
+  const handleTestGithubUrl = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const trimmed = testGithubUrl.trim();
-    const githubPattern = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+$/i;
+
     if (!trimmed) {
       setGithubTestResult({
         type: "error",
@@ -101,7 +147,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ healthState }) => {
       });
       return;
     }
-    if (!githubPattern.test(trimmed)) {
+
+    const coords = parseGithubCoordinates(trimmed);
+    if (!coords) {
       setGithubTestResult({
         type: "error",
         message: "URL format must follow 'https://github.com/owner/repository'.",
@@ -112,14 +160,56 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ healthState }) => {
     setIsTestingGithub(true);
     setGithubTestResult(null);
 
-    // Ingestion validation check
-    setTimeout(() => {
-      setIsTestingGithub(false);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    try {
+      const response = await fetch(
+        `https://api.github.com/repos/${coords.owner}/${coords.repo}`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/vnd.github.v3+json",
+          },
+          signal: controller.signal,
+        }
+      );
+      clearTimeout(timeoutId);
+
+      if (response.status === 200) {
+        const data = await response.json().catch(() => ({}));
+        setGithubTestResult({
+          type: "success",
+          message: `Verified valid public GitHub format for ${trimmed}: Repository is reachable and public (${data.full_name || `${coords.owner}/${coords.repo}`}). Acquisition will stream via codeload.github.com without requiring a personal token.`,
+        });
+      } else if (response.status === 404) {
+        setGithubTestResult({
+          type: "error",
+          message: `Repository not found on GitHub (HTTP 404). Ensure the repository exists, the URL spelling is correct, and the repository is public.`,
+        });
+      } else if (response.status === 403) {
+        setGithubTestResult({
+          type: "warning",
+          message: `GitHub API rate limit reached (HTTP 403). URL format is valid; streaming archive acquisition via codeload.github.com can still proceed.`,
+        });
+      } else {
+        setGithubTestResult({
+          type: "error",
+          message: `GitHub API responded with HTTP ${response.status}. Repository reachability could not be confirmed.`,
+        });
+      }
+    } catch (err: unknown) {
+      clearTimeout(timeoutId);
+      const isTimeout = err instanceof Error && err.name === "AbortError";
       setGithubTestResult({
-        type: "success",
-        message: `Verified valid public GitHub format for ${trimmed}. Acquisition will stream via codeload.github.com without requiring a personal token.`,
+        type: "error",
+        message: isTimeout
+          ? "Reachability check timed out after 8 seconds. Verify your internet connection."
+          : `Network error contacting GitHub API (${err instanceof Error ? err.message : "Connection failed"}). Public streaming acquisition may still succeed.`,
       });
-    }, 450);
+    } finally {
+      setIsTestingGithub(false);
+    }
   };
 
   return (
