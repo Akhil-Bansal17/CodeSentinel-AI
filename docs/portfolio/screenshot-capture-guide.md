@@ -46,12 +46,11 @@ To maintain a professional, cohesive presentation across the GitHub repository, 
 
 ### Step 1: Start the Local Stack
 ```bash
-# Terminal 1: Backend
-cd backend
-source .venv/bin/activate  # or .\.venv\Scripts\Activate.ps1 on Windows
+# Terminal 1: Backend (from repository root)
+source backend/.venv/bin/activate  # or .\backend\.venv\Scripts\Activate.ps1 on Windows
 uvicorn backend.app.main:app --port 8000
 
-# Terminal 2: Frontend
+# Terminal 2: Frontend (from frontend directory)
 cd frontend
 npm run dev
 ```
