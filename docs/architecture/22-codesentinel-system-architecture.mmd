@@ -1,0 +1,125 @@
+graph TD
+    %% -------------------------------------------------------------
+    %% CodeSentinel AI — System Architecture Diagram (Phase 9)
+    %% Design Identity: Obsidian Sentinel — High-Precision Engineering Console
+    %% -------------------------------------------------------------
+
+    subgraph Layer1["Layer 1: Frontend Experience Layer (Obsidian Sentinel Console)"]
+        UI_Shell["Application Shell & Global Navigation"]
+        UI_Context["Repository & Snapshot Context Provider"]
+        UI_Overview["System Overview & Portfolio Console"]
+        UI_Analysis["Static Analysis & Security Findings Console"]
+        UI_Dep["Dependencies & SCA Vulnerability Explorer"]
+        UI_Arch["Architecture & Coupling Graph Console"]
+        UI_Health["Codebase Health Index Dashboard"]
+        UI_Search["Hybrid Code Search & Chunk Detail Modal"]
+        UI_QA["Evidence-Backed Repository Q&A Assistant"]
+        UI_Remediation["Remediation Review & Diff Inspector"]
+        UI_CiCd["CI/CD Workflows & Audit Export Studio"]
+        UI_Settings["Settings & Diagnostics Console"]
+
+        UI_Shell --> UI_Context
+        UI_Context --> UI_Overview
+        UI_Context --> UI_Analysis
+        UI_Context --> UI_Dep
+        UI_Context --> UI_Arch
+        UI_Context --> UI_Health
+        UI_Context --> UI_Search
+        UI_Context --> UI_QA
+        UI_Context --> UI_Remediation
+        UI_Context --> UI_CiCd
+        UI_Context --> UI_Settings
+    end
+
+    subgraph Layer2["Layer 2: API & Orchestration Gateway (FastAPI)"]
+        MW_Cors["CORS & Request Latency Middleware"]
+        MW_Trace["Correlation ID Tracking (X-Request-ID)"]
+        MW_Sec["Security Headers (nosniff, DENY, strict-origin)"]
+        API_Router["REST API Router (/api/v1)"]
+        API_Health["Health & Liveness Probes (/api/health)"]
+        Task_Mgr["Task Lifecycle Manager (In-Memory Concurrency)"]
+        Exc_Handler["Centralized Exception & Validation Handlers"]
+
+        MW_Cors --> MW_Trace --> MW_Sec --> API_Router
+    end
+
+    subgraph Layer3["Layer 3: Repository Ingestion & Snapshot Subsystem"]
+        Val_Source["Source Validator (SSRF Defense, RFC 6052, Port 443 Only)"]
+        Acq_Stream["GitHub Archive Stream Acquisition (Streaming HTTP)"]
+        Acq_Local["Local Repository Ingestion (Whitelisted Roots Only)"]
+        Safe_Extract["Safe Tar/Zip Extractor (TarSlip Shield, Ratio & Size Limits)"]
+        Disc_Files["File Discovery & Language Detection (Category Classification)"]
+        Calc_Checksums["SHA-256 Content Hashing & LOC Metrics Calculator"]
+        Build_Snapshot["Immutable Snapshot Builder"]
+
+        Val_Source --> Acq_Stream --> Safe_Extract
+        Acq_Local --> Safe_Extract
+        Safe_Extract --> Disc_Files --> Calc_Checksums --> Build_Snapshot
+    end
+
+    subgraph Layer4_Det["Layer 4A: Deterministic Intelligence & Analysis Engines"]
+        Eng_Static["Static Code Analysis Engine (AST Complexity, Smells, Line Limits)"]
+        Eng_Sec["Application Security Engine (SQLi, Pickle, Shell, Secret Sinks)"]
+        Eng_SCA["Dependency SCA & Advisory Matcher (PEP 440 & Semver 2.0.0)"]
+        Eng_Arch["Architecture & Coupling Engine (Tarjan's SCC Cycles, Martin's Ca/Ce)"]
+        Eng_Health["Codebase Health Scoring Engine (5-Dimension Weighted Synthesis)"]
+        Eng_Audit["Multi-Pillar Audit Runner (SARIF 2.1.0 & Markdown Exporters)"]
+        Eng_Workflow["CI/CD Workflow Generator (Pinned Actions, Shell Sanitization)"]
+    end
+
+    subgraph Layer4_AI["Layer 4B: Retrieval, Q&A & Remediation Engines"]
+        Eng_Chunker["AST Syntax-Aware Code Chunker (Functions, Classes, Blocks)"]
+        Eng_Lexical["BM25Okapi Lexical Indexer & Search"]
+        Eng_Vector["Vector Embedding & Cosine Similarity (Optional Local/Ollama)"]
+        Eng_RRF["Reciprocal Rank Fusion (Hybrid RRF Search)"]
+        Eng_PromptGuard["Prompt Injection Guard Shield"]
+        Eng_QA["Grounded Q&A Synthesis (Zero Hallucination, Citation Verifier)"]
+        Eng_Patch["Remediation Patch Engine (Line-Accurate Unified Diffs)"]
+        Eng_Validator["In-Memory Patch Validator (Syntax Check, Anti-Drift Hashing)"]
+        Gate_Approval{"Human Approval Gate"}
+        Eng_Applier["Atomic Disk Patch Applier (Anti-Traversal, Rollback Safe)"]
+        Eng_PR["PR Synthesis Studio (Conflict Detection, Patch Bundles)"]
+
+        Eng_Chunker --> Eng_Lexical --> Eng_RRF
+        Eng_Chunker --> Eng_Vector --> Eng_RRF
+        Eng_RRF --> Eng_QA
+        Eng_PromptGuard --> Eng_QA
+        Eng_Patch --> Eng_Validator --> Gate_Approval
+        Gate_Approval -- Approved --> Eng_Applier
+        Gate_Approval -- Bundled --> Eng_PR
+    end
+
+    subgraph Layer5["Layer 5: Data & Persistence Layer (PostgreSQL 16)"]
+        T_Repo[("repositories")]
+        T_Snap[("repository_snapshots")]
+        T_Files[("repository_files")]
+        T_Analysis[("analysis_runs & findings")]
+        T_Deps[("repository_dependencies & vulnerabilities")]
+        T_Arch[("architecture_runs & violations")]
+        T_Health[("codebase_health_assessments")]
+        T_Chunks[("code_index_runs & code_chunks")]
+        T_Remediation[("remediation_proposals, validations & audits")]
+        T_Audit[("audit_runs & ci_audit_runs")]
+        T_PR[("pr_preparations")]
+
+        T_Repo --> T_Snap
+        T_Snap --> T_Files
+        T_Snap --> T_Analysis
+        T_Snap --> T_Deps
+        T_Snap --> T_Arch
+        T_Snap --> T_Health
+        T_Snap --> T_Chunks
+        T_Snap --> T_Remediation
+        T_Snap --> T_Audit
+        T_Snap --> T_PR
+    end
+
+    %% Flow connections
+    Layer1 -- HTTP / REST API Calls --> Layer2
+    Layer2 --> Layer3
+    Layer2 --> Layer4_Det
+    Layer2 --> Layer4_AI
+
+    Layer3 --> Layer5
+    Layer4_Det --> Layer5
+    Layer4_AI --> Layer5
