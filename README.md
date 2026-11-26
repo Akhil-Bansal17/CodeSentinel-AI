@@ -238,6 +238,9 @@ cp .env.example .env
 # Run database migrations (requires running PostgreSQL, or uses SQLite dev fallback)
 alembic upgrade head
 
+# Return to repository root to run the application and test suites
+cd ..
+
 # Start development API server
 uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
@@ -289,6 +292,9 @@ To shut down cleanly:
 docker compose down
 ```
 
+> [!WARNING]
+> Running `docker compose down -v` removes named Docker volumes (`postgres_data`) and permanently deletes persisted database records. Use `docker compose down` (without `-v`) to preserve database state across container restarts.
+
 ---
 
 ## Step-by-Step Usage Guide
@@ -316,6 +322,9 @@ docker compose down
 ## Testing & Verification
 
 All automated test suites pass with a **100% pass rate**:
+
+> [!NOTE]
+> All backend test commands are executed from the **repository root** with the Python virtual environment activated (`source backend/.venv/bin/activate` or `.\backend\.venv\Scripts\Activate.ps1`), utilizing the root `pytest.ini` (`pythonpath = .`). Frontend test commands can be executed directly from root using `npm --prefix frontend test -- --run` or from inside `frontend/`.
 
 | Suite | Scope | Command | Verified Result |
 | :--- | :--- | :--- | :--- |
