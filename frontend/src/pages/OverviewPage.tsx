@@ -250,13 +250,18 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
                 >
                   <div className="space-y-3">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <span className="font-semibold text-sm text-text-primary group-hover:text-accent transition-colors truncate block">
-                          {repo.name}
-                        </span>
-                        <span className="text-[11px] font-mono text-text-muted truncate block mt-0.5">
-                          {repo.source_identifier || repo.source_type}
-                        </span>
+                      <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                        <div className="p-1.5 rounded-md bg-surface-subtle border border-border-subtle text-text-muted group-hover:text-accent group-hover:border-accent/30 transition-colors shrink-0 mt-0.5">
+                          <FolderGit2 className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="font-semibold text-sm text-text-primary group-hover:text-accent transition-colors truncate block">
+                            {repo.name}
+                          </span>
+                          <span className="text-[11px] font-mono text-text-muted truncate block mt-0.5">
+                            {repo.source_identifier || repo.source_type}
+                          </span>
+                        </div>
                       </div>
                       <Badge
                         label={repo.status}
@@ -299,9 +304,9 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
                     )}
                   </div>
 
-                  <div className="flex items-center justify-end text-xs text-accent font-medium pt-4 mt-3 border-t border-border-subtle group-hover:translate-x-0.5 transition-transform">
+                  <div className="flex items-center justify-end text-xs text-accent font-medium pt-3.5 mt-3 border-t border-border-subtle">
                     <span>Inspect Snapshot</span>
-                    <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                    <ArrowRight className="w-3.5 h-3.5 ml-1 transition-transform duration-200 group-hover:translate-x-1" />
                   </div>
                 </Card>
               );
