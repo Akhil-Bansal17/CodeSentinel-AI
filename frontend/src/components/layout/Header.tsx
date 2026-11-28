@@ -133,9 +133,10 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={() => healthState.refetch()}
+            disabled={healthState.isLoading}
             title="Refresh backend status"
             aria-label="Refresh backend status"
-            className="p-1.5 rounded-md text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors cursor-pointer"
+            className="p-1.5 rounded-md text-text-muted border border-transparent hover:text-accent hover:bg-accent/10 hover:border-accent/25 active:scale-95 active:bg-accent/20 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none transition-all duration-150 cursor-pointer"
           >
             <RefreshCw
               className={`w-3.5 h-3.5 ${healthState.isLoading ? "animate-spin" : ""}`}
